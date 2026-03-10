@@ -41,7 +41,7 @@ When `status` is `"awaiting_approval"`, check `metadata.pending_changes`:
     "pending_changes": [
       {
         "change_id": "ch_1",
-        "operation": "update_chunk",
+        "operation": "edit",
         "chunk_id": "550e8400-e29b-41d4-a716-446655440000",
         "old_html": "<p>Original section 3 content...</p>",
         "new_html": "<p>Updated content with GDPR compliance...</p>",
@@ -113,17 +113,17 @@ Each proposed change has an `operation` field that determines what the AI wants 
 
 | Operation | `old_html` | `new_html` | `insert_after_chunk_id` | Meaning |
 |-----------|-----------|-----------|------------------------|---------|
-| `update_chunk` | Current content | Proposed replacement | — | Modify an existing section |
-| `create_chunk` | null | New content to add | Section to insert after | Add a new section to the document |
-| `delete_chunk` | Content being removed | null | — | Remove a section from the document |
+| `edit` | Current content | Proposed replacement | — | Modify an existing section |
+| `create` | null | New content to add | Section to insert after | Add a new section to the document |
+| `delete` | Content being removed | null | — | Remove a section from the document |
 
 ### Building a diff view
 
 To show users what the AI wants to change, compare `old_html` and `new_html`:
 
-- **For `update_chunk`**: Use a diff library (like `diff-match-patch` or `jsdiff`) to highlight additions and removals between `old_html` and `new_html`. Show a before/after view or inline diff.
-- **For `create_chunk`**: Display `new_html` with a visual indicator that this is a new section being added (e.g., a green border or "New section" label). The `insert_after_chunk_id` value corresponds to a `data-chunk-id` attribute on an element in the document HTML — find that element and insert the new content after it.
-- **For `delete_chunk`**: Display `old_html` with a visual indicator that this section will be removed (e.g., red strikethrough or "Will be deleted" label).
+- **For `edit`**: Use a diff library (like `diff-match-patch` or `jsdiff`) to highlight additions and removals between `old_html` and `new_html`. Show a before/after view or inline diff.
+- **For `create`**: Display `new_html` with a visual indicator that this is a new section being added (e.g., a green border or "New section" label). The `insert_after_chunk_id` value corresponds to a `data-chunk-id` attribute on an element in the document HTML — find that element and insert the new content after it.
+- **For `delete`**: Display `old_html` with a visual indicator that this section will be removed (e.g., red strikethrough or "Will be deleted" label).
 
 Always display the `ai_explanation` alongside the diff — it tells the user why the AI proposed the change.
 

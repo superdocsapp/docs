@@ -2707,7 +2707,7 @@
           "operation": {
             "type": "string",
             "title": "Operation",
-            "description": "Type of change: 'update_chunk', 'create_chunk', or 'delete_chunk'."
+            "description": "Type of change: 'edit', 'create', or 'delete'."
           },
           "chunk_id": {
             "anyOf": [
