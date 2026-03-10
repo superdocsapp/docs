@@ -35,4 +35,4 @@ response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, j
 })
 ```
 
-The returned HTML contains `data-chunk-id` attributes on elements. These enable the AI to make targeted edits to specific sections without reprocessing the entire document.
+The returned HTML contains `data-chunk-id` attributes on elements. These identify document sections and enable the AI to make targeted edits without reprocessing the entire document. These same IDs appear in API responses — for example, `chunk_id` and `insert_after_chunk_id` in [HITL proposed changes](/guides/human-in-the-loop#understanding-proposed-changes).

@@ -122,7 +122,7 @@ Each proposed change has an `operation` field that determines what the AI wants 
 To show users what the AI wants to change, compare `old_html` and `new_html`:
 
 - **For `update_chunk`**: Use a diff library (like `diff-match-patch` or `jsdiff`) to highlight additions and removals between `old_html` and `new_html`. Show a before/after view or inline diff.
-- **For `create_chunk`**: Display `new_html` with a visual indicator that this is a new section being added (e.g., a green border or "New section" label).
+- **For `create_chunk`**: Display `new_html` with a visual indicator that this is a new section being added (e.g., a green border or "New section" label). The `insert_after_chunk_id` value corresponds to a `data-chunk-id` attribute on an element in the document HTML — find that element and insert the new content after it.
 - **For `delete_chunk`**: Display `old_html` with a visual indicator that this section will be removed (e.g., red strikethrough or "Will be deleted" label).
 
 Always display the `ai_explanation` alongside the diff — it tells the user why the AI proposed the change.
