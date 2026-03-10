@@ -51,12 +51,42 @@ data: {"type": "intermediate", "content": "Analyzing document structure...", "se
 
 ### `proposed_change`
 
-In HITL mode, the AI proposes a document change for review.
+In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes a document change for review. One event is emitted per proposed change.
 
 ```
 event: proposed_change
-data: {"type": "proposed_change", "content": "{\"change_id\": \"ch_1\", \"operation\": \"update_chunk\", ...}", "sequence": 2}
+data: {"type": "proposed_change", "content": "{\"change_id\": \"ch_1\", ...}", "sequence": 2}
 ```
+
+The `content` field is a JSON string. Parse it to get the change details:
+
+```json
+{
+  "change_id": "ch_1",
+  "operation": "update_chunk",
+  "chunk_id": "550e8400-e29b-41d4-a716-446655440000",
+  "old_html": "<p>Original section content...</p>",
+  "new_html": "<p>Updated content with GDPR compliance...</p>",
+  "ai_explanation": "Added GDPR data processing requirements",
+  "batch_id": "ch_1",
+  "batch_total": 3,
+  "insert_after_chunk_id": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `change_id` | string | Unique ID for this change. Use when calling `/approve`. |
+| `operation` | string | `"update_chunk"`, `"create_chunk"`, or `"delete_chunk"`. |
+| `chunk_id` | string \| null | The document section being modified or deleted. Null for creates. |
+| `old_html` | string \| null | Current HTML content. Present for updates and deletes. Null for creates. |
+| `new_html` | string \| null | Proposed new HTML content. Present for updates and creates. Null for deletes. |
+| `ai_explanation` | string | Why the AI proposed this change. Show this to the user. |
+| `batch_id` | string \| null | Groups related changes. All changes in a batch share the same `batch_id`. |
+| `batch_total` | number \| null | How many changes are in this batch. Wait for this many events before showing the review UI. |
+| `insert_after_chunk_id` | string \| null | For `create_chunk`: where to insert the new section in the document. |
+
+See the [Human-in-the-Loop guide](/guides/human-in-the-loop) for the complete approval workflow.
 
 ### `final`
 
