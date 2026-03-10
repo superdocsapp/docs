@@ -1604,80 +1604,6 @@
         }
       }
     },
-    "/v1/billing/checkout": {
-      "post": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Create Checkout",
-        "description": "Create a checkout session to upgrade your subscription.\n\nReturns a URL to redirect the user to the hosted payment page.\nOnly allows upgrading to a higher tier than the current plan.",
-        "operationId": "create_checkout_v1_billing_checkout_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckoutRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckoutResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/billing/portal": {
-      "get": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Get Portal",
-        "description": "Get a URL to the customer billing portal.\n\nThe portal allows managing your subscription, viewing invoices,\nand updating your payment method.",
-        "operationId": "get_portal_v1_billing_portal_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortalResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/health": {
       "get": {
         "tags": [
@@ -2066,36 +1992,6 @@
             }
           }
         ]
-      },
-      "CheckoutRequest": {
-        "properties": {
-          "tier": {
-            "type": "string",
-            "title": "Tier",
-            "description": "Target subscription tier: 'plus' ($20/mo, 2000 ops) or 'pro' ($99/mo, 10000 ops)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "tier"
-        ],
-        "title": "CheckoutRequest",
-        "description": "Initiate a subscription upgrade."
-      },
-      "CheckoutResponse": {
-        "properties": {
-          "checkout_url": {
-            "type": "string",
-            "title": "Checkout Url",
-            "description": "URL to redirect the user to for payment. Opens the hosted checkout page."
-          }
-        },
-        "type": "object",
-        "required": [
-          "checkout_url"
-        ],
-        "title": "CheckoutResponse",
-        "description": "Checkout session for subscription upgrade."
       },
       "CreateApiKeyRequest": {
         "properties": {
@@ -2766,21 +2662,6 @@
         ],
         "title": "PendingChange",
         "description": "A proposed document change awaiting user approval."
-      },
-      "PortalResponse": {
-        "properties": {
-          "portal_url": {
-            "type": "string",
-            "title": "Portal Url",
-            "description": "URL to the billing portal for managing subscription, invoices, and payment method."
-          }
-        },
-        "type": "object",
-        "required": [
-          "portal_url"
-        ],
-        "title": "PortalResponse",
-        "description": "Customer billing portal access."
       },
       "SessionInfo": {
         "properties": {
