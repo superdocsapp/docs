@@ -1,0 +1,205 @@
+---
+title: "JavaScript Examples"
+description: "Complete working JavaScript examples for the SuperDocs API using fetch and EventSource."
+---
+
+# JavaScript Examples
+
+All examples use the native `fetch` API and work in browsers and Node.js 18+.
+
+## Basic chat with document
+
+```javascript
+const API_KEY = "sk_YOUR_API_KEY";
+const BASE = "https://api.superdocs.app";
+
+async function chat(message, sessionId, documentHtml = null) {
+  const response = await fetch(`${BASE}/v1/chat`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      document_html: documentHtml
+    })
+  });
+
+  return response.json();
+}
+
+// Usage
+const data = await chat(
+  "Add an introduction paragraph",
+  "js-demo",
+  "<h1>My Document</h1><p>Content here.</p>"
+);
+
+console.log("AI:", data.response);
+if (data.document_changes) {
+  console.log("Updated HTML:", data.document_changes.updated_html);
+}
+```
+
+## EventSource streaming
+
+```javascript
+async function streamChat(message, sessionId, documentHtml) {
+  // 1. Start async job
+  const response = await fetch(`${BASE}/v1/chat/async`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      document_html: documentHtml
+    })
+  });
+
+  const { job_id } = await response.json();
+
+  // 2. Open SSE stream
+  return new Promise((resolve, reject) => {
+    const url = `${BASE}/v1/chat/${sessionId}/stream?job_id=${job_id}&api_key=${API_KEY}`;
+    const eventSource = new EventSource(url);
+
+    eventSource.addEventListener("intermediate", (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Progress:", data.content);
+    });
+
+    eventSource.addEventListener("final", (event) => {
+      const data = JSON.parse(event.data);
+      eventSource.close();
+      resolve(data.result);
+    });
+
+    eventSource.addEventListener("usage", (event) => {
+      const data = JSON.parse(event.data);
+      console.log(`Operations: ${data.monthly_used}/${data.monthly_limit}`);
+    });
+
+    eventSource.addEventListener("error", (event) => {
+      eventSource.close();
+      if (event.data) {
+        reject(new Error(JSON.parse(event.data).error));
+      }
+    });
+  });
+}
+
+// Usage
+const result = await streamChat(
+  "Rewrite section 2 to be more formal",
+  "streaming-demo",
+  currentHtml
+);
+console.log("AI:", result.response);
+```
+
+## File upload
+
+```javascript
+async function uploadAttachment(file, sessionId) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("session_id", sessionId);
+
+  const response = await fetch(`${BASE}/v1/attachments/upload`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}` },
+    body: formData
+  });
+
+  return response.json();
+}
+
+// Browser usage
+const fileInput = document.querySelector('input[type="file"]');
+const result = await uploadAttachment(fileInput.files[0], "my-session");
+console.log("Job ID:", result.job_id);
+```
+
+## Job polling
+
+```javascript
+async function pollJob(jobId) {
+  while (true) {
+    const response = await fetch(`${BASE}/v1/jobs/${jobId}`, {
+      headers: { "Authorization": `Bearer ${API_KEY}` }
+    });
+    const job = await response.json();
+
+    if (job.status === "completed") return job.result;
+    if (job.status === "failed") throw new Error(job.error);
+    if (job.status === "awaiting_approval") return job;
+
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+
+// Usage
+const { job_id } = await uploadAttachment(file, "my-session");
+const result = await pollJob(job_id);
+console.log("Attachment processed:", result.attachment_id);
+```
+
+## HITL approval
+
+```javascript
+async function chatWithApproval(message, sessionId, documentHtml) {
+  // Start with approval mode
+  const response = await fetch(`${BASE}/v1/chat/async`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      document_html: documentHtml,
+      approval_mode: "ask_every_time"
+    })
+  });
+
+  const { job_id } = await response.json();
+
+  // Poll and approve
+  while (true) {
+    const jobResponse = await fetch(`${BASE}/v1/jobs/${job_id}`, {
+      headers: { "Authorization": `Bearer ${API_KEY}` }
+    });
+    const job = await jobResponse.json();
+
+    if (job.status === "completed") return job.result;
+    if (job.status === "failed") throw new Error(job.error);
+
+    if (job.status === "awaiting_approval") {
+      const changes = job.metadata.pending_changes;
+      console.log(`${changes.length} change(s) proposed`);
+
+      // Auto-approve all (replace with UI in production)
+      await fetch(`${BASE}/v1/chat/${sessionId}/approve`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          job_id,
+          approved: true,
+          changes: changes.map(c => ({ change_id: c.change_id, approved: true }))
+        })
+      });
+    }
+
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+```

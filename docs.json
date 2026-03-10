@@ -1,0 +1,144 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "SuperDocs",
+  "theme": "maple",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#f97766",
+    "light": "#eca496",
+    "dark": "#ac645b"
+  },
+  "openapi": [
+    "openapi.json"
+  ],
+  "api": {
+    "playground": {
+      "mode": "simple"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction/overview",
+              "introduction/quickstart"
+            ]
+          },
+          {
+            "group": "Account & Billing",
+            "pages": [
+              "account/account-setup",
+              "account/api-keys",
+              "account/mcp-setup",
+              "account/plans-and-usage",
+              "account/billing"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/sessions",
+              "concepts/documents",
+              "concepts/attachments",
+              "concepts/templates"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/streaming",
+              "guides/async-jobs",
+              "guides/human-in-the-loop",
+              "guides/model-selection",
+              "guides/ai-to-ai"
+            ]
+          },
+          {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/setup",
+              "mcp/claude-desktop",
+              "mcp/cursor-vscode",
+              "mcp/claude-code",
+              "mcp/available-tools"
+            ]
+          },
+          {
+            "group": "Errors & Limits",
+            "pages": [
+              "errors/error-codes",
+              "errors/rate-limits"
+            ]
+          },
+          {
+            "group": "Code Examples",
+            "pages": [
+              "examples/python",
+              "examples/javascript",
+              "examples/curl"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": "openapi.json"
+      }
+    ]
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.superdocs.app"
+    }
+  },
+  "topbar": {
+    "links": [
+      {
+        "name": "App",
+        "url": "https://use.superdocs.app"
+      },
+      {
+        "name": "API Status",
+        "url": "https://api.superdocs.app/health"
+      }
+    ]
+  },
+  "footer": {
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          {
+            "label": "Website",
+            "href": "https://superdocs.app"
+          },
+          {
+            "label": "App",
+            "href": "https://use.superdocs.app"
+          }
+        ]
+      },
+      {
+        "header": "Support",
+        "items": [
+          {
+            "label": "Contact",
+            "href": "mailto:hello@superdocs.app"
+          },
+          {
+            "label": "API Status",
+            "href": "https://api.superdocs.app/health"
+          }
+        ]
+      }
+    ]
+  }
+}

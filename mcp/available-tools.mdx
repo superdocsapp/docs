@@ -1,0 +1,56 @@
+---
+title: "Available Tools"
+description: "All 16 MCP tools available when connecting to the SuperDocs MCP server."
+---
+
+# Available MCP Tools
+
+When you connect to the SuperDocs MCP server, these 16 tools become available to your AI tool.
+
+## Chat
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `chat` | Send a message with optional document HTML. Returns AI response and document changes. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
+| `chat_async` | Start an async chat that processes in the background. Returns a job ID for polling. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
+| `approve_change` | Approve or deny AI-proposed document changes (HITL workflow). | `job_id`, `change_id`, `approved`, `feedback`, `changes` |
+
+## Sessions
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `list_sessions` | List all sessions with message counts and timestamps. | `limit` |
+| `get_session_history` | Get conversation history and document state for a session. | `session_id` |
+| `get_session_jobs` | List jobs for a specific session. | `session_id` |
+
+## Attachments
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `upload_attachment` | Upload a file (PDF, DOCX, TXT, RTF, MD) for AI context. | `file`, `session_id` |
+| `delete_attachment` | Remove an attachment from a session. | `attachment_id`, `session_id` |
+| `get_attachment_status` | Check processing status of session attachments. | `session_id` |
+
+## Jobs
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `list_jobs` | List all jobs for the authenticated user. | `status`, `limit` |
+| `get_job` | Get status and result of a specific job. | `job_id` |
+| `cancel_job` | Cancel a pending or in-progress job. | `job_id` |
+
+## Templates
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `upload_user_template` | Upload a reusable document template. | `file` |
+| `list_user_templates` | List all uploaded templates. | — |
+| `delete_user_template` | Delete a user template. | `template_id` |
+
+## Health
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `health` | Check if the SuperDocs API is healthy. | — |
+
+For full request/response schemas, see the [API Reference](/api-reference).

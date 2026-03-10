@@ -1,0 +1,87 @@
+---
+title: "Attachments"
+description: "Upload PDF, DOCX, and text files to give the AI additional context for document editing."
+---
+
+# Attachments
+
+Upload files to provide the AI with reference material. The AI can search and reference attachment content when editing your document.
+
+## Supported file types
+
+| Type | Extensions |
+|------|-----------|
+| PDF | `.pdf` |
+| Word | `.docx` |
+| Plain text | `.txt` |
+| Rich text | `.rtf` |
+| Markdown | `.md` |
+
+Maximum file size: **50 MB**.
+
+<Note>
+Legacy `.doc` files are not supported. Convert to `.docx` first.
+</Note>
+
+## Upload a file
+
+Attachments are processed asynchronously. Upload the file, get a `job_id`, then poll for completion.
+
+```bash
+# 1. Upload
+curl -X POST https://api.superdocs.app/v1/attachments/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@reference-doc.pdf" \
+  -F "session_id=my-session"
+```
+
+Response:
+
+```json
+{
+  "job_id": "att_abc123",
+  "filename": "reference-doc.pdf",
+  "status": "processing",
+  "message": "Upload successful. Processing reference-doc.pdf..."
+}
+```
+
+```bash
+# 2. Poll for completion
+curl https://api.superdocs.app/v1/jobs/att_abc123 \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+When `status` is `"completed"`, the attachment is indexed and available as AI context for that session.
+
+## Check attachment status
+
+```bash
+curl https://api.superdocs.app/v1/attachments/status/my-session \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Image attachments
+
+You can also send images inline with your chat request for vision-based analysis:
+
+```json
+{
+  "message": "What does this diagram show?",
+  "session_id": "my-session",
+  "image_attachments": [{
+    "id": "img-1",
+    "name": "diagram.png",
+    "base64Data": "iVBORw0KGgo...",
+    "mimeType": "image/png",
+    "size": 54321
+  }]
+}
+```
+
+## Delete an attachment
+
+```bash
+curl -X DELETE "https://api.superdocs.app/v1/attachments/ATTACHMENT_ID?session_id=my-session" \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```

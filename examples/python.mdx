@@ -1,0 +1,197 @@
+---
+title: "Python Examples"
+description: "Complete working Python examples for the SuperDocs API using the requests library."
+---
+
+# Python Examples
+
+All examples use the `requests` library. Install it with `pip install requests`.
+
+## Basic chat with document
+
+```python
+import requests
+
+API_KEY = "sk_YOUR_API_KEY"
+BASE = "https://api.superdocs.app"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+
+response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
+    "message": "Add an executive summary at the top",
+    "session_id": "python-demo",
+    "document_html": "<h1>Q4 Report</h1><p>Revenue grew 15% year over year.</p>"
+})
+
+data = response.json()
+print("AI:", data["response"])
+
+if data.get("document_changes"):
+    updated_html = data["document_changes"]["updated_html"]
+    print("Document updated. Version:", data["document_changes"]["version_id"])
+```
+
+## Handle response and preserve HTML
+
+```python
+# First request
+response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
+    "message": "Create a project plan with 3 sections",
+    "session_id": "project-plan",
+    "document_html": ""
+})
+data = response.json()
+current_html = data["document_changes"]["updated_html"]
+
+# Second request — send the HTML back as-is
+response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
+    "message": "Add deadlines to each section",
+    "session_id": "project-plan",
+    "document_html": current_html  # preserve data-chunk-id attributes
+})
+data = response.json()
+current_html = data["document_changes"]["updated_html"]
+```
+
+## Upload attachment and poll for completion
+
+```python
+import time
+
+# Upload
+with open("reference.pdf", "rb") as f:
+    response = requests.post(
+        f"{BASE}/v1/attachments/upload",
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        files={"file": ("reference.pdf", f, "application/pdf")},
+        data={"session_id": "my-session"}
+    )
+
+job_id = response.json()["job_id"]
+print(f"Upload started: {job_id}")
+
+# Poll until ready
+while True:
+    job = requests.get(f"{BASE}/v1/jobs/{job_id}", headers=HEADERS).json()
+    if job["status"] == "completed":
+        print("Attachment ready")
+        break
+    elif job["status"] == "failed":
+        print("Processing failed:", job["error"])
+        break
+    time.sleep(2)
+
+# Now chat — the AI can reference the attachment
+response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
+    "message": "Summarize the key points from the uploaded reference document",
+    "session_id": "my-session"
+})
+print("AI:", response.json()["response"])
+```
+
+## Async job with polling
+
+```python
+import time
+
+# Start async
+response = requests.post(f"{BASE}/v1/chat/async", headers=HEADERS, json={
+    "message": "Rewrite this entire document in formal legal language",
+    "session_id": "legal-rewrite",
+    "document_html": "<h1>Agreement</h1><p>We agree to work together on the project.</p>"
+})
+job_id = response.json()["job_id"]
+
+# Poll
+while True:
+    job = requests.get(f"{BASE}/v1/jobs/{job_id}", headers=HEADERS).json()
+    print(f"Status: {job['status']}")
+
+    if job["status"] == "completed":
+        result = job["result"]
+        print("AI:", result["response"])
+        if result.get("document_changes"):
+            print("Updated HTML:", result["document_changes"]["updated_html"][:200])
+        break
+    elif job["status"] == "failed":
+        print("Error:", job["error"])
+        break
+
+    time.sleep(2)
+```
+
+## SSE streaming
+
+```python
+import json
+import requests
+
+# Start async job first
+response = requests.post(f"{BASE}/v1/chat/async", headers=HEADERS, json={
+    "message": "Write a detailed analysis of section 2",
+    "session_id": "streaming-demo",
+    "document_html": "..."
+})
+job_id = response.json()["job_id"]
+
+# Stream progress
+url = f"{BASE}/v1/chat/streaming-demo/stream?job_id={job_id}&api_key={API_KEY}"
+with requests.get(url, stream=True) as stream:
+    current_event = None
+    for line in stream.iter_lines():
+        if not line:
+            continue
+        decoded = line.decode("utf-8")
+        if decoded.startswith("event: "):
+            current_event = decoded[7:]
+        elif decoded.startswith("data: "):
+            data = json.loads(decoded[6:])
+            if current_event == "intermediate":
+                print(f"Progress: {data['content']}")
+            elif current_event == "final":
+                print(f"Done: {data['result']['response'][:100]}")
+                break
+            elif current_event == "error":
+                print(f"Error: {data['error']}")
+                break
+```
+
+## HITL approval flow
+
+```python
+import time
+
+# Start with approval mode
+response = requests.post(f"{BASE}/v1/chat/async", headers=HEADERS, json={
+    "message": "Update the liability clause to cap damages at $1M",
+    "session_id": "contract-review",
+    "document_html": "...",
+    "approval_mode": "ask_every_time"
+})
+job_id = response.json()["job_id"]
+
+# Poll and approve
+while True:
+    job = requests.get(f"{BASE}/v1/jobs/{job_id}", headers=HEADERS).json()
+
+    if job["status"] == "completed":
+        print("Done:", job["result"]["response"])
+        break
+    elif job["status"] == "failed":
+        print("Error:", job["error"])
+        break
+    elif job["status"] == "awaiting_approval":
+        changes = job["metadata"]["pending_changes"]
+        print(f"\n{len(changes)} change(s) proposed:")
+        for c in changes:
+            print(f"  - {c['operation']}: {c.get('ai_explanation', 'No explanation')}")
+
+        # Approve all
+        requests.post(f"{BASE}/v1/chat/contract-review/approve", headers=HEADERS, json={
+            "job_id": job_id,
+            "approved": True,
+            "changes": [{"change_id": c["change_id"], "approved": True} for c in changes]
+        })
+        print("Approved all changes")
+
+    time.sleep(2)
+```

@@ -1,0 +1,38 @@
+---
+title: "Claude Code"
+description: "Connect SuperDocs to Claude Code (CLI) with a single command."
+---
+
+# Claude Code
+
+Connect SuperDocs to Claude Code with one CLI command.
+
+## Setup
+
+```bash
+claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
+  --header "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+That's it. SuperDocs tools are now available in your Claude Code session.
+
+## Test it
+
+```bash
+claude
+# Then type: "Use the SuperDocs health tool to check the API"
+```
+
+## Example usage
+
+Once connected, you can ask Claude Code to:
+
+- "Create a technical specification document using SuperDocs"
+- "Edit my SuperDocs session and update the introduction"
+- "Upload this file as an attachment to my SuperDocs session"
+
+## Remove the server
+
+```bash
+claude mcp remove superdocs
+```

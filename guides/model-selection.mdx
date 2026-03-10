@@ -1,0 +1,78 @@
+---
+title: "Model Selection"
+description: "Choose from four AI model tiers and three thinking depths to balance speed, capability, and cost."
+---
+
+# Model Selection
+
+SuperDocs offers four model tiers and three thinking depths. All tiers are available on every plan.
+
+## Model tiers
+
+Set `model_tier` in your request to choose a model:
+
+| Tier | Best for | Speed | Thinking depth control |
+|------|----------|-------|----------------------|
+| `core` | Everyday editing, quick tasks | Fast | Yes |
+| `turbo` | Speed-critical workflows | Fastest | No — always optimized |
+| `pro` | Complex analysis, multi-step edits | Moderate | No — always optimized |
+| `max` | Challenging documents, nuanced tasks | Slower | Yes |
+
+Default: `core`
+
+## Thinking depth
+
+Set `thinking_depth` to control how much reasoning the AI applies:
+
+| Depth | Behavior |
+|-------|----------|
+| `fast` | Quick responses, minimal reasoning |
+| `balanced` | AI decides when to reason deeply (default) |
+| `deep` | Extended reasoning for complex problems |
+
+Default: `balanced`
+
+<Note>
+Thinking depth control is available for the `core` and `max` tiers. The `turbo` and `pro` tiers use their own optimized reasoning — the `thinking_depth` parameter is ignored for these models. You don't need to configure it; they always use the best reasoning depth for the task.
+</Note>
+
+## Usage
+
+```bash
+# Core with custom thinking depth
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Analyze this contract for potential risks",
+    "session_id": "my-session",
+    "document_html": "...",
+    "model_tier": "core",
+    "thinking_depth": "deep"
+  }'
+
+# Pro — no thinking_depth needed, reasoning is always optimized
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Analyze this contract for potential risks",
+    "session_id": "my-session",
+    "document_html": "...",
+    "model_tier": "pro"
+  }'
+```
+
+## Recommendations
+
+| Task | Suggested tier | Suggested depth |
+|------|---------------|-----------------|
+| Fix a typo | `core` | `fast` |
+| Rewrite a paragraph | `core` | `balanced` |
+| Draft a multi-section document | `core` or `max` | `deep` |
+| Analyze a complex contract | `pro` or `max` | `deep` (max only) |
+| Batch processing many documents | `turbo` | — |
+
+## Default model preference
+
+You can set a default model tier in your account preferences (via the web app). Per-request `model_tier` overrides your default.

@@ -1,0 +1,40 @@
+---
+title: "Templates"
+description: "Upload reusable document templates that the AI can search and apply when creating content."
+---
+
+# Templates
+
+Upload document templates for the AI to reference. When you ask the AI to create a document, it can search your templates and use them as a starting point.
+
+## Upload a template
+
+Templates support the same file types as attachments: `.docx`, `.pdf`, `.txt`, `.rtf`, `.md`.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/templates/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@nda-template.docx"
+```
+
+Template processing is synchronous — the template is ready immediately after upload.
+
+## List your templates
+
+```bash
+curl https://api.superdocs.app/v1/templates \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Delete a template
+
+```bash
+curl -X DELETE https://api.superdocs.app/v1/templates/TEMPLATE_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## How the AI uses templates
+
+When you ask the AI to create a document (e.g., "Draft an NDA"), it searches your uploaded templates for relevant matches. If a template fits, the AI uses it as a starting point and customizes it based on your instructions.
+
+Templates are scoped per user or organization — your templates are only visible to you.

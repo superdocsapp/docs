@@ -1,0 +1,62 @@
+# =============================================================
+# WHITELIST-ONLY GITIGNORE — blocks everything except doc files
+# =============================================================
+# This repo is PUBLIC. Only documentation files should exist here.
+# If you accidentally copy code or secrets, this gitignore prevents
+# them from being staged by `git add .`
+
+# Block EVERYTHING by default
+*
+
+# Allow directory traversal (required for nested folders to work)
+!*/
+
+# Allow only documentation file types
+!*.mdx
+!*.json
+!*.png
+!*.svg
+!*.ico
+!.gitignore
+
+# Explicitly block dangerous file types (defense in depth)
+# These override the whitelist above as an extra safety net
+*.py
+*.pyc
+*.ts
+*.tsx
+*.js
+*.jsx
+*.env
+*.env.*
+*.pem
+*.key
+*.crt
+*.sql
+*.sh
+*.bash
+*.zsh
+*.yaml
+*.yml
+*.toml
+*.cfg
+*.ini
+*.log
+*.csv
+*.db
+*.sqlite
+*.pickle
+*.pkl
+*.tar
+*.gz
+*.zip
+requirements.txt
+package.json
+package-lock.json
+Dockerfile
+docker-compose*
+CLAUDE.md
+README.md
+DEPLOYMENT.md
+*.service-account*.json
+*firebase*.json

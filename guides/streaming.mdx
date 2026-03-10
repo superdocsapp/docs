@@ -1,0 +1,141 @@
+---
+title: "SSE Streaming"
+description: "Stream real-time progress updates from the AI using Server-Sent Events (SSE)."
+---
+
+# SSE Streaming
+
+For long-running AI operations, use Server-Sent Events (SSE) to receive real-time progress updates instead of waiting for the full response.
+
+## How it works
+
+1. Start an async chat request to get a `job_id`
+2. Open an SSE connection to stream progress
+3. Receive events as the AI processes your request
+
+## Setup
+
+```bash
+# 1. Start an async request
+curl -X POST https://api.superdocs.app/v1/chat/async \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Rewrite all sections to be more concise",
+    "session_id": "my-session",
+    "document_html": "..."
+  }'
+
+# Response: { "job_id": "job_abc123", "session_id": "my-session", ... }
+
+# 2. Stream progress (auth via query parameter)
+curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=job_abc123&api_key=sk_YOUR_API_KEY"
+```
+
+<Note>
+SSE uses EventSource, which doesn't support custom headers. Pass your API key as the `api_key` query parameter.
+</Note>
+
+## Event types
+
+The stream emits 5 event types:
+
+### `intermediate`
+
+Progress updates during AI processing.
+
+```
+event: intermediate
+data: {"type": "intermediate", "content": "Analyzing document structure...", "sequence": 1, "timestamp": "2026-03-07T10:00:01Z"}
+```
+
+### `proposed_change`
+
+In HITL mode, the AI proposes a document change for review.
+
+```
+event: proposed_change
+data: {"type": "proposed_change", "content": "{\"change_id\": \"ch_1\", \"operation\": \"update_chunk\", ...}", "sequence": 2}
+```
+
+### `final`
+
+Job completed successfully. Contains the full result.
+
+```
+event: final
+data: {"content": "I've made all sections more concise.", "result": {"response": "...", "document_changes": {...}, "usage": {...}}}
+```
+
+### `usage`
+
+Emitted after `final` with usage consumption data.
+
+```
+event: usage
+data: {"monthly_used": 43, "monthly_limit": 500, "monthly_remaining": 457, "was_billable": true, "subscription_tier": "free"}
+```
+
+### `error`
+
+Job failed, was cancelled, or an auth error occurred.
+
+```
+event: error
+data: {"error": "Request timed out"}
+```
+
+## JavaScript example
+
+```javascript
+const eventSource = new EventSource(
+  `https://api.superdocs.app/v1/chat/my-session/stream?job_id=${jobId}&api_key=${apiKey}`
+);
+
+eventSource.addEventListener("intermediate", (event) => {
+  const data = JSON.parse(event.data);
+  console.log("Progress:", data.content);
+});
+
+eventSource.addEventListener("final", (event) => {
+  const data = JSON.parse(event.data);
+  console.log("Done:", data.result.response);
+  // Update your editor with data.result.document_changes.updated_html
+  eventSource.close();
+});
+
+eventSource.addEventListener("usage", (event) => {
+  const data = JSON.parse(event.data);
+  console.log(`Used ${data.monthly_used}/${data.monthly_limit} operations`);
+});
+
+eventSource.addEventListener("error", (event) => {
+  if (event.data) {
+    const data = JSON.parse(event.data);
+    console.error("Error:", data.error);
+  }
+  eventSource.close();
+});
+```
+
+## Python example
+
+```python
+import json
+import requests
+
+url = f"https://api.superdocs.app/v1/chat/my-session/stream?job_id={job_id}&api_key={api_key}"
+
+with requests.get(url, stream=True) as response:
+    for line in response.iter_lines():
+        if not line:
+            continue
+        decoded = line.decode("utf-8")
+        if decoded.startswith("data: "):
+            data = json.loads(decoded[6:])
+            if "content" in data:
+                print(f"Progress: {data['content']}")
+            elif "error" in data:
+                print(f"Error: {data['error']}")
+                break
+```

@@ -1,0 +1,67 @@
+---
+title: "Claude Desktop"
+description: "Step-by-step guide to connect SuperDocs to Claude Desktop via MCP."
+---
+
+# Claude Desktop
+
+Connect SuperDocs to Claude Desktop so you can edit documents through conversation.
+
+## 1. Find your config file
+
+| OS | Path |
+|----|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+
+Create the file if it doesn't exist.
+
+## 2. Add the SuperDocs config
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "superdocs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://api.superdocs.app/mcp",
+        "--header",
+        "Authorization:${SUPERDOCS_AUTH}"
+      ],
+      "env": {
+        "SUPERDOCS_AUTH": "Bearer sk_YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+Replace `sk_YOUR_API_KEY` with your actual API key.
+
+<Note>
+Claude Desktop uses `mcp-remote` to bridge to the SuperDocs Streamable HTTP server. This requires Node.js installed on your machine.
+</Note>
+
+If you already have other MCP servers configured, add the `"superdocs"` entry inside the existing `"mcpServers"` object.
+
+## 3. Restart Claude Desktop
+
+Close and reopen Claude Desktop. The SuperDocs tools will appear in the tools menu.
+
+## 4. Test it
+
+Type in Claude Desktop:
+
+> "Use the SuperDocs health tool to check if the API is running"
+
+You should see a response confirming the API is healthy.
+
+## Example usage
+
+> "Create a new NDA document for a consulting engagement using SuperDocs"
+
+> "Search my SuperDocs session for any mentions of payment terms"
+
+See [Available Tools](/mcp/available-tools) for the full list of what you can do.

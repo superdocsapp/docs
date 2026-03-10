@@ -1,0 +1,81 @@
+---
+title: "AI-to-AI Integration"
+description: "Connect your AI agent to SuperDocs for autonomous document editing without a browser."
+---
+
+# AI-to-AI Integration
+
+Your AI agent can use SuperDocs as a document editing tool. No browser, no frontend — just API calls. Your AI decides what to edit, SuperDocs executes.
+
+## How it works
+
+<Steps>
+  <Step title="Your AI agent sends a message and document HTML to SuperDocs" />
+  <Step title="SuperDocs AI edits the document and returns updated HTML" />
+  <Step title="Your agent reads the response and decides the next action" />
+  <Step title="Repeat — send the updated HTML back with the next instruction" />
+</Steps>
+
+This creates a loop: your AI agent controls _what_ to edit, SuperDocs handles _how_ to edit it.
+
+## Example: Autonomous document workflow
+
+```python
+import requests
+
+API_KEY = "sk_YOUR_API_KEY"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+BASE = "https://api.superdocs.app/v1/chat"
+
+# Your AI agent's workflow
+tasks = [
+    "Create a project proposal with 4 sections: Overview, Goals, Timeline, Budget",
+    "Add specific milestones to the Timeline section",
+    "Add cost estimates to the Budget section",
+    "Review the entire document and fix any inconsistencies"
+]
+
+session_id = "ai-agent-proposal"
+document_html = ""
+
+for task in tasks:
+    response = requests.post(BASE, headers=HEADERS, json={
+        "message": task,
+        "session_id": session_id,
+        "document_html": document_html
+    })
+
+    data = response.json()
+    print(f"Task: {task}")
+    print(f"AI: {data['response'][:100]}...")
+
+    # Use the updated document for the next task
+    if data.get("document_changes"):
+        document_html = data["document_changes"]["updated_html"]
+
+print("\nFinal document ready.")
+```
+
+## Session persistence
+
+Use the same `session_id` across calls. SuperDocs remembers the full conversation, so your agent can reference previous changes:
+
+```python
+# First call
+requests.post(BASE, headers=HEADERS, json={
+    "message": "Draft a sales contract",
+    "session_id": "agent-contract",
+    "document_html": ""
+})
+
+# Later call — SuperDocs remembers the contract it drafted
+requests.post(BASE, headers=HEADERS, json={
+    "message": "Add a payment terms section based on net-30",
+    "session_id": "agent-contract",
+    "document_html": current_html
+})
+```
+
+## With MCP
+
+If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Integration](/mcp/setup) for setup. The AI agent gets native access to all 16 SuperDocs tools without writing any API client code.

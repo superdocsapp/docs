@@ -1,0 +1,41 @@
+---
+title: "MCP Setup"
+description: "Generate an MCP key from the SuperDocs Settings page and connect your AI tool."
+---
+
+# MCP Setup
+
+The MCP tab in Settings generates a dedicated API key and shows connection details for your AI tool.
+
+## Generate your MCP key
+
+1. Open [use.superdocs.app](https://use.superdocs.app) and sign in
+2. Click the **gear icon** to open Settings
+3. Go to the **MCP** tab
+4. Click **Generate MCP Key**
+
+A dedicated API key named "MCP Integration" is created. The connection details appear:
+
+| Field | Value |
+|-------|-------|
+| **Endpoint** | `https://api.superdocs.app/mcp` |
+| **Transport** | Streamable HTTP |
+| **Authorization** | `Bearer sk_...` (your generated key) |
+
+## Connect your AI tool
+
+Copy the config snippet shown in Settings and paste it into your tool's configuration file.
+
+For step-by-step setup instructions, see the MCP Integration guides:
+
+<CardGroup cols={3}>
+  <Card title="Claude Desktop" icon="message-bot" href="/mcp/claude-desktop">
+    JSON config for Claude Desktop
+  </Card>
+  <Card title="Cursor & VS Code" icon="code" href="/mcp/cursor-vscode">
+    Config for Cursor, VS Code, Windsurf
+  </Card>
+  <Card title="Claude Code" icon="terminal" href="/mcp/claude-code">
+    CLI command for Claude Code
+  </Card>
+</CardGroup>

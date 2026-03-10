@@ -1,0 +1,3371 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Universal Document AI API",
+    "description": "AI-powered document editing with multi-tenant organization support",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/v1/chat": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "chat"
+        ],
+        "summary": "Universal Chat",
+        "description": "Send a message to SuperDocs AI and receive an AI response with optional document edits.\n\nThe AI agent can edit, search, create, and delete document sections based on your message.\nProvide document_html to give the AI context about the current document state.\nReturns the AI response text and any document changes (HTML updates, creates, deletes).\nEach message that triggers a document action counts as one billable operation.\n\nOptional parameters:\n- model_tier: AI model to use ('core', 'turbo', 'pro', 'max'). Default: 'core'.\n- thinking_depth: Reasoning depth ('fast', 'balanced', 'deep'). Default: auto-selected.\n- approval_mode: Change review mode ('approve_all' or 'ask_every_time'). Default: 'approve_all'.\n- image_attachments: Inline images for vision-based analysis.\n\nWhen approval_mode is 'ask_every_time', the response includes pending changes\nrequiring review via the async workflow (use chat_async instead for full HITL support).",
+        "operationId": "chat",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversalChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "List Sessions",
+        "description": "List all document editing sessions for the authenticated user.\n\nReturns session IDs, message counts, timestamps, and preview text.\nUse a session_id from this list when calling the chat or history endpoints.",
+        "operationId": "list_sessions",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by user ID (deprecated - auth determines scope)",
+              "title": "User Id"
+            },
+            "description": "Filter by user ID (deprecated - auth determines scope)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Maximum number of sessions to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Maximum number of sessions to return"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/history": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Get Session History",
+        "description": "Get conversation history and document state for a specific session.\n\nReturns the full message history (user and AI messages), current document HTML content,\ndocument version, chunk count, and attachment list. Use this to restore a previous session\nor inspect what changes were made.",
+        "operationId": "get_session_history",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnhancedChatHistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/upload": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "attachments"
+        ],
+        "summary": "Upload Attachment",
+        "description": "Upload a document attachment to a session for AI reference.\n\nThe file is processed asynchronously \u2014 text is extracted, converted, and indexed\nso the AI can search and reference it during chat. Use GET /v1/attachments/status/{session_id}\nto check processing progress.\n\nSupported file types: .pdf, .docx, .txt, .rtf, .md (max 50 MB).\nReturns a job_id for tracking the processing status.",
+        "operationId": "upload_attachment",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_attachment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/{attachment_id}": {
+      "delete": {
+        "tags": [
+          "v1",
+          "mcp",
+          "attachments"
+        ],
+        "summary": "Cancel Attachment",
+        "description": "Remove an attachment from a session or cancel its processing.\n\nIf the attachment is still being processed, cancels the processing job.\nIf processing completed, removes the attachment from the session.\nThe attachment_id can be either the final attachment ID or the job ID (during processing).",
+        "operationId": "delete_attachment",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/status/{session_id}": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "attachments"
+        ],
+        "summary": "Get Session Attachments",
+        "description": "Get all attachments and their processing status for a session.\n\nReturns ready attachments (with metadata like filename, type, size, chunk count)\nand in-progress processing jobs. Use this to check if an uploaded attachment is ready\nfor the AI to reference.",
+        "operationId": "get_attachment_status",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/documents/upload": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Upload Document",
+        "description": "Legacy document upload endpoint - redirects to attachments/upload",
+        "operationId": "upload_document_v1_documents_upload_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_v1_documents_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "jobs"
+        ],
+        "summary": "List Jobs",
+        "description": "List all async jobs for the authenticated user.\n\nReturns job IDs, statuses, and results. Use this after calling chat/async\nto find your pending or completed jobs. Filter by status (pending, processing, completed, failed).",
+        "operationId": "list_jobs",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by job status",
+              "title": "Status"
+            },
+            "description": "Filter by job status"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Maximum number of jobs to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Maximum number of jobs to return"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "jobs"
+        ],
+        "summary": "Get Job",
+        "description": "Get the status and result of a specific async job.\n\nPoll this endpoint after starting an async chat request.\nPossible statuses: pending, in_progress, awaiting_approval, completed, failed, cancelled.\n\nWhen status is 'awaiting_approval', the metadata.pending_changes array contains\nthe proposed changes (change_id, operation, chunk_id, old_html, new_html, ai_explanation).\nCall POST /v1/chat/{session_id}/approve to approve or deny them.\n\nWhen status is 'completed', the result field contains the AI response and any document changes.",
+        "operationId": "get_job",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Cancel a pending or in-progress async job.\n\nOnly jobs with status 'pending' or 'processing' can be cancelled.\nReturns the updated job details with status 'cancelled'.",
+        "operationId": "cancel_job",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/jobs": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "jobs"
+        ],
+        "summary": "Get Session Jobs",
+        "description": "Get all async jobs for a specific session, sorted by most recent first.\n\nReturns job IDs, statuses, and results for all operations in the session.\nUseful for checking if any jobs are still running or awaiting approval.",
+        "operationId": "get_session_jobs",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Maximum number of jobs to return",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Maximum number of jobs to return"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/async": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "chat"
+        ],
+        "summary": "Async Chat",
+        "description": "Start an asynchronous chat request and return a job ID for polling.\n\nUse this for long-running document operations. The request is processed in the background.\nPoll the job status using GET /v1/jobs/{job_id} until status is 'completed' or 'failed'.\nThe result contains the AI response and any document changes, same as the sync chat endpoint.\n\nOptional parameters:\n- model_tier: AI model to use ('core', 'turbo', 'pro', 'max'). Default: 'core'.\n- thinking_depth: Reasoning depth ('fast', 'balanced', 'deep'). Default: auto-selected.\n- approval_mode: Change review mode ('approve_all' or 'ask_every_time'). Default: 'approve_all'.\n- image_attachments: Inline images for vision-based analysis.\n\nHITL workflow (approval_mode='ask_every_time'):\n1. Poll GET /v1/jobs/{job_id} \u2014 status transitions to 'awaiting_approval'\n2. Read metadata.pending_changes for proposed edits (change_id, operation, old_html, new_html)\n3. POST /v1/chat/{session_id}/approve with approved=true/false per change\n4. Continue polling \u2014 job resumes and eventually reaches 'completed'",
+        "operationId": "chat_async",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsyncChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/{session_id}/stream": {
+      "get": {
+        "tags": [
+          "v1",
+          "chat"
+        ],
+        "summary": "Stream Chat Progress",
+        "description": "Stream real-time progress for a chat job using Server-Sent Events (SSE).\n\nOpens an SSE connection that streams events as the AI processes your request.\nUse this with the job_id returned from POST /v1/chat/async.\n\nEvent types:\n- 'intermediate': Progress updates during processing (content, sequence, timestamp).\n- 'proposed_change': A document change proposed for review (when approval_mode is 'ask_every_time').\n- 'final': Processing complete. Contains the full result with AI response and document changes.\n- 'usage': Billing data emitted after 'final' (monthly_used, monthly_limit, monthly_remaining).\n- 'error': An error occurred (job failed, cancelled, or not found).\n\nAuthentication: Pass a token or api_key as a query parameter (required for EventSource which cannot set headers).",
+        "operationId": "stream_chat_progress_v1_chat__session_id__stream_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Job ID to stream progress for",
+              "title": "Job Id"
+            },
+            "description": "Job ID to stream progress for"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Authentication token (query parameter for EventSource compatibility)",
+              "title": "Token"
+            },
+            "description": "Authentication token (query parameter for EventSource compatibility)"
+          },
+          {
+            "name": "api_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "API key (query parameter for EventSource compatibility)",
+              "title": "Api Key"
+            },
+            "description": "API key (query parameter for EventSource compatibility)"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/{session_id}/approve": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "approval"
+        ],
+        "summary": "Approve Change",
+        "description": "Approve or deny a proposed AI change during human-in-the-loop (HITL) review.\n\nWhen a job has status 'awaiting_approval', the AI has proposed document changes\nthat require user review. Poll GET /v1/jobs/{job_id} to see the pending_changes\nin the result field, then call this endpoint to approve or deny.\n\nFor single changes: set approved=true/false and optionally provide feedback.\nFor batch changes: provide a 'changes' array with per-change decisions.\nAfter approval, the job resumes processing and eventually reaches 'completed'.",
+        "operationId": "approve_change",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/poll/{session_id}": {
+      "get": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Poll Session Updates",
+        "description": "Long-poll for real-time job updates on a session (B2B organizations only).\n\nReturns immediately if there are recent job updates, or holds the connection\nopen up to the specified timeout. Use the 'since' parameter to avoid receiving\nduplicate updates.",
+        "operationId": "poll_session_updates_v1_poll__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 8601 timestamp \u2014 only return updates after this time",
+              "title": "Since"
+            },
+            "description": "ISO 8601 timestamp \u2014 only return updates after this time"
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Long polling timeout in seconds (max 1800 = 30 minutes)",
+              "default": 1800,
+              "title": "Timeout"
+            },
+            "description": "Long polling timeout in seconds (max 1800 = 30 minutes)"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/upload": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "templates"
+        ],
+        "summary": "Upload User Template",
+        "description": "Upload a document file as a personal/organization template.\n\nThe file is processed synchronously: text extraction, HTML conversion, and content indexing.\nSupported formats: .docx, .pdf, .txt, .rtf, .md\nTemplates are scoped to the uploading user or organization.",
+        "operationId": "upload_user_template",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_user_template"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "templates"
+        ],
+        "summary": "List User Templates",
+        "description": "List all active templates for the authenticated user or organization.\n\nReturns template metadata including name, file type, size, and creation date.\nTemplates are scoped \u2014 users see only their own templates, organizations see theirs.",
+        "operationId": "list_user_templates",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/{template_id}": {
+      "delete": {
+        "tags": [
+          "v1",
+          "mcp",
+          "templates"
+        ],
+        "summary": "Delete User Template",
+        "description": "Delete a template by ID. Only the owner (user or organization) can delete their templates.\n\nThe template is soft-deleted and will no longer appear in list results.",
+        "operationId": "delete_user_template",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Current User Profile",
+        "description": "Get current user's profile information\n\nReturns user profile with subscription tier and usage limits",
+        "operationId": "get_current_user_profile_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update User Profile",
+        "description": "Update current user's profile\n\nAllows updating display name, timezone, language, and preferences",
+        "operationId": "update_user_profile_v1_users_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/users/me/usage": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User Usage Stats",
+        "description": "Get detailed usage statistics for current user\n\nReturns operation counts, token usage, and success rates by operation type",
+        "operationId": "get_user_usage_stats_v1_users_me_usage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageStatsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/users/me/sessions": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User Sessions",
+        "description": "List all chat sessions for current user\n\nReturns list of sessions with last activity and message counts",
+        "operationId": "get_user_sessions_v1_users_me_sessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserSessionResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get User Sessions V1 Users Me Sessions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/users/me/sessions/{session_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User Session",
+        "description": "Delete a specific chat session\n\nRemoves all messages for the given session ID (user must own the session)",
+        "operationId": "delete_user_session_v1_users_me_sessions__session_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me/limits": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Check User Limits",
+        "description": "Check current usage limits and remaining operations\n\nReturns real-time usage information with reset date",
+        "operationId": "check_user_limits_v1_users_me_limits_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/users/me/api-keys": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List Api Keys",
+        "description": "List all API keys for the current user (masked).\n\nReturns key prefix and last 4 characters for identification.",
+        "operationId": "list_api_keys_v1_users_me_api_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyListItem"
+                  },
+                  "type": "array",
+                  "title": "Response List Api Keys V1 Users Me Api Keys Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create Api Key",
+        "description": "Create a new API key for the current user.\n\nThe raw key is returned ONCE in the response. It cannot be retrieved again.",
+        "operationId": "create_api_key_v1_users_me_api_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateApiKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/users/me/api-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Revoke Api Key",
+        "description": "Revoke (soft delete) an API key.\n\nThe key will be marked as inactive and can no longer be used for authentication.",
+        "operationId": "revoke_api_key_v1_users_me_api_keys__key_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/checkout": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Create Checkout",
+        "description": "Create a checkout session to upgrade your subscription.\n\nReturns a URL to redirect the user to the hosted payment page.\nOnly allows upgrading to a higher tier than the current plan.",
+        "operationId": "create_checkout_v1_billing_checkout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/billing/portal": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Get Portal",
+        "description": "Get a URL to the customer billing portal.\n\nThe portal allows managing your subscription, viewing invoices,\nand updating your payment method.",
+        "operationId": "get_portal_v1_billing_portal_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "mcp"
+        ],
+        "summary": "Health Check",
+        "description": "Check if the SuperDocs API is healthy and responsive.\n\nReturns 200 with status 'healthy' if the service is running.\nUse this to verify connectivity before making other API calls.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiKeyListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Key identifier (UUID)."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Label assigned to this key."
+          },
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix",
+            "description": "First 7 characters of the key (e.g., 'sk_a1b2')."
+          },
+          "last_four": {
+            "type": "string",
+            "title": "Last Four",
+            "description": "Last 4 characters of the key for identification."
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Whether the key is active. Revoked keys show as false."
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 timestamp when the key was created."
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At",
+            "description": "ISO 8601 timestamp of last use, or null if never used."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "key_prefix",
+          "last_four",
+          "is_active",
+          "created_at"
+        ],
+        "title": "ApiKeyListItem",
+        "description": "API key summary (masked for security)."
+      },
+      "ApprovalRequest": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Job ID that is awaiting approval."
+          },
+          "change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Id",
+            "description": "Specific change to approve/deny (for individual decisions). Get change IDs from the job's pending_changes."
+          },
+          "approved": {
+            "type": "boolean",
+            "title": "Approved",
+            "description": "Whether to approve (true) or deny (false) the change."
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback",
+            "description": "Optional feedback explaining why a change was denied. Helps the AI adjust future suggestions."
+          },
+          "changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes",
+            "description": "Batch decisions: array of {change_id, approved, feedback} objects. Use for 'Accept All' or 'Deny All'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "approved"
+        ],
+        "title": "ApprovalRequest",
+        "description": "Approve or deny proposed AI document changes."
+      },
+      "AsyncChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Your message to the AI assistant."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique session identifier. Reuse to continue a conversation."
+          },
+          "document_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Html",
+            "description": "Current document HTML. Include data-chunk-id attributes on elements to enable targeted AI edits."
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "User identifier. Automatically set from authentication \u2014 typically omit this."
+          },
+          "image_attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ImageAttachmentData"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Attachments",
+            "description": "Inline images for vision-based analysis (base64-encoded)."
+          },
+          "async_mode": {
+            "type": "boolean",
+            "title": "Async Mode",
+            "description": "Must be true for async processing. Included for backward compatibility.",
+            "default": true
+          },
+          "model_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Tier",
+            "description": "AI model to use: 'core' (default, fast), 'turbo' (fastest), 'pro' (advanced reasoning), 'max' (most capable)."
+          },
+          "thinking_depth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Depth",
+            "description": "Reasoning depth: 'fast', 'balanced' (default), or 'deep'. Controls how much analysis the AI performs."
+          },
+          "approval_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Mode",
+            "description": "Change review mode: 'approve_all' (default, auto-applies changes) or 'ask_every_time' (pauses for your review)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "session_id"
+        ],
+        "title": "AsyncChatRequest",
+        "description": "Start an async chat request that processes in the background."
+      },
+      "AsyncChatResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Job identifier. Poll GET /v1/jobs/{job_id} for status and results."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Session identifier for this conversation."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Initial job status (always 'pending')."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable status message.",
+            "default": "Chat request queued for processing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "session_id",
+          "status"
+        ],
+        "title": "AsyncChatResponse",
+        "description": "Response from starting an async chat request."
+      },
+      "Body_upload_attachment": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "file"
+        ],
+        "title": "Body_upload_attachment"
+      },
+      "Body_upload_document_v1_documents_upload_post": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "file"
+        ],
+        "title": "Body_upload_document_v1_documents_upload_post"
+      },
+      "Body_upload_user_template": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_user_template"
+      },
+      "ChatResponse": {
+        "properties": {
+          "response": {
+            "type": "string",
+            "title": "Response",
+            "description": "AI assistant's response text."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Session identifier for this conversation."
+          },
+          "document_changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentChanges"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Document modifications made by the AI. Present only when the document was changed."
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Operation usage data. Present for authenticated users with usage tracking."
+          }
+        },
+        "type": "object",
+        "required": [
+          "response",
+          "session_id"
+        ],
+        "title": "ChatResponse",
+        "description": "AI response with optional document changes and usage data.",
+        "examples": [
+          {
+            "document_changes": {
+              "changes_summary": "Document updated by AI",
+              "updated_html": "<div data-chunk-id=\"550e8400-e29b-41d4-a716-446655440000\"><h2>Section 3</h2><p>Updated content...</p></div>",
+              "version_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+            },
+            "response": "I've added a confidentiality clause to section 3 covering non-disclosure obligations.",
+            "session_id": "session_abc123",
+            "usage": {
+              "monthly_limit": 500,
+              "monthly_remaining": 458,
+              "monthly_used": 42,
+              "subscription_tier": "free",
+              "was_billable": true
+            }
+          }
+        ]
+      },
+      "CheckoutRequest": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "title": "Tier",
+            "description": "Target subscription tier: 'plus' ($20/mo, 2000 ops) or 'pro' ($99/mo, 10000 ops)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier"
+        ],
+        "title": "CheckoutRequest",
+        "description": "Initiate a subscription upgrade."
+      },
+      "CheckoutResponse": {
+        "properties": {
+          "checkout_url": {
+            "type": "string",
+            "title": "Checkout Url",
+            "description": "URL to redirect the user to for payment. Opens the hosted checkout page."
+          }
+        },
+        "type": "object",
+        "required": [
+          "checkout_url"
+        ],
+        "title": "CheckoutResponse",
+        "description": "Checkout session for subscription upgrade."
+      },
+      "CreateApiKeyRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "description": "A label for this key (e.g., 'My App', 'CI Pipeline')."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateApiKeyRequest",
+        "description": "Create a new API key."
+      },
+      "CreateApiKeyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Key identifier (UUID). Use this to revoke the key later."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Label you assigned to this key."
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "The full API key (sk_... format). Copy this now \u2014 it cannot be retrieved again."
+          },
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix",
+            "description": "First 7 characters of the key (e.g., 'sk_a1b2') for identification."
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 timestamp when the key was created."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "key",
+          "key_prefix",
+          "created_at"
+        ],
+        "title": "CreateApiKeyResponse",
+        "description": "Newly created API key. The raw key is shown only once \u2014 save it immediately."
+      },
+      "DocumentChanges": {
+        "properties": {
+          "updated_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Html",
+            "description": "Full updated document HTML with data-chunk-id attributes. Apply this to your editor to sync the document."
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id",
+            "description": "Document version identifier. Changes on every modification."
+          },
+          "changes_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes Summary",
+            "description": "Human-readable summary of what was changed."
+          },
+          "requires_approval": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires Approval",
+            "description": "If true, changes need review via the approve endpoint before being applied."
+          },
+          "pending_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PendingChange"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Changes",
+            "description": "Proposed changes awaiting approval. Present when requires_approval is true."
+          },
+          "changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes",
+            "description": "History of individual changes applied during this request."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "DocumentChanges",
+        "description": "Document modifications produced by the AI assistant."
+      },
+      "DocumentState": {
+        "properties": {
+          "html_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html Content",
+            "description": "Full document HTML content with data-chunk-id attributes."
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id",
+            "description": "Document version identifier (UUID string)."
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count",
+            "description": "Number of content sections in the document.",
+            "default": 0
+          },
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified",
+            "description": "ISO 8601 timestamp of the last modification."
+          },
+          "attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachments",
+            "description": "Session attachments. Each item has: id (string), filename (string), file_extension (string), processing_status ('ready', 'processing', or 'failed')."
+          }
+        },
+        "type": "object",
+        "title": "DocumentState",
+        "description": "Current document state for session restoration."
+      },
+      "EnhancedChatHistoryResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Session identifier."
+          },
+          "messages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Messages",
+            "description": "Ordered list of messages. Each item has: id (string), sender ('user' or 'ai'), content (string), timestamp (ISO 8601), turn_index (int)."
+          },
+          "document_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current document state. Present if the session has an active document."
+          },
+          "editor_action": {
+            "type": "string",
+            "title": "Editor Action",
+            "description": "Frontend instruction: 'update' (load document_state HTML into editor), 'clear' (reset editor), or 'keep' (no change).",
+            "default": "keep"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "messages"
+        ],
+        "title": "EnhancedChatHistoryResponse",
+        "description": "Conversation history with document state and restoration instructions."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ImageAttachmentData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique identifier for this image."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Original filename of the image."
+          },
+          "base64Data": {
+            "type": "string",
+            "title": "Base64Data",
+            "description": "Base64-encoded image data."
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype",
+            "description": "MIME type (e.g., 'image/png', 'image/jpeg')."
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "File size in bytes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "base64Data",
+          "mimeType",
+          "size"
+        ],
+        "title": "ImageAttachmentData",
+        "description": "Inline image attachment for vision-based analysis."
+      },
+      "JobListResponse": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobResponse"
+            },
+            "type": "array",
+            "title": "Jobs",
+            "description": "Array of job details."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of jobs returned."
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "total"
+        ],
+        "title": "JobListResponse",
+        "description": "List of async jobs."
+      },
+      "JobMetadata": {
+        "properties": {
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename",
+            "description": "Uploaded filename (attachment processing jobs)."
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size",
+            "description": "File size in bytes (attachment processing jobs)."
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type",
+            "description": "MIME type of uploaded file (attachment processing jobs)."
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Original user message (chat jobs)."
+          },
+          "document_html_provided": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Html Provided",
+            "description": "Whether document HTML was included in the request (chat jobs)."
+          },
+          "pending_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PendingChange"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Changes",
+            "description": "Proposed changes awaiting approval. Present when job status is 'awaiting_approval'."
+          },
+          "intermediate_responses": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intermediate Responses",
+            "description": "Progress updates during processing. Each item has: type, content, sequence, timestamp."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "JobMetadata",
+        "description": "Job metadata. Contents vary by job type."
+      },
+      "JobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Unique job identifier. Use this to poll for status updates."
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id",
+            "description": "Organization that owns this job (null for user jobs)."
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "User that owns this job (null for organization jobs)."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Session associated with this job."
+          },
+          "job_type": {
+            "type": "string",
+            "title": "Job Type",
+            "description": "Type of job: 'chat' or 'attachment_processing'."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Current status: 'pending', 'in_progress', 'awaiting_approval', 'completed', 'failed', or 'cancelled'."
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 timestamp when the job was created."
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "ISO 8601 timestamp of the last status change."
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress",
+            "description": "Progress percentage (0-100)."
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Job output. Present when status is 'completed'. Contains AI response and document changes for chat jobs."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message. Present when status is 'failed'."
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Job metadata and context. Contains pending_changes when status is 'awaiting_approval'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "session_id",
+          "job_type",
+          "status",
+          "created_at",
+          "updated_at",
+          "progress"
+        ],
+        "title": "JobResponse",
+        "description": "Status and details of an async job."
+      },
+      "JobResult": {
+        "properties": {
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response",
+            "description": "AI response text (chat jobs)."
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Session identifier (chat jobs)."
+          },
+          "document_changes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentChanges"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Document modifications (chat jobs)."
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Usage tracking data (chat jobs)."
+          },
+          "attachment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Id",
+            "description": "Processed attachment identifier (attachment processing jobs)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "JobResult",
+        "description": "Job result data. Structure depends on job type."
+      },
+      "PendingChange": {
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "title": "Change Id",
+            "description": "Unique identifier for this proposed change."
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation",
+            "description": "Type of change: 'update_chunk', 'create_chunk', or 'delete_chunk'."
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id",
+            "description": "Target document section ID being modified or deleted."
+          },
+          "old_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Html",
+            "description": "Previous HTML content of the section (for updates)."
+          },
+          "new_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Html",
+            "description": "Proposed new HTML content (for updates and creates)."
+          },
+          "ai_explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Explanation",
+            "description": "AI-generated explanation of why this change was proposed."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "change_id",
+          "operation"
+        ],
+        "title": "PendingChange",
+        "description": "A proposed document change awaiting user approval."
+      },
+      "PortalResponse": {
+        "properties": {
+          "portal_url": {
+            "type": "string",
+            "title": "Portal Url",
+            "description": "URL to the billing portal for managing subscription, invoices, and payment method."
+          }
+        },
+        "type": "object",
+        "required": [
+          "portal_url"
+        ],
+        "title": "PortalResponse",
+        "description": "Customer billing portal access."
+      },
+      "SessionInfo": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique session identifier."
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "User who owns this session (null for organization sessions)."
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "ISO 8601 timestamp when the session was created."
+          },
+          "last_activity": {
+            "type": "string",
+            "title": "Last Activity",
+            "description": "ISO 8601 timestamp of the most recent activity."
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count",
+            "description": "Total number of messages in this session."
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview",
+            "description": "Preview of the first user message (up to 100 characters)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "created_at",
+          "last_activity",
+          "message_count",
+          "preview"
+        ],
+        "title": "SessionInfo",
+        "description": "Summary of a document editing session."
+      },
+      "SessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionInfo"
+            },
+            "type": "array",
+            "title": "Sessions",
+            "description": "Array of session summaries, ordered by most recent activity."
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total number of sessions returned."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions",
+          "total"
+        ],
+        "title": "SessionListResponse",
+        "description": "List of document editing sessions."
+      },
+      "UniversalChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Your message to the AI assistant."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique session identifier. Reuse to continue a conversation."
+          },
+          "document_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Html",
+            "description": "Current document HTML. Include data-chunk-id attributes on elements to enable targeted AI edits."
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "User identifier. Automatically set from authentication \u2014 typically omit this."
+          },
+          "image_attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ImageAttachmentData"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Attachments",
+            "description": "Inline images for vision-based analysis (base64-encoded)."
+          },
+          "model_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Tier",
+            "description": "AI model to use: 'core' (default, fast), 'turbo' (fastest), 'pro' (advanced reasoning), 'max' (most capable)."
+          },
+          "thinking_depth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Depth",
+            "description": "Reasoning depth: 'fast', 'balanced' (default), or 'deep'. Controls how much analysis the AI performs."
+          },
+          "approval_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Mode",
+            "description": "Change review mode: 'approve_all' (default, auto-applies changes) or 'ask_every_time' (pauses for your review)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "session_id"
+        ],
+        "title": "UniversalChatRequest",
+        "description": "Send a message to the AI assistant with optional document context.",
+        "examples": [
+          {
+            "approval_mode": "approve_all",
+            "document_html": "<div data-chunk-id=\"550e8400-e29b-41d4-a716-446655440000\"><h2>Section 3</h2><p>Terms and conditions...</p></div>",
+            "message": "Add a confidentiality clause to section 3",
+            "model_tier": "core",
+            "session_id": "session_abc123"
+          }
+        ]
+      },
+      "UpdateProfileRequest": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "New display name."
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone",
+            "description": "IANA timezone (e.g., 'America/New_York')."
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "description": "Preferred language code (e.g., 'en', 'es')."
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences",
+            "description": "User preferences to update (e.g., {approval_mode: 'ask_every_time', model_tier: 'pro'})."
+          }
+        },
+        "type": "object",
+        "title": "UpdateProfileRequest",
+        "description": "Update user profile fields."
+      },
+      "UsageInfo": {
+        "properties": {
+          "monthly_used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Used",
+            "description": "Total operations used this billing cycle."
+          },
+          "monthly_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Limit",
+            "description": "Maximum operations allowed per cycle. -1 means unlimited."
+          },
+          "monthly_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Remaining",
+            "description": "Operations remaining this cycle. -1 means unlimited."
+          },
+          "was_billable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Was Billable",
+            "description": "Whether this request counted as a billable operation."
+          },
+          "subscription_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Tier",
+            "description": "Current subscription tier: 'free', 'plus', 'pro', or 'enterprise'."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "UsageInfo",
+        "description": "Operation usage data for the current billing cycle."
+      },
+      "UsageStatsResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id",
+            "description": "User identifier."
+          },
+          "subscription_tier": {
+            "type": "string",
+            "title": "Subscription Tier",
+            "description": "Current plan: 'free', 'plus', 'pro', or 'enterprise'."
+          },
+          "monthly_limit": {
+            "type": "integer",
+            "title": "Monthly Limit",
+            "description": "Maximum operations allowed per month. -1 means unlimited."
+          },
+          "monthly_used": {
+            "type": "integer",
+            "title": "Monthly Used",
+            "description": "Operations used this billing cycle."
+          },
+          "monthly_remaining": {
+            "type": "integer",
+            "title": "Monthly Remaining",
+            "description": "Operations remaining this cycle."
+          },
+          "monthly_reset_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Reset At",
+            "description": "ISO 8601 timestamp when the monthly counter resets."
+          },
+          "total_sessions": {
+            "type": "integer",
+            "title": "Total Sessions",
+            "description": "Total number of chat sessions created."
+          },
+          "total_documents": {
+            "type": "integer",
+            "title": "Total Documents",
+            "description": "Total number of documents processed."
+          },
+          "total_operations": {
+            "type": "integer",
+            "title": "Total Operations",
+            "description": "Lifetime total operations across all billing cycles."
+          },
+          "current_month_stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Current Month Stats",
+            "description": "Breakdown of this month's operations by type, including counts, tokens used, and success rates."
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "subscription_tier",
+          "monthly_limit",
+          "monthly_used",
+          "monthly_remaining",
+          "total_sessions",
+          "total_documents",
+          "total_operations",
+          "current_month_stats"
+        ],
+        "title": "UsageStatsResponse",
+        "description": "Detailed usage statistics for the current billing cycle."
+      },
+      "UserProfileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique user identifier (UUID)."
+          },
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "User's email address."
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "User's display name."
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "URL to user's profile photo."
+          },
+          "email_verified": {
+            "type": "boolean",
+            "title": "Email Verified",
+            "description": "Whether the user's email has been verified."
+          },
+          "auth_provider": {
+            "type": "string",
+            "title": "Auth Provider",
+            "description": "Authentication method: 'email' or 'google'."
+          },
+          "subscription_tier": {
+            "type": "string",
+            "title": "Subscription Tier",
+            "description": "Current plan: 'free', 'plus', 'pro', or 'enterprise'."
+          },
+          "subscription_status": {
+            "type": "string",
+            "title": "Subscription Status",
+            "description": "Subscription status: 'active', 'canceled', or 'past_due'."
+          },
+          "monthly_operation_limit": {
+            "type": "integer",
+            "title": "Monthly Operation Limit",
+            "description": "Maximum operations allowed per month. -1 means unlimited."
+          },
+          "monthly_operations_used": {
+            "type": "integer",
+            "title": "Monthly Operations Used",
+            "description": "Operations used this billing cycle."
+          },
+          "monthly_remaining": {
+            "type": "integer",
+            "title": "Monthly Remaining",
+            "description": "Operations remaining this cycle."
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences",
+            "description": "User preferences (e.g., approval_mode, model_tier)."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "ISO 8601 timestamp when the account was created."
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At",
+            "description": "ISO 8601 timestamp of the last login."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "email_verified",
+          "auth_provider",
+          "subscription_tier",
+          "subscription_status",
+          "monthly_operation_limit",
+          "monthly_operations_used",
+          "monthly_remaining"
+        ],
+        "title": "UserProfileResponse",
+        "description": "User profile with subscription and usage information."
+      },
+      "UserSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique session identifier."
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At",
+            "description": "ISO 8601 timestamp of the most recent message."
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count",
+            "description": "Total number of messages in this session."
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "message_count"
+        ],
+        "title": "UserSessionResponse",
+        "description": "Summary of a user's chat session."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.superdocs.app"
+    }
+  ]
+}

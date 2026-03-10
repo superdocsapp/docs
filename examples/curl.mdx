@@ -1,0 +1,241 @@
+---
+title: "curl Examples"
+description: "Copy-paste ready curl commands for every key SuperDocs API operation."
+---
+
+# curl Examples
+
+Replace `sk_YOUR_API_KEY` with your actual API key in all commands.
+
+## Chat
+
+### Send a message with document
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Add a summary section at the top",
+    "session_id": "curl-demo",
+    "document_html": "<h1>Report</h1><p>Q4 revenue increased 15%.</p>"
+  }'
+```
+
+### Send a message without document
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Draft a project proposal outline",
+    "session_id": "curl-demo"
+  }'
+```
+
+### Chat with model selection
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Analyze this contract for potential risks",
+    "session_id": "curl-demo",
+    "document_html": "...",
+    "model_tier": "max",
+    "thinking_depth": "deep"
+  }'
+```
+
+## Async chat
+
+### Start an async request
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/async \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Rewrite this document in formal language",
+    "session_id": "async-demo",
+    "document_html": "..."
+  }'
+```
+
+## Jobs
+
+### Check job status
+
+```bash
+curl https://api.superdocs.app/v1/jobs/JOB_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### List all jobs
+
+```bash
+curl https://api.superdocs.app/v1/jobs \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Cancel a job
+
+```bash
+curl -X POST https://api.superdocs.app/v1/jobs/JOB_ID/cancel \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Sessions
+
+### List sessions
+
+```bash
+curl https://api.superdocs.app/v1/sessions \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Get session history
+
+```bash
+curl https://api.superdocs.app/v1/sessions/SESSION_ID/history \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Get session jobs
+
+```bash
+curl https://api.superdocs.app/v1/sessions/SESSION_ID/jobs \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Delete a session
+
+```bash
+curl -X DELETE https://api.superdocs.app/v1/users/me/sessions/SESSION_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Attachments
+
+### Upload a file
+
+```bash
+curl -X POST https://api.superdocs.app/v1/attachments/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@document.pdf" \
+  -F "session_id=my-session"
+```
+
+### Check attachment status
+
+```bash
+curl https://api.superdocs.app/v1/attachments/status/SESSION_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Delete an attachment
+
+```bash
+curl -X DELETE "https://api.superdocs.app/v1/attachments/ATTACHMENT_ID?session_id=my-session" \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Templates
+
+### Upload a template
+
+```bash
+curl -X POST https://api.superdocs.app/v1/templates/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@template.docx"
+```
+
+### List templates
+
+```bash
+curl https://api.superdocs.app/v1/templates \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Delete a template
+
+```bash
+curl -X DELETE https://api.superdocs.app/v1/templates/TEMPLATE_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## HITL approval
+
+### Approve a single change
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/SESSION_ID/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "change_id": "CHANGE_ID",
+    "approved": true
+  }'
+```
+
+### Approve multiple changes
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/SESSION_ID/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "approved": true,
+    "changes": [
+      {"change_id": "ch_1", "approved": true},
+      {"change_id": "ch_2", "approved": false}
+    ]
+  }'
+```
+
+### Deny with feedback
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/SESSION_ID/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "change_id": "CHANGE_ID",
+    "approved": false,
+    "feedback": "Keep the original wording but add a reference to GDPR"
+  }'
+```
+
+## User management
+
+### Get profile
+
+```bash
+curl https://api.superdocs.app/v1/users/me \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Get usage stats
+
+```bash
+curl https://api.superdocs.app/v1/users/me/usage \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Get tier limits
+
+```bash
+curl https://api.superdocs.app/v1/users/me/limits \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+## Health check
+
+```bash
+curl https://api.superdocs.app/health
+```

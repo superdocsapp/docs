@@ -1,0 +1,83 @@
+---
+title: "Sessions"
+description: "Sessions persist conversation history and document state across requests. You choose the session ID."
+---
+
+# Sessions
+
+A session holds your conversation history and document state. Reuse a session ID to pick up where you left off.
+
+## How sessions work
+
+You choose the `session_id` — any string you want. The API stores the conversation and document state for that session.
+
+```bash
+# First request — starts a new session
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Add an introduction section",
+    "session_id": "project-proposal-v1",
+    "document_html": "<h1>Project Proposal</h1>"
+  }'
+
+# Second request — continues the same session
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Now add a budget section",
+    "session_id": "project-proposal-v1",
+    "document_html": "<div data-chunk-id=\"...\">...updated HTML from previous response...</div>"
+  }'
+```
+
+The AI remembers the full conversation. On the second request, it knows about the introduction it just wrote.
+
+## Persistence
+
+Sessions persist across server restarts. You can close your browser, come back tomorrow, and resume with the same `session_id`.
+
+## List sessions
+
+```bash
+curl https://api.superdocs.app/v1/sessions \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+Returns session IDs, message counts, timestamps, and a preview of the first message.
+
+## Load session history
+
+```bash
+curl https://api.superdocs.app/v1/sessions/project-proposal-v1/history \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+The response includes:
+- `messages` — Full conversation history
+- `document_state` — Current document HTML, version ID, and attachment list
+- `editor_action` — What to do with the document: `"update"` (load the HTML), `"clear"` (reset), or `"keep"` (no change)
+
+## Session isolation
+
+Sessions are isolated per user. Your sessions are never visible to other users.
+
+## B2B session management
+
+If you're serving multiple end users through a single API key, manage session IDs per user on your end. For example, prefix session IDs with your user's identifier:
+
+```
+session_id: "user_123_draft-contract"
+session_id: "user_456_meeting-notes"
+```
+
+This keeps each user's conversations and documents separate.
+
+## Delete a session
+
+```bash
+curl -X DELETE https://api.superdocs.app/v1/users/me/sessions/project-proposal-v1 \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```

@@ -1,0 +1,38 @@
+---
+title: "Documents"
+description: "How to send document HTML to the API and handle the updated HTML that comes back."
+---
+
+# Documents
+
+Send your document HTML in `document_html`. The AI reads it, makes changes, and returns updated HTML in `document_changes.updated_html`.
+
+**The one rule:** Render the returned HTML as-is in your editor. When sending it back on the next request, send the full document HTML exactly as your editor has it. Don't programmatically strip, modify, or reformat the HTML. If your editor or HTML sanitizer removes custom `data-*` attributes, configure it to preserve them.
+
+## Example flow
+
+```python
+import requests
+
+API_KEY = "sk_YOUR_API_KEY"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+
+# 1. Send a document
+response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+    "message": "Add a summary at the top",
+    "session_id": "my-doc",
+    "document_html": "<h1>Report</h1><p>Q4 revenue increased by 15%.</p>"
+})
+
+data = response.json()
+updated_html = data["document_changes"]["updated_html"]
+
+# 2. Send the updated HTML back on the next request
+response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+    "message": "Make the summary more concise",
+    "session_id": "my-doc",
+    "document_html": updated_html  # send back exactly as received
+})
+```
+
+The returned HTML contains `data-chunk-id` attributes on elements. These enable the AI to make targeted edits to specific sections without reprocessing the entire document.

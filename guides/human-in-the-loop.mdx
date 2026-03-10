@@ -1,0 +1,153 @@
+---
+title: "Human-in-the-Loop"
+description: "Review and approve AI-proposed document changes before they're applied, using the HITL approval workflow."
+---
+
+# Human-in-the-Loop
+
+By default, the AI applies changes immediately. Set `approval_mode` to `"ask_every_time"` to review changes before they take effect.
+
+HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wait for your approval.
+
+## End-to-end workflow
+
+### 1. Send a request with approval mode
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/async \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Update section 3 to include GDPR compliance language",
+    "session_id": "contract-review",
+    "document_html": "...",
+    "approval_mode": "ask_every_time"
+  }'
+```
+
+### 2. Poll for approval status
+
+```bash
+curl https://api.superdocs.app/v1/jobs/JOB_ID \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+When `status` is `"awaiting_approval"`, check `metadata.pending_changes`:
+
+```json
+{
+  "status": "awaiting_approval",
+  "metadata": {
+    "pending_changes": [
+      {
+        "change_id": "ch_1",
+        "operation": "update_chunk",
+        "chunk_id": "550e8400-e29b-41d4-a716-446655440000",
+        "old_html": "<p>Original section 3 content...</p>",
+        "new_html": "<p>Updated content with GDPR compliance...</p>",
+        "ai_explanation": "Added GDPR data processing requirements"
+      }
+    ]
+  }
+}
+```
+
+### 3. Approve or deny changes
+
+**Approve a single change:**
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/contract-review/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "change_id": "ch_1",
+    "approved": true
+  }'
+```
+
+**Approve all changes at once:**
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/contract-review/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "approved": true,
+    "changes": [
+      {"change_id": "ch_1", "approved": true},
+      {"change_id": "ch_2", "approved": false}
+    ]
+  }'
+```
+
+**Deny with feedback:**
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/contract-review/approve \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_id": "JOB_ID",
+    "change_id": "ch_1",
+    "approved": false,
+    "feedback": "Keep the original language but add a GDPR reference link"
+  }'
+```
+
+### 4. Continue polling
+
+After approval, the job resumes processing. Poll until `status` is `"completed"` to get the final result.
+
+## Complete Python example
+
+```python
+import time
+import requests
+
+API_KEY = "sk_YOUR_API_KEY"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+BASE = "https://api.superdocs.app"
+
+# 1. Start with approval mode
+response = requests.post(f"{BASE}/v1/chat/async", headers=HEADERS, json={
+    "message": "Rewrite the liability section",
+    "session_id": "contract-review",
+    "document_html": "...",
+    "approval_mode": "ask_every_time"
+})
+job_id = response.json()["job_id"]
+
+# 2. Poll and handle approvals
+while True:
+    job = requests.get(f"{BASE}/v1/jobs/{job_id}", headers=HEADERS).json()
+
+    if job["status"] == "completed":
+        print("Done:", job["result"]["response"])
+        break
+
+    elif job["status"] == "failed":
+        print("Error:", job["error"])
+        break
+
+    elif job["status"] == "awaiting_approval":
+        changes = job["metadata"]["pending_changes"]
+        for change in changes:
+            print(f"\nChange {change['change_id']}:")
+            print(f"  Operation: {change['operation']}")
+            print(f"  Explanation: {change.get('ai_explanation', 'N/A')}")
+            print(f"  Old: {change.get('old_html', 'N/A')[:100]}")
+            print(f"  New: {change.get('new_html', 'N/A')[:100]}")
+
+        # Approve all changes
+        requests.post(f"{BASE}/v1/chat/contract-review/approve", headers=HEADERS, json={
+            "job_id": job_id,
+            "approved": True,
+            "changes": [{"change_id": c["change_id"], "approved": True} for c in changes]
+        })
+        print("\nApproved all changes, continuing...")
+
+    time.sleep(2)
+```

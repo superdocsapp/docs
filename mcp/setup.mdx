@@ -1,0 +1,49 @@
+---
+title: "MCP Overview"
+description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to SuperDocs using the Model Context Protocol (MCP)."
+---
+
+# MCP Integration
+
+The Model Context Protocol (MCP) lets AI tools connect to external services. SuperDocs exposes an MCP server with 16 tools for document editing, session management, attachments, and more.
+
+When connected, SuperDocs tools appear natively in your AI tool — no API client code needed.
+
+## Prerequisites
+
+- A SuperDocs account ([sign up free](https://use.superdocs.app))
+- An API key (see [API Keys](/account/api-keys) or [MCP Setup](/account/mcp-setup))
+
+## Connection details
+
+| Field | Value |
+|-------|-------|
+| **Endpoint** | `https://api.superdocs.app/mcp` |
+| **Transport** | Streamable HTTP |
+| **Auth header** | `Authorization: Bearer sk_YOUR_API_KEY` |
+
+## Supported clients
+
+<CardGroup cols={3}>
+  <Card title="Claude Desktop" icon="message-bot" href="/mcp/claude-desktop">
+    Add to claude_desktop_config.json
+  </Card>
+  <Card title="Cursor & VS Code" icon="code" href="/mcp/cursor-vscode">
+    Add to .cursor/mcp.json or VS Code settings
+  </Card>
+  <Card title="Claude Code" icon="terminal" href="/mcp/claude-code">
+    One CLI command
+  </Card>
+</CardGroup>
+
+<Tip>
+These are just the most popular clients. **Any application with an MCP client** can connect to SuperDocs — including your own custom AI agents, internal business tools, or startup products. If it speaks MCP, it works with SuperDocs. Just point it at the endpoint and auth details above.
+</Tip>
+
+## Quick test
+
+After connecting, ask your AI tool:
+
+> "Use the SuperDocs health tool to check the API status"
+
+If the connection is working, you'll get back `{"status": "healthy"}`.

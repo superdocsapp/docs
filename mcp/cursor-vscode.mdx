@@ -1,0 +1,80 @@
+---
+title: "Cursor & VS Code"
+description: "Connect SuperDocs to Cursor, VS Code, or Windsurf via MCP configuration."
+---
+
+# Cursor, VS Code & Windsurf
+
+Connect SuperDocs to your code editor for AI-powered document editing alongside your development workflow.
+
+## Cursor
+
+### 1. Create the config file
+
+Create `.cursor/mcp.json` in your project root (or global config):
+
+```json .cursor/mcp.json
+{
+  "mcpServers": {
+    "superdocs": {
+      "url": "https://api.superdocs.app/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer sk_YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### 2. Restart Cursor
+
+The SuperDocs tools will appear in Cursor's AI capabilities.
+
+## VS Code
+
+### 1. Open MCP settings
+
+Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for "MCP: Add Server" or edit your `settings.json`:
+
+```json settings.json
+{
+  "mcp.servers": {
+    "superdocs": {
+      "url": "https://api.superdocs.app/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer sk_YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### 2. Restart VS Code
+
+## Windsurf
+
+Add the same configuration to Windsurf's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "superdocs": {
+      "url": "https://api.superdocs.app/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer sk_YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+## Test your connection
+
+In your editor's AI chat, type:
+
+> "Check the SuperDocs API health"
+
+If configured correctly, the AI will call the `health` tool and report the API status.
