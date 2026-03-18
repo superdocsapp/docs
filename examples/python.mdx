@@ -52,6 +52,50 @@ data = response.json()
 current_html = data["document_changes"]["updated_html"]
 ```
 
+## Upload document and edit it
+
+```python
+# Upload a file as the active document
+upload = requests.post(f"{BASE}/v1/documents/upload",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    files={"file": open("contract.docx", "rb")},
+    data={"session_id": "doc-edit"}
+)
+doc = upload.json()
+print(f"Loaded {doc['filename']} ({doc['chunks_count']} sections)")
+
+# Edit it with AI
+response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
+    "message": "Simplify the language throughout",
+    "session_id": "doc-edit",
+    "document_html": doc["html"]
+})
+updated_html = response.json()["document_changes"]["updated_html"]
+```
+
+## Export document as Word file
+
+```python
+# Export from a session
+response = requests.post(f"{BASE}/v1/documents/export", headers=HEADERS, json={
+    "session_id": "doc-edit",
+    "format": "docx",
+    "filename": "simplified-contract"
+})
+
+with open("simplified-contract.docx", "wb") as f:
+    f.write(response.content)
+
+# Or export from HTML directly
+response = requests.post(f"{BASE}/v1/documents/export", headers=HEADERS, json={
+    "html": updated_html,
+    "format": "doc"
+})
+
+with open("export.doc", "wb") as f:
+    f.write(response.content)
+```
+
 ## Upload attachment and poll for completion
 
 ```python

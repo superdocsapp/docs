@@ -431,11 +431,12 @@
     "/v1/documents/upload": {
       "post": {
         "tags": [
-          "v1"
+          "v1",
+          "mcp"
         ],
         "summary": "Upload Document",
-        "description": "Legacy document upload endpoint - redirects to attachments/upload",
-        "operationId": "upload_document_v1_documents_upload_post",
+        "description": "Upload a file and load it as the active document in a session.\n\nThe file is processed synchronously — text is extracted, converted to HTML, and indexed for AI editing. The response includes the full document HTML ready for use with the chat endpoint.\n\nSupported formats: DOCX, PDF, TXT, HTML, MD (Markdown), RTF.\n\nAfter uploading, send chat messages with the returned HTML as document_html to edit the document with AI.",
+        "operationId": "upload_document",
         "security": [
           {
             "HTTPBearer": []
@@ -474,9 +475,81 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadResponse"
+                }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/documents/export": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Export Document",
+        "description": "Export a document as a downloadable Word file.\n\nTwo content modes:\n- Mode A (html provided): Converts the supplied HTML directly to a Word file.\n- Mode B (session_id only): Retrieves the active document from the session and converts it.\n\nTwo format options:\n- 'doc' (default): Word-compatible file with high formatting fidelity.\n- 'docx': Native Open XML format, better for programmatic processing.",
+        "operationId": "export_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Word file download",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No document loaded in the session"
           },
           "422": {
             "description": "Validation Error",
@@ -1917,6 +1990,65 @@
           "file"
         ],
         "title": "Body_upload_document_v1_documents_upload_post"
+      },
+      "DocumentUploadResponse": {
+        "properties": {
+          "html": {
+            "type": "string",
+            "title": "HTML",
+            "description": "Full document HTML with data-chunk-id attributes."
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session ID",
+            "description": "Session identifier for this document."
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original uploaded filename."
+          },
+          "chunks_count": {
+            "type": "integer",
+            "title": "Chunks Count",
+            "description": "Number of document sections created."
+          },
+          "version_id": {
+            "type": "string",
+            "title": "Version ID",
+            "description": "Document version identifier."
+          }
+        },
+        "type": "object",
+        "required": ["html", "session_id", "filename", "chunks_count", "version_id"],
+        "title": "DocumentUploadResponse"
+      },
+      "ExportRequest": {
+        "properties": {
+          "session_id": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "Session ID",
+            "description": "Session ID to export the document from. Required if html is not provided."
+          },
+          "html": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "HTML",
+            "description": "HTML content to convert to a Word file. If provided, this is used instead of the session document."
+          },
+          "filename": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "Filename",
+            "description": "Custom filename for the exported file (without extension). Auto-detected from the first heading if not provided."
+          },
+          "format": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+            "title": "Format",
+            "description": "Export format: 'doc' (default, Word-compatible) or 'docx' (native Open XML).",
+            "default": "doc"
+          }
+        },
+        "type": "object",
+        "title": "ExportRequest"
       },
       "Body_upload_user_template": {
         "properties": {

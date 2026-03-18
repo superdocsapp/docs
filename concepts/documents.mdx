@@ -1,15 +1,17 @@
 ---
 title: "Documents"
-description: "How to send document HTML to the API and handle the updated HTML that comes back."
+description: "Load documents from files, edit them with AI, create new ones from scratch, and export as Word files."
 ---
 
 # Documents
+
+## Sending document HTML
 
 Send your document HTML in `document_html`. The AI reads it, makes changes, and returns updated HTML in `document_changes.updated_html`.
 
 **The one rule:** Render the returned HTML as-is in your editor. When sending it back on the next request, send the full document HTML exactly as your editor has it. Don't programmatically strip, modify, or reformat the HTML. If your editor or HTML sanitizer removes custom `data-*` attributes, configure it to preserve them.
 
-## Example flow
+### Example flow
 
 ```python
 import requests
@@ -36,3 +38,152 @@ response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, j
 ```
 
 The returned HTML contains `data-chunk-id` attributes on elements. These identify document sections and enable the AI to make targeted edits without reprocessing the entire document. These same IDs appear in API responses — for example, `chunk_id` and `insert_after_chunk_id` in [HITL proposed changes](/guides/human-in-the-loop#understanding-proposed-changes).
+
+## Loading documents from files
+
+Upload a file to load it as the active document in a session. The file is processed synchronously — the response includes the full document HTML ready for editing.
+
+**Supported formats:** DOCX, PDF, TXT, HTML, MD (Markdown), RTF
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@contract.docx" \
+  -F "session_id=my-session"
+```
+
+Response:
+
+```json
+{
+  "html": "<div data-chunk-id=\"abc123\"><h1>Contract</h1><p>...</p></div>",
+  "session_id": "my-session",
+  "filename": "contract.docx",
+  "chunks_count": 12,
+  "version_id": "v_xyz789"
+}
+```
+
+After uploading, you can immediately send chat messages to edit the document:
+
+```python
+# Upload a document
+upload = requests.post("https://api.superdocs.app/v1/documents/upload",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    files={"file": open("contract.docx", "rb")},
+    data={"session_id": "my-session"}
+)
+doc_html = upload.json()["html"]
+
+# Edit it with AI
+response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+    "message": "Simplify the language in section 3",
+    "session_id": "my-session",
+    "document_html": doc_html
+})
+```
+
+## Creating documents from scratch
+
+Send a message to an empty session (no `document_html`, no uploaded file) and the AI will generate a complete document for you.
+
+```python
+response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+    "message": "Create a non-disclosure agreement between two companies",
+    "session_id": "new-nda"
+})
+
+data = response.json()
+new_document_html = data["document_changes"]["updated_html"]
+```
+
+Example prompts that work well:
+- "Create a consulting agreement"
+- "Draft a project proposal for a mobile app"
+- "Write a company privacy policy"
+- "Create a meeting minutes template"
+
+The AI generates structured, formatted HTML that you can then continue editing with follow-up messages.
+
+## Exporting documents
+
+Export the current document as a downloadable Word file.
+
+**Two modes:**
+- **Mode A** — send HTML content directly (use when you have the document HTML in your app)
+- **Mode B** — send a session ID (the API retrieves the document from the session)
+
+**Two formats:**
+- `doc` (default) — Word-compatible file with high formatting fidelity
+- `docx` — native OOXML format, better for programmatic processing
+
+### Mode A: Export from HTML
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/export \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "html": "<h1>My Document</h1><p>Content here...</p>",
+    "format": "docx",
+    "filename": "my-document"
+  }' \
+  --output my-document.docx
+```
+
+### Mode B: Export from session
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/export \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "my-session",
+    "format": "doc"
+  }' \
+  --output exported-document.doc
+```
+
+### Export in Python
+
+```python
+response = requests.post("https://api.superdocs.app/v1/documents/export",
+    headers=HEADERS,
+    json={
+        "session_id": "my-session",
+        "format": "docx",
+        "filename": "final-contract"
+    }
+)
+
+with open("final-contract.docx", "wb") as f:
+    f.write(response.content)
+```
+
+### Request parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `html` | string | One of `html` or `session_id` required | HTML content to convert |
+| `session_id` | string | One of `html` or `session_id` required | Session to export from |
+| `format` | string | No | `"doc"` (default) or `"docx"` |
+| `filename` | string | No | Custom filename (without extension). Auto-detected from the first heading if not provided. |
+
+The response is a binary file download with the appropriate Content-Type header.
+
+## Supported formatting
+
+The AI can apply the following formatting when creating or editing documents:
+
+- **Text styling** — bold, italic, underline, strikethrough
+- **Headings** — H1 through H6
+- **Lists** — ordered, unordered, and nested
+- **Text highlighting** — with color options (e.g., yellow, green, red)
+- **Text color** — change the color of specific text
+- **Links** — clickable hyperlinks
+- **Tables** — with rows and columns
+- **Blockquotes** — indented quotation blocks
+- **Code blocks** — for code snippets
+- **Horizontal rules** — section dividers
+
+Ask for formatting in plain language: "highlight the key terms in yellow", "make the title bold and larger", "add a table comparing the two options".

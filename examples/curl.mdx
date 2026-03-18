@@ -117,6 +117,35 @@ curl -X DELETE https://api.superdocs.app/v1/users/me/sessions/SESSION_ID \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
+## Documents
+
+### Upload a document to the editor
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/upload \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "file=@contract.docx" \
+  -F "session_id=my-session"
+```
+
+### Export a document as Word file
+
+```bash
+# From session
+curl -X POST https://api.superdocs.app/v1/documents/export \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "my-session", "format": "docx"}' \
+  --output document.docx
+
+# From HTML
+curl -X POST https://api.superdocs.app/v1/documents/export \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>Title</h1><p>Content</p>", "format": "doc"}' \
+  --output document.doc
+```
+
 ## Attachments
 
 ### Upload a file

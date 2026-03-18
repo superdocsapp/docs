@@ -1,11 +1,11 @@
 ---
 title: "Attachments"
-description: "Upload PDF, DOCX, and text files to give the AI additional context for document editing."
+description: "Upload PDF, DOCX, and text files to give the AI additional context or load them into the editor."
 ---
 
 # Attachments
 
-Upload files to provide the AI with reference material. The AI can search and reference attachment content when editing your document.
+Upload files to provide the AI with reference material. The AI can search and reference attachment content when editing your document — or you can load an attachment directly into the editor.
 
 ## Supported file types
 
@@ -60,6 +60,45 @@ When `status` is `"completed"`, the attachment is indexed and available as AI co
 curl https://api.superdocs.app/v1/attachments/status/my-session \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
+
+## Attachments vs document upload
+
+SuperDocs has two ways to load files — they serve different purposes:
+
+| | Attachment (`/v1/attachments/upload`) | Document upload (`/v1/documents/upload`) |
+|---|---|---|
+| **Purpose** | Reference material for the AI | Load as the active document |
+| **Processing** | Async (poll for completion) | Synchronous (immediate) |
+| **Editing** | Read-only — AI can search and reference | Fully editable via chat |
+| **Multiple files** | Yes — multiple per session | One active document per session |
+| **Best for** | Supporting context (e.g., upload a brief, then create a document based on it) | Loading a file you want to edit |
+
+## Loading an attachment into the editor
+
+After uploading an attachment, you can ask the AI to load it into the editor — making it the active document you can edit:
+
+```python
+# 1. Upload a file as an attachment
+upload = requests.post("https://api.superdocs.app/v1/attachments/upload",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    files={"file": open("draft.docx", "rb")},
+    data={"session_id": "my-session"}
+)
+
+# 2. Wait for processing to complete
+# ... poll /v1/jobs/{job_id} until status is "completed" ...
+
+# 3. Ask the AI to load it into the editor
+response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+    "message": "Load the draft document into the editor",
+    "session_id": "my-session"
+})
+# The AI loads the attachment content as the active document
+```
+
+The AI supports two loading modes:
+- **Replace** — clears the editor and loads the full attachment (default when the editor is empty)
+- **Insert** — adds the attachment content to the existing document (when the editor already has content)
 
 ## Image attachments
 

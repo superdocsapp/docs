@@ -102,6 +102,46 @@ const result = await streamChat(
 console.log("AI:", result.response);
 ```
 
+## Upload document and export
+
+```javascript
+const API_KEY = "sk_YOUR_API_KEY";
+const BASE = "https://api.superdocs.app";
+const headers = { Authorization: `Bearer ${API_KEY}` };
+
+// Upload a file as the active document
+async function uploadDocument(file, sessionId) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("session_id", sessionId);
+
+  const res = await fetch(`${BASE}/v1/documents/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${API_KEY}` },
+    body: formData,
+  });
+  return res.json(); // { html, session_id, filename, chunks_count, version_id }
+}
+
+// Export and download as Word file
+async function exportDocument(sessionId, format = "docx") {
+  const res = await fetch(`${BASE}/v1/documents/export`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, format }),
+  });
+  const blob = await res.blob();
+
+  // Trigger download in browser
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `document.${format}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+```
+
 ## File upload
 
 ```javascript
