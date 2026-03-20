@@ -19,7 +19,7 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_document_to_editor` | Upload a file and load it as the active document in the editor. | `file`, `session_id` |
+| `upload_document_base64` | Upload a document (base64-encoded) and load it as the active document. | `filename`, `file_base64`, `session_id` |
 | `export_document` | Export a document as a downloadable Word file (.doc or .docx). | `session_id`, `html`, `format`, `filename` |
 
 ## Sessions
@@ -34,7 +34,7 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_attachment` | Upload a file (PDF, DOCX, TXT, RTF, MD) for AI context. | `file`, `session_id` |
+| `upload_attachment_base64` | Upload a file (base64-encoded) as an attachment for AI context. Processed asynchronously. | `filename`, `file_base64`, `session_id` |
 | `delete_attachment` | Remove an attachment from a session. | `attachment_id`, `session_id` |
 | `get_attachment_status` | Check processing status of session attachments. | `session_id` |
 
@@ -50,7 +50,7 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_user_template` | Upload a reusable document template. | `file` |
+| `upload_template_base64` | Upload a document template (base64-encoded). | `filename`, `file_base64` |
 | `list_user_templates` | List all uploaded templates. | — |
 | `delete_user_template` | Delete a user template. | `template_id` |
 
@@ -61,7 +61,7 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 | `health` | Check if the SuperDocs API is healthy. | — |
 
 <Note>
-  **File upload tools via MCP:** Three tools that accept file uploads — `upload_attachment`, `upload_document_to_editor`, and `upload_user_template` — are listed in the MCP tool catalog but require the [REST API](/api-reference) for actual file transfers. The MCP protocol does not support multipart file uploads. Use the corresponding REST endpoints directly for file operations.
+  **File uploads via MCP:** Upload tools accept base64-encoded file content in the `file_base64` parameter. Encode your file to base64 and pass it as a string along with the original `filename` (used for file type detection). Supported file types: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Maximum file size: 50 MB.
 </Note>
 
 For full request/response schemas, see the [API Reference](/api-reference).
