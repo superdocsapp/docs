@@ -1,11 +1,11 @@
 ---
 title: "Available Tools"
-description: "All 16 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 18 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 16 tools become available to your AI tool.
+When you connect to the SuperDocs MCP server, these 18 tools become available to your AI tool.
 
 ## Chat
 
@@ -14,6 +14,13 @@ When you connect to the SuperDocs MCP server, these 16 tools become available to
 | `chat` | Send a message with optional document HTML. Returns AI response and document changes. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
 | `chat_async` | Start an async chat that processes in the background. Returns a job ID for polling. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
 | `approve_change` | Approve or deny AI-proposed document changes (HITL workflow). | `job_id`, `change_id`, `approved`, `feedback`, `changes` |
+
+## Documents
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `upload_document_to_editor` | Upload a file and load it as the active document in the editor. | `file`, `session_id` |
+| `export_document` | Export a document as a downloadable Word file (.doc or .docx). | `session_id`, `html`, `format`, `filename` |
 
 ## Sessions
 
@@ -52,5 +59,9 @@ When you connect to the SuperDocs MCP server, these 16 tools become available to
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
 | `health` | Check if the SuperDocs API is healthy. | — |
+
+<Note>
+  **File upload tools via MCP:** Three tools that accept file uploads — `upload_attachment`, `upload_document_to_editor`, and `upload_user_template` — are listed in the MCP tool catalog but require the [REST API](/api-reference) for actual file transfers. The MCP protocol does not support multipart file uploads. Use the corresponding REST endpoints directly for file operations.
+</Note>
 
 For full request/response schemas, see the [API Reference](/api-reference).
