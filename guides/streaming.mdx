@@ -38,7 +38,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 5 event types:
+The stream emits 6 event types:
 
 ### `intermediate`
 
@@ -88,6 +88,21 @@ The `content` field is a JSON string. Parse it to get the change details:
 
 See the [Human-in-the-Loop guide](/guides/human-in-the-loop) for the complete approval workflow.
 
+### `document_sync`
+
+Emitted before the AI begins processing, after the backend has prepared your document for editing. The event carries the prepared HTML containing the section identifiers the AI will reference when proposing changes.
+
+```
+event: document_sync
+data: {"type": "document_sync", "content": "<p data-chunk-id=\"...\">Section 1</p>..."}
+```
+
+**When it fires**: Only when you provide `document_html` in the request. The event arrives once at the start of the stream, before any `intermediate` or `proposed_change` events.
+
+**What to do with it**: Apply the HTML to your editor immediately so the editor's section IDs match the IDs the AI will reference in subsequent `proposed_change` events. This is essential for HITL diff highlights to render correctly on freshly pasted or uploaded documents — without it, the editor and the AI may disagree on which section a change targets.
+
+If you do not render diffs in an editor (e.g., you only display the final response), you can ignore this event.
+
 ### `final`
 
 Job completed successfully. Contains the full result.
@@ -121,6 +136,13 @@ data: {"error": "Request timed out"}
 const eventSource = new EventSource(
   `https://api.superdocs.app/v1/chat/my-session/stream?job_id=${jobId}&api_key=${apiKey}`
 );
+
+eventSource.addEventListener("document_sync", (event) => {
+  const data = JSON.parse(event.data);
+  // Apply data.content to your editor so its section IDs match
+  // the IDs the AI will reference in proposed_change events.
+  editor.commands.setContent(data.content);
+});
 
 eventSource.addEventListener("intermediate", (event) => {
   const data = JSON.parse(event.data);
