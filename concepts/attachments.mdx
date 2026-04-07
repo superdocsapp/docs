@@ -1,6 +1,6 @@
 ---
 title: "Attachments"
-description: "Upload PDF, DOCX, and text files to give the AI additional context or load them into the editor."
+description: "Upload PDF, DOCX, HTML, text, and image files to give the AI additional context or load them into the editor."
 ---
 
 # Attachments
@@ -13,9 +13,11 @@ Upload files to provide the AI with reference material. The AI can search and re
 |------|-----------|
 | PDF | `.pdf` |
 | Word | `.docx` |
+| HTML | `.html`, `.htm` |
 | Plain text | `.txt` |
 | Rich text | `.rtf` |
 | Markdown | `.md` |
+| Images | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` |
 
 Maximum file size: **50 MB**.
 
@@ -100,13 +102,22 @@ The AI supports two loading modes:
 - **Replace** — clears the editor and loads the full attachment (default when the editor is empty)
 - **Insert** — adds the attachment content to the existing document (when the editor already has content)
 
-## Image attachments
+## Image attachments and vision
 
-You can also send images inline with your chat request for vision-based analysis:
+SuperDocs can **see** the images you attach. The AI visually interprets diagrams, screenshots, photos, charts, scanned documents, and any other image content — and uses what it sees to inform the document it is editing.
+
+Common use cases:
+
+- **Transcribe a screenshot** into the document ("Add the table from this screenshot to my report")
+- **Reference a diagram** in generated content ("Write a paragraph describing the architecture in this image")
+- **Extract data from a chart** ("Summarize the trends in this chart and add a section about them")
+- **Identify objects or text in a photo** ("What does the sign in this photo say? Add it as a quote")
+
+Images are handled inline with your chat request — no separate upload step is required:
 
 ```json
 {
-  "message": "What does this diagram show?",
+  "message": "What does this diagram show? Add a section explaining it.",
   "session_id": "my-session",
   "image_attachments": [{
     "id": "img-1",
@@ -117,6 +128,8 @@ You can also send images inline with your chat request for vision-based analysis
   }]
 }
 ```
+
+Supported image formats: PNG, JPG/JPEG, GIF, WebP.
 
 ## Delete an attachment
 
