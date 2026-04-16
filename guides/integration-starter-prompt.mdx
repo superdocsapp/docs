@@ -44,7 +44,11 @@ Only the product-identifier line below is required. Everything else is optional 
 
 ## Part 0A — Fast path (recommended for most teams)
 
-Most teams already maintain a file that describes their product, stack, and conventions in a form a coding agent reads fluently. Paste it — or a link to it — below and skip the structured questionnaire in Part 0B.
+Most teams already maintain a file that describes their product, stack, and conventions in a form a coding agent reads fluently — typically `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`, or similar in the project root.
+
+If you have one of these files in your project root, you do not need to do anything in this section — the agent will discover and read it automatically as the first step of the protocol below. Skip to running the prompt.
+
+If your context lives somewhere other than the project root (a Notion page, a Confluence doc, a different filename, an internal brief), use one of the three options below to point the agent at it.
 
 **Pick one of the three options. You do not need to do all three.**
 
@@ -77,7 +81,7 @@ Representative file path(s):
 
 ### If none apply
 
-Skip Part 0A entirely. You can still leave Part 0B blank too — the agent will infer from your codebase once it starts reading files.
+Skip Part 0A entirely. The agent will still auto-discover any context file in your project root (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, etc.) and infer remaining values from your codebase once it starts reading files.
 
 ---
 
@@ -114,7 +118,10 @@ Fill in a value if you have a firm preference. Leave blank to let the agent choo
 
 Before executing **any** phase, the coding agent must:
 
-1. **READ CONTEXT.** Read every file and URL provided in Part 0A. Then read the integrator's existing codebase — at minimum, the package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.), the main framework config files, any editor component if declared or discoverable, and the `README` if present.
+1. **READ CONTEXT.** Before doing anything else:
+   a. Search the project root for any context files the integrator may have already maintained. Look for, in this order: `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`, `.aiderrules`, `GEMINI.md`, `COPILOT.md`, `INSTRUCTIONS.md`, or any file matching the pattern `*RULES*.md` / `*AGENT*.md` / `*INSTRUCTIONS*.md` in the project root. If any of these exist, read all of them — these files describe the integrator's product, stack, and conventions and are higher-priority context than anything else. Do NOT assume your coding-agent harness auto-loaded them; read them explicitly via your file-read tool so you know what's in them.
+   b. Read every file and URL provided in Part 0A (paste-in context, links to internal docs, package manifests).
+   c. Read the integrator's existing codebase — at minimum, the package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.), the main framework config files, any editor component if declared or discoverable, and the `README` if present.
 2. **INFER.** For every Part 0B slot the integrator left blank, infer the value from context. If a slot cannot be inferred with reasonable confidence, mark it as `UNSET`.
 3. **ECHO BACK.** Present every Part 0B value with a source tag:
    - `[provided]` — the integrator explicitly set this.
