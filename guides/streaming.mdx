@@ -58,6 +58,17 @@ event: proposed_change
 data: {"type": "proposed_change", "content": "{\"change_id\": \"ch_1\", ...}", "sequence": 2}
 ```
 
+<Warning>
+  `proposed_change.content` is delivered as a **JSON-stringified string**, not a parsed object. The event data itself is JSON, and the `content` field inside it is a second layer of JSON that must be parsed again. In JavaScript:
+
+  ```javascript theme={null}
+  const data = JSON.parse(event.data);          // first parse — event envelope
+  const change = JSON.parse(data.content);      // second parse — change details
+  ```
+
+  This is inconsistent with `final.result`, which is already an object after a single parse. Until this normalises in a future API version, double-parse `proposed_change.content`. Missing the second parse is the single most common reason integrators see empty diff cards — the UI renders but every field reads as `undefined`.
+</Warning>
+
 The `content` field is a JSON string. Parse it to get the change details:
 
 ```json
