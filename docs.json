@@ -57,6 +57,7 @@
               "guides/streaming",
               "guides/async-jobs",
               "guides/human-in-the-loop",
+              "guides/editor-integration",
               "guides/model-selection",
               "guides/ai-to-ai"
             ]
