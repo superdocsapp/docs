@@ -54,6 +54,7 @@
           {
             "group": "Guides",
             "pages": [
+              "guides/integration-starter-prompt",
               "guides/streaming",
               "guides/async-jobs",
               "guides/human-in-the-loop",
