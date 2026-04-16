@@ -1,0 +1,1104 @@
+---
+title: "Integration Starter Prompt"
+description: "Paste this into your coding agent to integrate SuperDocs into any app, in any stack, with any editor. Target fill time: under 5 minutes."
+---
+
+# Integration Starter Prompt
+
+**Target fill time: under 5 minutes.** Paste your existing agent context (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`), or a `package.json`, or nothing at all — the agent infers the rest and tells you what it picked before starting.
+
+## What you'll build
+
+A complete integration of SuperDocs into your product. Your coding agent reads this prompt, reads any context you paste into Part 0A (or infers from your codebase), confirms what it's inferred, and then writes the integration: editor chunk-id preservation, API proxy, streaming, inline diff overlay, Word export. The public SuperDocs docs are authoritative for every snippet the agent uses — so if you ever swap your editor or backend framework, the same prompt still works.
+
+This template handles the realistic range of starting points:
+
+- **Greenfield** with no app yet — the agent scaffolds one.
+- **Existing app with no editor yet** — the agent adds one.
+- **Existing app with an editor** — the agent wires SuperDocs into it.
+- **Server-side / batch / agent-to-agent** — the agent skips the UI phases.
+
+## Copy this prompt
+
+Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, or any other).
+
+````text
+# SuperDocs Integration Starter Prompt — Template
+
+Paste this prompt into your coding agent (Claude Code, Cursor, Windsurf, etc.) to integrate SuperDocs into a product.
+
+**Target fill time: under 5 minutes.** Almost everything below is optional. Paste whatever context you already have — a `CLAUDE.md`, a `package.json`, a link to an internal brief, or nothing at all — and the coding agent will figure out the rest. It will tell you what it inferred before it starts writing code, and you'll have one chance to correct it.
+
+This template is published at https://docs.superdocs.app/guides/integration-starter-prompt. The filled-in ProseMirror + Next.js version used in the integration video lives at https://github.com/superdocsapp/prosemirror-superdocs-demo.
+
+---
+
+## Part 0 — Optional context (fill in what you know; the agent infers the rest)
+
+Only the product-identifier line below is required. Everything else is optional — agents do a better job inferring from your actual codebase than filling in generic defaults.
+
+- **PRODUCT_NAME / PRODUCT_DESCRIPTION** _(required — one line to two sentences)_:
+  <!-- what is this product and what is SuperDocs integrating into -->
+
+---
+
+## Part 0A — Fast path (recommended for most teams)
+
+Most teams already maintain a file that describes their product, stack, and conventions in a form a coding agent reads fluently. Paste it — or a link to it — below and skip the structured questionnaire in Part 0B.
+
+**Pick one of the three options. You do not need to do all three.**
+
+### Option 1 — Paste your existing agent context
+
+If your team has a `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, internal developer brief, or equivalent, paste its contents between the markers below. The coding agent will infer the Part 0B declarations from this context.
+
+```
+<!-- paste your CLAUDE.md / AGENTS.md / .cursorrules / internal brief here -->
+```
+
+### Option 2 — Link to existing internal docs
+
+If your context lives in Notion, Confluence, a GitHub README, or a public docs site, list the URLs below. The coding agent will fetch and read them before proceeding.
+
+- <!-- URL 1 -->
+- <!-- URL 2 -->
+
+### Option 3 — Paste your package manifest + one representative file
+
+If you don't have agent context yet but have an existing codebase, paste your package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.) and the path to one file that handles documents today — the current editor component, the current upload endpoint, whatever is closest to where SuperDocs will plug in.
+
+```
+<!-- package manifest here -->
+```
+
+Representative file path(s):
+
+- <!-- path to one file the agent should read first -->
+
+### If none apply
+
+Skip Part 0A entirely. You can still leave Part 0B blank too — the agent will infer from your codebase once it starts reading files.
+
+---
+
+## Part 0B — Structured declarations (all optional)
+
+Fill in whatever you already know. Leave the rest blank — the coding agent will read your codebase and infer each missing value, then echo its inferences back before writing code. Do not fill these in defensively; agents that have read your actual `package.json`, editor component, and framework files produce better picks than blanket defaults.
+
+### Descriptive slots
+
+- **EXISTING_APP_CONTEXT:** _(describe the codebase — only relevant if this is not a greenfield build. Leave blank to let the agent read the repo itself.)_
+- **DOC_FLOW_DESCRIPTION:** _(how documents currently enter, live in, and leave the product. Leave blank to let the agent infer from the codebase.)_
+- **SAMPLE_DOCUMENT:** _(starting HTML the demo uses for the first edit. Leave blank to let the agent generate a sensible one.)_
+- **EXISTING_EDITOR_FILE_PATH:** _(path to your current editor component file. Leave blank and the agent will find it via file search if one exists.)_
+
+### Scenario axes — all optional
+
+Fill in a value if you have a firm preference. Leave blank to let the agent choose based on your codebase — it will echo back its pick before starting.
+
+- **APP_MATURITY:** `greenfield` · `existing-no-editor` · `existing-with-editor` _(leave blank to let the agent detect from the repo.)_
+- **EDITOR_STATE:** `none` · `installed-basic` · `installed-custom` _(leave blank to let the agent detect from installed dependencies.)_
+- **EDITOR_FRAMEWORK:** `prosemirror` · `tiptap` · `slate` · `lexical` · `quill` · `ckeditor` · `contenteditable` · `other` _(leave blank to let the agent pick based on your `package.json` or, for greenfield, recommend one.)_
+- **AUTH_STATE:** `none-demo-only` · `firebase` · `auth0` · `clerk` · `custom-sessions` · `enterprise-sso` _(leave blank to let the agent detect.)_
+- **BACKEND_STATE:** `next-api-routes` · `express` · `fastapi` · `rails` · `django` · `go` · `dotnet` · `other` _(leave blank to let the agent detect from the project layout.)_
+- **LANGUAGE:** `typescript` · `javascript` · `python` · `go` · `ruby` · `java` · `csharp` · `php` _(leave blank to let the agent detect from file extensions.)_
+- **FRONTEND_FRAMEWORK:** `nextjs` · `remix` · `vite-react` · `sveltekit` · `vue` · `plain-html` · `rails-view` · `django-template` · `htmx` · `desktop` · `none` (server-only) _(leave blank to let the agent detect.)_
+- **DEPLOYMENT_TARGET:** `localhost-demo` · `browser-saas` · `server-only-no-ui` · `desktop-app` · `mcp-only` _(leave blank and the agent will ask if genuinely ambiguous.)_
+- **USE_CASE_SHAPE:** `chat-panel` · `slash-commands` · `inline-ghost-text` · `batch-processing` · `agent-to-agent` _(leave blank and the agent will propose one based on where documents live in your app today.)_
+- **INCLUDE_EXPORT:** `true` · `false` _(leave blank; agent defaults to true unless there's a reason otherwise.)_
+- **API_KEY_STORAGE_PREFERENCE:** `env-var` · `secrets-manager` · `vault` · `existing-config-file` · `other` _(leave blank to let the agent detect from your existing secret-handling patterns.)_
+
+---
+
+## Agent protocol — inference, echo-back, confirm
+
+Before executing **any** phase, the coding agent must:
+
+1. **READ CONTEXT.** Read every file and URL provided in Part 0A. Then read the integrator's existing codebase — at minimum, the package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.), the main framework config files, any editor component if declared or discoverable, and the `README` if present.
+2. **INFER.** For every Part 0B slot the integrator left blank, infer the value from context. If a slot cannot be inferred with reasonable confidence, mark it as `UNSET`.
+3. **ECHO BACK.** Present every Part 0B value with a source tag:
+   - `[provided]` — the integrator explicitly set this.
+   - `[inferred from <file or signal>]` — the agent inferred it from a specific source. Name the source.
+   - `[UNSET — asking you]` — genuinely ambiguous, needs the integrator to decide.
+4. **ASK.** For each `UNSET` slot, ask the integrator specifically, offering 2–3 suggested options.
+5. **WAIT.** Do not execute Phase 1 until the integrator has confirmed the inferred values and answered the `UNSET` questions.
+
+This prevents the agent from confidently integrating into the wrong stack because it misread pasted context or guessed at an ambiguous axis.
+
+---
+
+## Last-resort fallback stack (only when no signal is available)
+
+If the agent cannot infer anything from context AND the integrator has left Part 0B entirely blank AND cannot answer follow-up questions, the agent may proceed with the following blanket fallback — **but must announce it clearly before starting:**
+
+> *"I had no context to work with, so I'm defaulting to the fastest-to-ship stack below. Tell me to stop if this isn't right."*
+
+- **APP_MATURITY:** `greenfield`
+- **LANGUAGE:** `typescript`
+- **FRONTEND_FRAMEWORK:** `nextjs`
+- **EDITOR_FRAMEWORK:** `tiptap` _(lower chunk-id-schema friction than raw ProseMirror for a blind start)_
+- **BACKEND_STATE:** `next-api-routes`
+- **AUTH_STATE:** `none-demo-only`
+- **API_KEY_STORAGE_PREFERENCE:** `env-var`
+- **DEPLOYMENT_TARGET:** `localhost-demo`
+- **USE_CASE_SHAPE:** `chat-panel`
+- **INCLUDE_EXPORT:** `true`
+
+This fallback is for the genuinely-no-signal case only. Inference from any real context — package manifest, existing editor component, repo layout — always beats this blanket stack.
+
+---
+
+## Phase selection (agent-side)
+
+For each phase below that starts with `**Run only if:**`, check the condition against the confirmed Part 0B values. If it matches, execute the phase. If not, skip it. For phases with multiple inline snippets, pick the one matching the declared axis and ignore the rest.
+
+---
+
+## Dry-run checklist (verify before first integration attempt)
+
+Verify all five before you commit to a full integration pass. Any failure here is a 10× better thing to catch now than mid-build.
+
+1. **Editor round-trip on real SuperDocs HTML.** Paste a realistic SuperDocs response (one with `data-chunk-id` on every block-level element) into the editor, read it back, confirm the `data-chunk-id` attribute survives the round-trip on every block node type your editor supports. Your chunk-id preservation wiring is the single most load-bearing line of code in this integration.
+2. **Scaffold / install commands are current for your declared stack.** The snippets in this template reflect versions at publication time; languages, frameworks, and SDKs drift. If a command or flag is rejected, drop the offending flag, continue. Do not stop to debug the scaffolder.
+3. **Styling plugin compatibility.** If you chose Tailwind, Next.js 16+ ships Tailwind v4 by default. If you're on Tailwind v3, the plugin import syntax differs — see Phase 2 note. If you're not using Tailwind at all, ignore `.prose` class references and style with your own system.
+4. **TypeScript / language-native types compile cleanly.** Some snippets (ProseMirror's `getAttrs` signature, for example) may clash with stricter generic constraints in your installed version. If one specific line throws a type error, add a targeted cast at the usage site — don't refactor the helper.
+5. **SSE consumption works in your declared frontend.** Send one test message, confirm at least one `intermediate` event arrives before wiring the rest of the UI. A silent SSE connection is the #1 time-burn.
+
+---
+
+## Part 1 — Mandatory context
+
+Read these before writing code:
+
+1. The full SuperDocs API reference at `https://docs.superdocs.app/llms-full.txt`. Fetch it locally:
+   ```bash
+   curl https://docs.superdocs.app/llms-full.txt > llms-full.txt
+   ```
+   This file is authoritative for every request/response shape. Refer to it whenever an API question comes up.
+2. This prompt, Parts 2–9.
+3. Your own codebase — only if `APP_MATURITY ≠ greenfield`. Read enough of `EXISTING_APP_CONTEXT` paths to understand where your editor component lives, where your authenticated backend routes live, and how your frontend consumes real-time data.
+
+Do not search the internet for integration patterns beyond these sources. Everything you need is in `llms-full.txt` or this template.
+
+---
+
+## Part 2 — Hard constraints
+
+### Scope — what the integration must produce
+- Users can send a natural-language instruction, see proposed AI edits, review them, and have approved edits applied to their document in place.
+- The AI's proposed changes are visible to the user before they apply (HITL review mode).
+- The integration does not expose your SuperDocs `sk_` API key to the browser.
+- The document HTML (with `data-chunk-id` attributes) round-trips correctly between your editor and SuperDocs.
+
+### Scope — what is explicitly out of scope for a first integration
+- Attachments, image uploads, and templates. All exist in the API; they're separate integrations.
+- MCP. That's a different transport — set `DEPLOYMENT_TARGET=mcp-only` and follow the MCP guide instead.
+- Multi-document UI, session list, user impersonation. Not part of the API integration.
+
+### Content safety — what to never include in your code, comments, or public-facing artefacts
+- Specific AI model names (the SuperDocs API includes the model; your users do not need to know which one).
+- Third-party orchestration framework names that SuperDocs might use internally.
+- Cloud provider names beyond "hosted" or "server-side."
+- Database technology assumptions.
+- Cost-per-operation numbers or internal SuperDocs pricing.
+
+Say "SuperDocs' AI" or "the AI" when you need to refer to the model.
+
+---
+
+## Part 3 — Standing rules during the build
+
+1. **Strong types.** Whatever your language, use the strictest practical type mode. No `any`, no `interface{}`, no untyped dicts at boundaries.
+2. **No decorative error handling.** If an HTTP call fails, let it surface to a toast / log / return value — don't paper it over with silent catches.
+3. **Comments only where the *why* is non-obvious.** Do not narrate what the code does.
+4. **Commit after every phase** (locally; don't push until the integration works end-to-end). If something breaks in Phase N+1, `git reset` is one keystroke away.
+5. **Read `llms-full.txt` whenever an API question comes up.** It is always the answer faster than guessing.
+
+---
+
+## Part 4 — Phased build instructions
+
+Each phase is tagged with the scenarios it applies to. Execute only the ones that match the declarations in Part 0.
+
+---
+
+### Phase 1 — Scaffold a new app
+
+**Run only if:** `APP_MATURITY = greenfield`.
+
+Scaffold the chosen frontend + backend combo. For the Next.js + TypeScript + Tailwind combination (matching the reference implementation):
+
+```bash
+npx create-next-app@latest . \
+  --typescript --tailwind --app --src-dir=false \
+  --import-alias="@/*" --eslint
+```
+
+For other frameworks, use that framework's official scaffolder with equivalent flags (TypeScript on, CSS library of choice, router enabled). Do not debug the scaffolder on camera — if a flag is rejected, drop it.
+
+Create `.env.local` (or your framework's equivalent secret store) with:
+
+```
+SUPERDOCS_API_KEY=sk_REPLACE_ME
+```
+
+Confirm the secret file is gitignored.
+
+Commit: `git commit -am "Phase 1: scaffold"`.
+
+---
+
+### Phase 2 — Editor setup with SuperDocs chunk-id preservation
+
+**Run only if:** `EDITOR_STATE = none` OR (`EDITOR_STATE ∈ {installed-basic, installed-custom}` AND chunk-id preservation not yet wired).
+
+**Background.** SuperDocs tags every block-level element in returned HTML with `data-chunk-id="<uuid>"`. Every serious rich-text editor strips unknown attributes by default unless its schema or config tells it otherwise. The failure mode is silent: surgical editing works intermittently and fails mysteriously. This phase wires up the preservation on your chosen editor.
+
+Pick the snippet matching `EDITOR_FRAMEWORK`:
+
+#### ProseMirror (raw)
+
+Install: `npm install prosemirror-state prosemirror-view prosemirror-model prosemirror-schema-basic prosemirror-schema-list prosemirror-history prosemirror-keymap prosemirror-commands`.
+
+```typescript
+// lib/schema.ts
+import { Schema, NodeSpec } from "prosemirror-model";
+import { schema as basicSchema } from "prosemirror-schema-basic";
+import { addListNodes } from "prosemirror-schema-list";
+
+function withChunkId(spec: NodeSpec): NodeSpec {
+  const attrs = { ...(spec.attrs ?? {}), "data-chunk-id": { default: null } };
+  const parseDOM = (spec.parseDOM ?? []).map((rule) => ({
+    ...rule,
+    // If your TS complains about this signature, cast with `as HTMLElement`
+    // at the usage site — do NOT refactor the signature.
+    getAttrs: (node: string | HTMLElement) => {
+      const base = typeof rule.getAttrs === "function"
+        ? rule.getAttrs(node as HTMLElement) ?? {}
+        : rule.attrs ?? {};
+      if (typeof node === "string") return base;
+      return { ...base, "data-chunk-id": node.getAttribute("data-chunk-id") };
+    },
+  }));
+  const originalToDOM = spec.toDOM;
+  const toDOM: NodeSpec["toDOM"] = originalToDOM
+    ? (node) => {
+        const out = originalToDOM(node);
+        if (!Array.isArray(out)) return out;
+        const [tag, maybeAttrs, ...rest] = out as [string, unknown, ...unknown[]];
+        const chunkId = node.attrs["data-chunk-id"];
+        if (!chunkId) return out;
+        const isAttrs = maybeAttrs && typeof maybeAttrs === "object"
+          && !Array.isArray(maybeAttrs)
+          && !(maybeAttrs as { nodeType?: unknown }).nodeType;
+        return isAttrs
+          ? [tag, { ...(maybeAttrs as Record<string, unknown>), "data-chunk-id": chunkId }, ...rest]
+          : [tag, { "data-chunk-id": chunkId }, maybeAttrs, ...rest];
+      }
+    : undefined;
+  return { ...spec, attrs, parseDOM, toDOM };
+}
+
+let nodes = basicSchema.spec.nodes;
+for (const name of ["paragraph", "blockquote", "heading", "horizontal_rule", "code_block"]) {
+  const spec = nodes.get(name);
+  if (spec) nodes = nodes.update(name, withChunkId(spec));
+}
+nodes = addListNodes(nodes, "paragraph block*", "block");
+for (const name of ["ordered_list", "bullet_list", "list_item"]) {
+  const spec = nodes.get(name);
+  if (spec) nodes = nodes.update(name, withChunkId(spec));
+}
+
+export const schema = new Schema({ nodes, marks: basicSchema.spec.marks });
+```
+
+Mount `EditorView` with this schema and expose `getHtml()` and `setHtml(html)` bridges so the chat panel can read HTML before a send and write HTML after a final event.
+
+#### TipTap
+
+Install: `npm install @tiptap/react @tiptap/starter-kit`.
+
+```typescript
+// lib/tiptap-chunk-id.ts — a global attribute extension
+import { Extension } from "@tiptap/core";
+
+export const ChunkIdPreserver = Extension.create({
+  name: "chunkIdPreserver",
+  addGlobalAttributes() {
+    return [{
+      types: ["paragraph", "heading", "blockquote", "bulletList", "orderedList",
+              "listItem", "codeBlock", "horizontalRule"],
+      attributes: {
+        "data-chunk-id": {
+          default: null,
+          parseHTML: (el) => el.getAttribute("data-chunk-id"),
+          renderHTML: (attrs) => attrs["data-chunk-id"]
+            ? { "data-chunk-id": attrs["data-chunk-id"] } : {},
+        },
+      },
+    }];
+  },
+});
+
+// In your Editor component:
+// const editor = useEditor({ extensions: [StarterKit, ChunkIdPreserver], content });
+```
+
+Expose `editor.getHTML()` and `editor.commands.setContent(html, false)` to your chat panel.
+
+#### Slate
+
+Install: `npm install slate slate-react slate-history slate-hyperscript`.
+
+```typescript
+// lib/slate-chunk-id.ts
+import { Element as SlateElement } from "slate";
+
+export type ChunkedElement = SlateElement & { "data-chunk-id"?: string | null };
+
+// Serialize a Slate document to HTML, preserving data-chunk-id
+export function toHtml(nodes: ChunkedElement[]): string {
+  return nodes.map((n) => {
+    const id = n["data-chunk-id"] ? ` data-chunk-id="${n["data-chunk-id"]}"` : "";
+    const tag = n.type ?? "p";
+    const inner = (n.children as { text?: string }[])
+      .map((c) => c.text ?? "").join("");
+    return `<${tag}${id}>${inner}</${tag}>`;
+  }).join("");
+}
+
+// Parse SuperDocs HTML back into Slate nodes with the chunk id preserved
+export function fromHtml(html: string): ChunkedElement[] {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return Array.from(doc.body.children).map((el) => ({
+    type: el.tagName.toLowerCase(),
+    "data-chunk-id": el.getAttribute("data-chunk-id"),
+    children: [{ text: el.textContent ?? "" }],
+  })) as ChunkedElement[];
+}
+```
+
+Render with your existing `renderElement` — just pass `data-chunk-id` through on the outer element.
+
+#### Lexical
+
+Install: `npm install lexical @lexical/react @lexical/html`.
+
+```typescript
+// lib/lexical-chunk-id.ts
+import { $getRoot, $createParagraphNode, LexicalNode } from "lexical";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
+
+// Monkey-patch exportDOM on each block node type you care about to keep data-chunk-id.
+// The cleanest pattern is a transform + element attribute map kept on a WeakMap.
+const chunkIdMap = new WeakMap<LexicalNode, string>();
+
+export function setChunkId(node: LexicalNode, id: string | null) {
+  if (id) chunkIdMap.set(node, id); else chunkIdMap.delete(node);
+}
+export function getChunkId(node: LexicalNode) {
+  return chunkIdMap.get(node) ?? null;
+}
+
+// When importing SuperDocs HTML:
+export function importHtml(editor, html: string) {
+  editor.update(() => {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const nodes = $generateNodesFromDOM(editor, doc);
+    // Walk DOM + nodes in parallel; when a DOM element has data-chunk-id, record it on the node.
+    doc.body.querySelectorAll("[data-chunk-id]").forEach((el, i) => {
+      const id = el.getAttribute("data-chunk-id");
+      if (nodes[i] && id) setChunkId(nodes[i], id);
+    });
+    $getRoot().clear().append(...nodes);
+  });
+}
+
+// When exporting to HTML for SuperDocs:
+export function exportHtml(editor) {
+  let html = "";
+  editor.getEditorState().read(() => {
+    html = $generateHtmlFromNodes(editor, null);
+    // Post-process: re-attach data-chunk-id based on chunkIdMap. Walk block nodes
+    // and inject the attribute into the generated HTML.
+  });
+  return html;
+}
+```
+
+Lexical requires the most custom wiring because `data-chunk-id` isn't a native concept in its model. Verify round-trip carefully during the dry-run.
+
+#### Quill
+
+Install: `npm install quill`.
+
+```typescript
+// lib/quill-chunk-id.ts
+import Quill from "quill";
+const Parchment = Quill.import("parchment") as typeof import("parchment");
+
+const ChunkIdAttributor = new Parchment.Attributor.Attribute(
+  "data-chunk-id", "data-chunk-id", { scope: Parchment.Scope.BLOCK }
+);
+Quill.register(ChunkIdAttributor, true);
+
+// When loading SuperDocs HTML:
+// quill.clipboard.dangerouslyPasteHTML(html)  — Parchment preserves data-chunk-id on blocks.
+
+// When reading back for SuperDocs:
+// quill.root.innerHTML  — the attribute stays on block elements.
+```
+
+#### ContentEditable (no editor library)
+
+```typescript
+// lib/contenteditable-chunk-id.ts
+// A plain contenteditable div does preserve attributes by default, but some
+// browsers silently re-normalize HTML when the user types. Protect against
+// that with a MutationObserver that restores missing chunk ids from a
+// snapshot taken before each AI round-trip.
+
+const lastSeenIds = new Map<Element, string>();
+
+export function snapshotChunkIds(root: Element) {
+  root.querySelectorAll("[data-chunk-id]").forEach((el) => {
+    const id = el.getAttribute("data-chunk-id");
+    if (id) lastSeenIds.set(el, id);
+  });
+}
+
+export function restoreChunkIds() {
+  for (const [el, id] of lastSeenIds.entries()) {
+    if (el.isConnected && !el.getAttribute("data-chunk-id")) {
+      el.setAttribute("data-chunk-id", id);
+    }
+  }
+}
+
+// Install a MutationObserver on the editable root and call restoreChunkIds()
+// whenever a childList or attributes mutation fires.
+```
+
+#### CKEditor / other
+
+If you're on CKEditor 5 or a different editor: consult that editor's "custom attributes" documentation. The pattern is always the same — declare `data-chunk-id` as a preserved attribute on block-level elements, and ensure it round-trips through the editor's HTML serializer and parser.
+
+Commit: `git commit -am "Phase 2: editor chunk-id preservation"`.
+
+---
+
+### Phase 3 — UI layout + sample document
+
+**Run only if:** `USE_CASE_SHAPE = chat-panel` AND `APP_MATURITY = greenfield`.
+
+**Otherwise:** describe where the chat-style interaction lives in your existing UI, and pick the USE_CASE_SHAPE-specific pattern in the notes below. Skip the layout code.
+
+For a greenfield two-pane layout: render the editor in the primary content area, the chat in a side panel, and pass a reference from the chat to the editor's `getHtml` / `setHtml` bridge.
+
+#### Non-chat-panel use cases
+
+- **`slash-commands`** — wire a keyboard shortcut or `/`-trigger in your editor that opens a command menu. Each command maps to a canned prompt that gets sent to `/v1/chat/async`. The review drawer from Phase 7 still applies.
+- **`inline-ghost-text`** — present the AI's proposed change as inline ghost text (like GitHub Copilot) rather than a side drawer. On Tab, apply the change via `setHtml`. On Esc, discard. Still use `approval_mode: "ask_every_time"` and consume `proposed_change` events — render them as ghost text instead of cards.
+- **`batch-processing`** — no UI. Iterate over a queue, call `/v1/chat` synchronously with each document, store the returned HTML. Skip Phases 3, 5 (SSE), 7 (review) entirely — use `approval_mode: "approve_all"`.
+- **`agent-to-agent`** — your own AI agent calls the SuperDocs API. Use sync `/v1/chat` with `approve_all`. Skip all UI phases.
+
+Commit: `git commit -am "Phase 3: UI layout"`.
+
+---
+
+### Phase 4 — API-key-safe proxy to SuperDocs
+
+**Always runs.**
+
+**Background.** The SuperDocs `sk_` key is a secret. Never expose it to a browser. Your backend holds it in an env var and forwards calls to `https://api.superdocs.app`, injecting the `Authorization: Bearer sk_...` header (or `api_key=sk_...` query param for the SSE stream, because `EventSource` can't set headers).
+
+Pick the snippet matching `BACKEND_STATE`:
+
+#### Next.js App Router (TypeScript)
+
+```typescript
+// app/api/superdocs/[...path]/route.ts
+import { NextRequest } from "next/server";
+
+const BASE = "https://api.superdocs.app";
+const KEY = process.env.SUPERDOCS_API_KEY;
+
+async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  if (!KEY) return new Response("Missing SUPERDOCS_API_KEY", { status: 500 });
+  const { path } = await ctx.params;
+  const target = `${BASE}/${path.join("/")}`;
+  const headers = new Headers(req.headers);
+  headers.set("Authorization", `Bearer ${KEY}`);
+  headers.delete("host");
+  const body = req.method === "GET" || req.method === "HEAD"
+    ? undefined : await req.arrayBuffer();
+  const res = await fetch(target, { method: req.method, headers, body });
+  return new Response(res.body, { status: res.status, headers: res.headers });
+}
+
+export const GET = proxy;
+export const POST = proxy;
+export const DELETE = proxy;
+```
+
+Separate SSE route (moves the key from env var into a query param since `EventSource` can't set headers):
+
+```typescript
+// app/api/superdocs/stream/route.ts
+import { NextRequest } from "next/server";
+const BASE = "https://api.superdocs.app";
+const KEY = process.env.SUPERDOCS_API_KEY!;
+
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const jobId = url.searchParams.get("job_id");
+  const sid = url.searchParams.get("sid");
+  if (!jobId || !sid) return new Response("Missing job_id or sid", { status: 400 });
+  const target = `${BASE}/v1/chat/${encodeURIComponent(sid)}/stream` +
+    `?job_id=${encodeURIComponent(jobId)}&api_key=${encodeURIComponent(KEY)}`;
+  const upstream = await fetch(target, { headers: { Accept: "text/event-stream" } });
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}
+```
+
+#### Express (Node/TS)
+
+```typescript
+import express from "express";
+import fetch from "node-fetch";
+const app = express();
+const KEY = process.env.SUPERDOCS_API_KEY!;
+
+app.use("/api/superdocs", express.raw({ type: "*/*" }), async (req, res) => {
+  const target = `https://api.superdocs.app${req.path}`;
+  const headers: Record<string, string> = { "Authorization": `Bearer ${KEY}` };
+  if (req.headers["content-type"]) headers["Content-Type"] = String(req.headers["content-type"]);
+  const upstream = await fetch(target, { method: req.method, headers, body: req.method === "GET" ? undefined : req.body });
+  res.status(upstream.status);
+  upstream.headers.forEach((v, k) => res.setHeader(k, v));
+  upstream.body?.pipe(res);
+});
+
+app.get("/api/superdocs/stream", async (req, res) => {
+  const target = `https://api.superdocs.app/v1/chat/${req.query.sid}/stream` +
+    `?job_id=${req.query.job_id}&api_key=${KEY}`;
+  const upstream = await fetch(target, { headers: { Accept: "text/event-stream" } });
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  upstream.body?.pipe(res);
+});
+```
+
+#### FastAPI (Python)
+
+```python
+import os, httpx
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse, Response
+
+app = FastAPI()
+KEY = os.environ["SUPERDOCS_API_KEY"]
+BASE = "https://api.superdocs.app"
+
+@app.api_route("/api/superdocs/{path:path}", methods=["GET","POST","DELETE"])
+async def proxy(path: str, request: Request):
+    body = await request.body() if request.method != "GET" else None
+    async with httpx.AsyncClient() as c:
+        r = await c.request(
+            request.method, f"{BASE}/{path}",
+            headers={"Authorization": f"Bearer {KEY}",
+                     "Content-Type": request.headers.get("content-type", "application/json")},
+            content=body,
+        )
+    return Response(r.content, status_code=r.status_code, headers=dict(r.headers))
+
+@app.get("/api/superdocs/stream")
+async def stream(job_id: str, sid: str):
+    url = f"{BASE}/v1/chat/{sid}/stream?job_id={job_id}&api_key={KEY}"
+    async def gen():
+        async with httpx.AsyncClient(timeout=None) as c:
+            async with c.stream("GET", url, headers={"Accept": "text/event-stream"}) as r:
+                async for chunk in r.aiter_raw():
+                    yield chunk
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache, no-transform"})
+```
+
+#### Rails (Ruby)
+
+```ruby
+# config/routes.rb
+match "/api/superdocs/*path", to: "superdocs#proxy", via: :all
+get  "/api/superdocs/stream", to: "superdocs#stream"
+
+# app/controllers/superdocs_controller.rb
+require "net/http"
+require "uri"
+
+class SuperdocsController < ApplicationController
+  KEY = ENV.fetch("SUPERDOCS_API_KEY")
+  BASE = "https://api.superdocs.app"
+
+  def proxy
+    uri = URI("#{BASE}/#{params[:path]}")
+    req_class = { "GET" => Net::HTTP::Get, "POST" => Net::HTTP::Post,
+                  "DELETE" => Net::HTTP::Delete }[request.method]
+    req = req_class.new(uri)
+    req["Authorization"] = "Bearer #{KEY}"
+    req["Content-Type"] = request.content_type if request.content_type
+    req.body = request.raw_post if req.request_body_permitted?
+    res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |h| h.request(req) }
+    render plain: res.body, status: res.code.to_i, content_type: res["content-type"]
+  end
+
+  def stream
+    url = "#{BASE}/v1/chat/#{params[:sid]}/stream?job_id=#{params[:job_id]}&api_key=#{KEY}"
+    response.headers["Content-Type"] = "text/event-stream"
+    response.headers["Cache-Control"] = "no-cache, no-transform"
+    URI.open(url, "Accept" => "text/event-stream") { |io| IO.copy_stream(io, response.stream) }
+  ensure
+    response.stream.close
+  end
+end
+```
+
+#### Django (Python)
+
+```python
+# views.py
+import os, requests
+from django.http import StreamingHttpResponse, HttpResponse
+
+KEY = os.environ["SUPERDOCS_API_KEY"]
+BASE = "https://api.superdocs.app"
+
+def proxy(request, path):
+    r = requests.request(
+        request.method, f"{BASE}/{path}",
+        headers={"Authorization": f"Bearer {KEY}",
+                 "Content-Type": request.META.get("CONTENT_TYPE", "application/json")},
+        data=request.body if request.method != "GET" else None,
+    )
+    return HttpResponse(r.content, status=r.status_code, content_type=r.headers.get("content-type"))
+
+def stream(request):
+    url = f"{BASE}/v1/chat/{request.GET['sid']}/stream?job_id={request.GET['job_id']}&api_key={KEY}"
+    r = requests.get(url, stream=True, headers={"Accept": "text/event-stream"})
+    resp = StreamingHttpResponse(r.iter_content(chunk_size=None), content_type="text/event-stream")
+    resp["Cache-Control"] = "no-cache, no-transform"
+    return resp
+
+# urls.py
+# path("api/superdocs/stream", stream),
+# re_path(r"^api/superdocs/(?P<path>.*)$", proxy),
+```
+
+#### Go net/http
+
+```go
+package main
+
+import ( "io"; "net/http"; "os"; "strings" )
+
+var key = os.Getenv("SUPERDOCS_API_KEY")
+const base = "https://api.superdocs.app"
+
+func proxy(w http.ResponseWriter, r *http.Request) {
+    target := base + strings.TrimPrefix(r.URL.Path, "/api/superdocs")
+    req, _ := http.NewRequest(r.Method, target, r.Body)
+    req.Header = r.Header.Clone()
+    req.Header.Set("Authorization", "Bearer "+key)
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil { http.Error(w, err.Error(), 502); return }
+    defer resp.Body.Close()
+    for k, v := range resp.Header { w.Header()[k] = v }
+    w.WriteHeader(resp.StatusCode)
+    io.Copy(w, resp.Body)
+}
+
+func stream(w http.ResponseWriter, r *http.Request) {
+    q := r.URL.Query()
+    url := base + "/v1/chat/" + q.Get("sid") + "/stream?job_id=" + q.Get("job_id") + "&api_key=" + key
+    req, _ := http.NewRequest("GET", url, nil)
+    req.Header.Set("Accept", "text/event-stream")
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil { http.Error(w, err.Error(), 502); return }
+    defer resp.Body.Close()
+    w.Header().Set("Content-Type", "text/event-stream")
+    w.Header().Set("Cache-Control", "no-cache, no-transform")
+    w.WriteHeader(resp.StatusCode)
+    flusher, _ := w.(http.Flusher)
+    buf := make([]byte, 4096)
+    for {
+        n, err := resp.Body.Read(buf)
+        if n > 0 { w.Write(buf[:n]); if flusher != nil { flusher.Flush() } }
+        if err != nil { return }
+    }
+}
+```
+
+#### .NET Minimal API
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+var key = Environment.GetEnvironmentVariable("SUPERDOCS_API_KEY")!;
+var http = new HttpClient();
+
+app.Map("/api/superdocs/stream", async (HttpContext ctx, string sid, string job_id) => {
+    var url = $"https://api.superdocs.app/v1/chat/{sid}/stream?job_id={job_id}&api_key={key}";
+    using var req = new HttpRequestMessage(HttpMethod.Get, url);
+    req.Headers.Accept.ParseAdd("text/event-stream");
+    using var res = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+    ctx.Response.StatusCode = (int)res.StatusCode;
+    ctx.Response.Headers.ContentType = "text/event-stream";
+    ctx.Response.Headers.CacheControl = "no-cache, no-transform";
+    await res.Content.CopyToAsync(ctx.Response.Body);
+});
+
+app.Map("/api/superdocs/{**path}", async (HttpContext ctx, string path) => {
+    var method = new HttpMethod(ctx.Request.Method);
+    using var req = new HttpRequestMessage(method, $"https://api.superdocs.app/{path}");
+    req.Headers.Authorization = new("Bearer", key);
+    if (ctx.Request.ContentLength > 0)
+        req.Content = new StreamContent(ctx.Request.Body);
+    using var res = await http.SendAsync(req);
+    ctx.Response.StatusCode = (int)res.StatusCode;
+    await res.Content.CopyToAsync(ctx.Response.Body);
+});
+
+app.Run();
+```
+
+#### Other backends
+
+If your backend isn't listed, the pattern is: accept any request under `/api/superdocs/*`, forward it to `https://api.superdocs.app/<path>` with `Authorization: Bearer sk_...` injected server-side, pipe the response back byte-for-byte. For the SSE stream, move the key to the `api_key` query param and pipe `text/event-stream` chunks unbuffered. Do not parse, transform, or cache — this is a dumb pipe.
+
+Commit: `git commit -am "Phase 4: superdocs proxy"`.
+
+---
+
+### Phase 5 — Chat flow with SSE consumption
+
+**Always runs.**
+
+Send the user's message and the document HTML to `POST /v1/chat/async`, then open the SSE stream for the returned `job_id`. Pick the snippet matching `FRONTEND_FRAMEWORK`:
+
+#### React hook (Next.js, Remix, Vite-React)
+
+```typescript
+// hooks/useSuperDocsStream.ts
+import { useRef } from "react";
+
+export function useSuperDocsStream() {
+  const ref = useRef<EventSource | null>(null);
+
+  function open(jobId: string, sessionId: string, handlers: {
+    document_sync?: (html: string) => void;
+    intermediate?: (text: string) => void;
+    proposed_change?: (change: any) => void;
+    final?: (result: any) => void;
+    usage?: (usage: any) => void;
+    error?: (err: string) => void;
+  }) {
+    ref.current?.close();
+    const es = new EventSource(`/api/superdocs/stream?job_id=${jobId}&sid=${sessionId}`);
+    ref.current = es;
+    const add = (name: string, fn?: (d: any) => void) => fn && es.addEventListener(name, (e: any) => fn(JSON.parse(e.data)));
+    add("document_sync", (d) => handlers.document_sync?.(d.content));
+    add("intermediate", (d) => handlers.intermediate?.(d.content));
+    add("proposed_change", (d) => handlers.proposed_change?.(JSON.parse(d.content)));
+    add("final", (d) => handlers.final?.(d.result));
+    add("usage", (d) => handlers.usage?.(d));
+    add("error", (d) => handlers.error?.(d?.error ?? "stream error"));
+    es.onerror = () => es.close();
+    return () => es.close();
+  }
+
+  return { open };
+}
+```
+
+#### Vue 3 composable
+
+```typescript
+// composables/useSuperDocsStream.ts
+import { onUnmounted, ref } from "vue";
+
+export function useSuperDocsStream() {
+  const es = ref<EventSource | null>(null);
+
+  function open(jobId: string, sessionId: string, handlers) {
+    es.value?.close();
+    const src = new EventSource(`/api/superdocs/stream?job_id=${jobId}&sid=${sessionId}`);
+    es.value = src;
+    const add = (name, fn) => fn && src.addEventListener(name, (e: any) => fn(JSON.parse(e.data)));
+    add("document_sync", (d) => handlers.document_sync?.(d.content));
+    add("intermediate", (d) => handlers.intermediate?.(d.content));
+    add("proposed_change", (d) => handlers.proposed_change?.(JSON.parse(d.content)));
+    add("final", (d) => handlers.final?.(d.result));
+    add("usage", (d) => handlers.usage?.(d));
+    add("error", (d) => handlers.error?.(d?.error ?? "stream error"));
+    src.onerror = () => src.close();
+  }
+
+  onUnmounted(() => es.value?.close());
+  return { open };
+}
+```
+
+#### Svelte store / action
+
+```typescript
+// lib/superdocs-stream.ts
+import { writable } from "svelte/store";
+
+export function createStream(jobId: string, sessionId: string, handlers) {
+  const connected = writable(false);
+  const es = new EventSource(`/api/superdocs/stream?job_id=${jobId}&sid=${sessionId}`);
+  es.onopen = () => connected.set(true);
+  const add = (name, fn) => fn && es.addEventListener(name, (e: any) => fn(JSON.parse(e.data)));
+  add("document_sync", (d) => handlers.document_sync?.(d.content));
+  add("intermediate", (d) => handlers.intermediate?.(d.content));
+  add("proposed_change", (d) => handlers.proposed_change?.(JSON.parse(d.content)));
+  add("final", (d) => handlers.final?.(d.result));
+  add("usage", (d) => handlers.usage?.(d));
+  add("error", (d) => handlers.error?.(d?.error ?? "stream error"));
+  es.onerror = () => { connected.set(false); es.close(); };
+  return { connected, close: () => es.close() };
+}
+```
+
+#### Plain JavaScript (Rails view, Django template, HTMX, plain HTML)
+
+```html
+<script>
+function openSuperDocsStream(jobId, sessionId, handlers) {
+  const es = new EventSource(`/api/superdocs/stream?job_id=${jobId}&sid=${sessionId}`);
+  const add = (name, fn) => fn && es.addEventListener(name, (e) => fn(JSON.parse(e.data)));
+  add("document_sync", (d) => handlers.document_sync?.(d.content));
+  add("intermediate",  (d) => handlers.intermediate?.(d.content));
+  add("proposed_change", (d) => handlers.proposed_change?.(JSON.parse(d.content)));
+  add("final", (d) => handlers.final?.(d.result));
+  add("usage", (d) => handlers.usage?.(d));
+  add("error", (d) => handlers.error?.(d?.error || "stream error"));
+  es.onerror = () => es.close();
+  return () => es.close();
+}
+</script>
+```
+
+#### Server-side client (`DEPLOYMENT_TARGET = server-only-no-ui` or `batch-processing`)
+
+No `EventSource` — use a streaming HTTP client directly against the SuperDocs API with a `Bearer` header (you're on the server, no proxy needed):
+
+```python
+# python, for server-side or batch pipelines
+import httpx, json
+
+KEY = os.environ["SUPERDOCS_API_KEY"]
+
+def run_edit(session_id: str, message: str, document_html: str):
+    with httpx.Client(headers={"Authorization": f"Bearer {KEY}"}) as c:
+        job = c.post("https://api.superdocs.app/v1/chat/async", json={
+            "message": message, "session_id": session_id, "document_html": document_html,
+        }).json()
+        job_id = job["job_id"]
+        url = f"https://api.superdocs.app/v1/chat/{session_id}/stream?job_id={job_id}"
+        with c.stream("GET", url, headers={"Authorization": f"Bearer {KEY}"}) as r:
+            event = None
+            for line in r.iter_lines():
+                if line.startswith("event: "): event = line[7:]
+                elif line.startswith("data: "):
+                    data = json.loads(line[6:])
+                    if event == "final": return data["result"]
+                    if event == "error": raise RuntimeError(data["error"])
+```
+
+Commit: `git commit -am "Phase 5: chat + SSE"`.
+
+---
+
+### Phase 6 — `document_sync` handling
+
+**Always runs.**
+
+When you send `document_html`, SuperDocs emits a `document_sync` event at the start of the stream containing the prepared HTML with chunk IDs. Apply it to your editor immediately so the editor's chunk IDs match what the AI references in `proposed_change` events that follow.
+
+This is two lines: in your stream handler, wire `document_sync` → `editor.setHtml(content)`. Already included in the Phase-5 snippets above.
+
+**Tradeoff if you skip it:** edits still apply via `final`, but mid-flight diff cards (Phase 7) may reference chunk IDs your editor doesn't have yet. Symptom: diff cards render but "which section is this?" anchoring breaks for freshly pasted/uploaded documents. Worth the two lines.
+
+---
+
+### Phase 7 — HITL review drawer
+
+**Always runs.**
+
+**UI style is yours.** Do not pull in Tailwind / shadcn / MUI just for this. Use whatever component library you already have. The logic below is what matters; skin it to your app.
+
+On chat send: include `approval_mode: "ask_every_time"` in the `POST /v1/chat/async` body. SuperDocs will emit one `proposed_change` event per AI-proposed edit, then pause.
+
+On each `proposed_change` (already wired in Phase 5):
+1. Parse `content` as JSON — fields are `change_id`, `operation` (`edit`/`create`/`delete`), `chunk_id`, `old_html`, `new_html`, `ai_explanation`, `batch_id`, `batch_total`, `insert_after_chunk_id`.
+2. Push it onto a `pending` list in your chat state.
+3. Render a review card per change: show `ai_explanation`, and `old_html` / `new_html` side-by-side with red and green backgrounds. Three buttons: Approve, Deny, (optional) Deny with feedback.
+
+On approve/deny:
+
+```javascript
+await fetch(`/api/superdocs/v1/chat/${sessionId}/approve`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    job_id: currentJobId,
+    approved: true,
+    changes: [{ change_id, approved: true }],
+    // or { change_id, approved: false, feedback: "reason..." } to deny with feedback
+  }),
+});
+```
+
+After the user decides, the AI resumes on the already-open SSE stream — the `approve` POST itself just returns 200.
+
+On `final`: the `result.document_changes.updated_html` replaces the editor's content. Clear the pending list.
+
+Commit: `git commit -am "Phase 7: HITL review"`.
+
+---
+
+### Phase 8 — Word export
+
+**Run only if:** `INCLUDE_EXPORT = true`.
+
+One POST, one blob, one download:
+
+```javascript
+const html = editorGetHtml();
+const res = await fetch("/api/superdocs/v1/documents/export", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ html, format: "docx", filename: "document" }),
+});
+const blob = await res.blob();
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url; a.download = "document.docx"; a.click();
+URL.revokeObjectURL(url);
+```
+
+Server-side clients: `POST /v1/documents/export` returns a binary body directly — save `response.content` (Python) or `res.arrayBuffer()` (Node) to a `.docx` file.
+
+Commit: `git commit -am "Phase 8: export"`.
+
+---
+
+### Phase 9 — Polish + README
+
+**Run only if:** `APP_MATURITY = greenfield`.
+
+Write a minimal README: one-paragraph description, run instructions (`npm install`, `.env.local`, `npm run dev`), link to SuperDocs docs. Run the end-to-end demo flow once to verify.
+
+Commit: `git commit -am "Phase 9: polish"`.
+
+---
+
+## Part 5 — API contract summary
+
+All requests go through your proxy. Paths are relative to `/api/superdocs/`.
+
+- `POST v1/chat/async` — body: `{ message, session_id, document_html, approval_mode?: "approve_all" | "ask_every_time" }` → `{ job_id }`.
+- `GET stream?job_id=...&sid=...` — SSE stream of six event types.
+- `POST v1/chat/{session_id}/approve` — body: `{ job_id, approved, changes?: [{ change_id, approved, feedback? }] }`.
+- `POST v1/documents/export` — body: `{ html?, session_id?, format: "doc"|"docx", filename? }` → binary Word file.
+
+SSE event `data:` shapes (all JSON):
+
+```
+document_sync   { type, content }                  // content: full HTML
+intermediate    { type, content, sequence, timestamp }
+proposed_change { type, content, sequence }        // content: JSON-stringified ProposedChange
+final           { content, result }                // result.response, result.document_changes.updated_html
+usage           { monthly_used, monthly_limit, monthly_remaining, was_billable, subscription_tier }
+error           { error }
+```
+
+Parsed `proposed_change.content` shape:
+```
+{ change_id, operation: "edit" | "create" | "delete",
+  chunk_id, old_html, new_html,
+  ai_explanation, batch_id, batch_total, insert_after_chunk_id }
+```
+
+---
+
+## Part 6 — Failure modes and their fixes
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `Missing SUPERDOCS_API_KEY` | env file not read | Restart your server; env vars are read on boot. |
+| 401 from `/v1/chat/async` | key wrong or includes `Bearer ` literal | Value is just `sk_...` with no quotes, no "Bearer" prefix. |
+| SSE connection opens then closes | proxy transforms headers | Pipe upstream body unchanged; set `Cache-Control: no-cache, no-transform`. |
+| `proposed_change` fires, approve 404 | wrong session_id in URL | Path must be `/api/superdocs/v1/chat/${sessionId}/approve`. |
+| Editor loses `data-chunk-id` after first edit | editor schema/config missing a node type | Add the missing node to your chunk-id-preservation config (Phase 2). |
+| Diff card `old_html` empty | operation is `create`, not `edit` | Correct — creates have no `old_html`. Render them as "new section" cards. |
+| Silent round-trip loss | HTML sanitizer strips unknown attributes | Add `data-chunk-id` to your sanitizer's allowlist. |
+| SSE works in dev, fails in prod | reverse proxy buffers | Disable buffering for `text/event-stream` in nginx/Caddy/CloudFront. |
+
+---
+
+## Part 7 — Self-review checklist
+
+Verify all applicable items before declaring the integration done. Skip items gated on scenarios you didn't enable.
+
+- [ ] A user message reaches SuperDocs with the current document HTML attached.
+- [ ] At least one `intermediate` event appears as progress in the UI.
+- [ ] **[USE_CASE_SHAPE includes review]** A `proposed_change` renders a visible diff card.
+- [ ] **[USE_CASE_SHAPE includes review]** Approving applies the change within ~2 seconds of click.
+- [ ] **[USE_CASE_SHAPE includes review]** Denying rejects the change.
+- [ ] The `final` event replaces the editor's content and the other sections of the document are untouched.
+- [ ] The usage data is surfaced somewhere (chip, console, or response body).
+- [ ] The SuperDocs `sk_` key is not visible in any browser network request.
+- [ ] **[INCLUDE_EXPORT=true]** Clicking export downloads a `.docx` that opens in Word/Pages with the current edits applied.
+- [ ] A second message in the same session continues the conversation (the AI refers back to the prior edit).
+- [ ] The `data-chunk-id` attribute survives the round-trip on every block node type your product uses.
+
+---
+
+## Part 8 — Content safety (last reminder)
+
+Nothing in your code, comments, commit messages, or public artefacts mentions specific AI model names, orchestration frameworks, internal tech names, cloud providers, or cost-per-operation figures. Say "SuperDocs' AI" or "the AI."
+
+---
+
+## You are now starting
+
+Confirm with the integrator that the Part 0 declarations are correct, then execute the phases in order, skipping where the conditions say to skip. Read `llms-full.txt` whenever an API question comes up. Commit locally after every phase. Do not push until the end-to-end integration works.
+
+Good luck.
+````
+
+## Reference implementation
+
+<Card title="prosemirror-superdocs-demo" icon="github" href="https://github.com/superdocsapp/prosemirror-superdocs-demo">
+  See the filled-in version used in our integration video — raw ProseMirror on Next.js with the full SOP-editing demo. MIT-licensed. Clone it, point your coding agent at it, and adapt.
+</Card>
+
+## Related guides
+
+- [Editor Integration](/guides/editor-integration) — drop-in chunk-id preservation snippets for ProseMirror, TipTap, Slate, Lexical, Quill, and CKEditor 5.
+- [Human-in-the-Loop](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor) — inline diff overlay patterns (Cursor-style) and side-by-side review cards.
+- [SSE Streaming](/guides/streaming) — six event types, the `proposed_change.content` double-parse, and the `EventSource` + `api_key` query-param pattern.
+- [JavaScript Examples](/examples/javascript) — working HITL flow plus a framework-agnostic two-pane frontend skeleton.
+
+## Stuck?
+
+Email [hello@superdocs.app](mailto:hello@superdocs.app) or book a 15-minute integration call at [cal.com/superdocs](https://cal.com/superdocs). If your editor, backend, or frontend stack isn't covered by the existing guides, we'll add a snippet.
