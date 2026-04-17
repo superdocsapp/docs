@@ -1,0 +1,419 @@
+---
+title: "Server Integration"
+description: "Use SuperDocs from a backend service with no UI — batch document processing, queue workers, scheduled jobs, document workflows. No frontend, no SSE consumer, no human approval needed."
+---
+
+# Server Integration
+
+If your product is a backend service that processes documents — a queue worker editing contracts overnight, a scheduled job that summarizes incoming reports, a document workflow that auto-improves files before they hit your storage — SuperDocs slots in as a synchronous API call, no UI required.
+
+This guide covers the pattern + working snippets for the five most common backend stacks (Node, Python, Go, Ruby, .NET), plus when to choose sync vs async vs polling.
+
+## Why this shape is different from a UI integration
+
+In a typical SuperDocs UI integration, a user types in a chat panel, the chat opens an SSE stream, and the user reviews proposed edits in real time before approving. The whole architecture is shaped around interactive review.
+
+In a server-side integration, none of that applies. There's no user typing, no chat panel, no SSE consumer to build, and (typically) no human approval. Your service has documents in a queue or storage, calls SuperDocs synchronously to get them edited, persists the results, and moves on.
+
+The integration is simpler — usually one synchronous HTTP call per document, plus a wrapper around it for retries, error handling, and persistence.
+
+## The pattern, in 4 steps
+
+1. **Get a document HTML** from wherever your service stores documents (S3, database, file, message queue payload).
+2. **Call `POST /v1/chat`** synchronously with `approval_mode: "approve_all"`. SuperDocs applies all proposed changes automatically and returns the final updated HTML.
+3. **Persist the updated HTML** back to wherever the document lives.
+4. **Handle errors and retries** per your service's existing conventions.
+
+That's the whole loop. The snippets below are the same loop in five different language idioms.
+
+## When to use sync vs async vs polling
+
+Three SuperDocs endpoints can drive a server-side integration. Pick based on document size and your service's needs:
+
+| Endpoint | When to use |
+|---|---|
+| `POST /v1/chat` (sync) | Default. Documents under ~50 pages, single-call edits, batch processing. Simplest pattern: one HTTP call in, one HTTP response out. |
+| `POST /v1/chat/async` + `GET /v1/jobs/{job_id}` (polling) | Long-running edits where you want to fire-and-forget and check back. Documents over ~50 pages, complex multi-section rewrites, or workflows where you don't want to block on a single HTTP call. |
+| `POST /v1/chat/async` + SSE stream | Rare for server-side. Use only if you specifically want to react to intermediate progress events or `proposed_change` events one at a time. Most server integrations don't need this. |
+
+For 90% of server-side integrations, the sync `/v1/chat` endpoint is the right answer.
+
+## Node.js (TypeScript)
+
+```typescript
+import 'dotenv/config';
+
+const SUPERDOCS_KEY = process.env.SUPERDOCS_API_KEY!;
+
+interface SuperDocsResponse {
+  response: string;
+  document_changes: { updated_html: string; version_id?: string };
+  usage: { monthly_used: number; monthly_limit: number; monthly_remaining: number };
+}
+
+export async function editDocument(
+  message: string,
+  sessionId: string,
+  documentHtml: string,
+  approvalMode: "approve_all" | "ask_every_time" = "approve_all"
+): Promise<SuperDocsResponse> {
+  const res = await fetch("https://api.superdocs.app/v1/chat", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${SUPERDOCS_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      document_html: documentHtml,
+      approval_mode: approvalMode,
+    }),
+    // Sync edits on long documents can take 30-60 seconds; raise default timeout.
+    signal: AbortSignal.timeout(300_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`SuperDocs ${res.status}: ${await res.text()}`);
+  }
+  return res.json() as Promise<SuperDocsResponse>;
+}
+
+// Example queue worker — pulls a document, edits it, persists the result
+export async function processQueueItem(jobId: string, documentHtml: string, instruction: string) {
+  try {
+    const result = await editDocument(instruction, `job-${jobId}`, documentHtml);
+    await persistToStorage(jobId, result.document_changes.updated_html);
+    return { ok: true, jobId, opsRemaining: result.usage.monthly_remaining };
+  } catch (err) {
+    console.error(`Failed to process ${jobId}:`, err);
+    throw err; // Let your queue's retry logic decide
+  }
+}
+
+async function persistToStorage(jobId: string, html: string) {
+  // Replace with your storage idiom: S3 upload, database UPDATE, file write, etc.
+}
+```
+
+## Python (FastAPI / Django / standalone)
+
+```python
+import os, httpx
+from typing import Literal, TypedDict
+
+SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
+
+class SuperDocsResponse(TypedDict):
+    response: str
+    document_changes: dict
+    usage: dict
+
+def edit_document(
+    message: str,
+    session_id: str,
+    document_html: str,
+    approval_mode: Literal["approve_all", "ask_every_time"] = "approve_all",
+) -> SuperDocsResponse:
+    """Sync edit. For long documents (50+ pages), prefer the async + polling pattern."""
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as client:
+        response = client.post(
+            "https://api.superdocs.app/v1/chat",
+            json={
+                "message": message,
+                "session_id": session_id,
+                "document_html": document_html,
+                "approval_mode": approval_mode,
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+
+# Example queue worker (Celery, RQ, plain script — pattern is the same)
+def process_queue_item(job_id: str, document_html: str, instruction: str) -> dict:
+    try:
+        result = edit_document(instruction, f"job-{job_id}", document_html)
+        persist_to_storage(job_id, result["document_changes"]["updated_html"])
+        return {"ok": True, "job_id": job_id, "ops_remaining": result["usage"]["monthly_remaining"]}
+    except httpx.HTTPStatusError as e:
+        # SuperDocs API returned non-2xx — let your queue's retry logic decide.
+        # Most errors (rate limit, transient network) are worth retrying.
+        # 401 (bad key), 4xx with explicit messages, are NOT worth retrying.
+        if e.response.status_code in (429, 502, 503, 504):
+            raise  # Let queue retry
+        return {"ok": False, "job_id": job_id, "error": str(e), "retryable": False}
+
+def persist_to_storage(job_id: str, html: str):
+    # Replace with your storage idiom.
+    pass
+
+# Async / polling variant for long documents (50+ pages)
+def edit_document_async(message: str, session_id: str, document_html: str) -> str:
+    """Returns updated HTML after polling job completion."""
+    import time
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=60) as client:
+        # Kick off the job
+        job_response = client.post(
+            "https://api.superdocs.app/v1/chat/async",
+            json={"message": message, "session_id": session_id,
+                  "document_html": document_html, "approval_mode": "approve_all"},
+        )
+        job_response.raise_for_status()
+        job_id = job_response.json()["job_id"]
+
+        # Poll until complete (typically 10-60 seconds for non-trivial edits)
+        while True:
+            time.sleep(2)
+            status = client.get(f"https://api.superdocs.app/v1/jobs/{job_id}").json()
+            if status["status"] == "completed":
+                return status["result"]["document_changes"]["updated_html"]
+            if status["status"] == "failed":
+                raise RuntimeError(f"Job failed: {status.get('error')}")
+```
+
+## Go (net/http)
+
+```go
+package superdocs
+
+import (
+    "bytes"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "os"
+    "time"
+)
+
+var key = os.Getenv("SUPERDOCS_API_KEY")
+
+type EditRequest struct {
+    Message      string `json:"message"`
+    SessionID    string `json:"session_id"`
+    DocumentHTML string `json:"document_html"`
+    ApprovalMode string `json:"approval_mode"`
+}
+
+type EditResponse struct {
+    Response        string `json:"response"`
+    DocumentChanges struct {
+        UpdatedHTML string `json:"updated_html"`
+        VersionID   string `json:"version_id,omitempty"`
+    } `json:"document_changes"`
+    Usage struct {
+        MonthlyUsed      int `json:"monthly_used"`
+        MonthlyLimit     int `json:"monthly_limit"`
+        MonthlyRemaining int `json:"monthly_remaining"`
+    } `json:"usage"`
+}
+
+func EditDocument(ctx context.Context, req EditRequest) (*EditResponse, error) {
+    if req.ApprovalMode == "" {
+        req.ApprovalMode = "approve_all"
+    }
+    body, _ := json.Marshal(req)
+
+    httpReq, _ := http.NewRequestWithContext(ctx, "POST",
+        "https://api.superdocs.app/v1/chat", bytes.NewReader(body))
+    httpReq.Header.Set("Authorization", "Bearer "+key)
+    httpReq.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{Timeout: 300 * time.Second}
+    res, err := client.Do(httpReq)
+    if err != nil {
+        return nil, fmt.Errorf("superdocs request: %w", err)
+    }
+    defer res.Body.Close()
+
+    if res.StatusCode != http.StatusOK {
+        b, _ := io.ReadAll(res.Body)
+        return nil, fmt.Errorf("superdocs %d: %s", res.StatusCode, string(b))
+    }
+
+    var out EditResponse
+    if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+        return nil, fmt.Errorf("decode: %w", err)
+    }
+    return &out, nil
+}
+
+// Example queue worker pattern
+func ProcessQueueItem(ctx context.Context, jobID, documentHTML, instruction string) error {
+    result, err := EditDocument(ctx, EditRequest{
+        Message:      instruction,
+        SessionID:    "job-" + jobID,
+        DocumentHTML: documentHTML,
+    })
+    if err != nil {
+        return err
+    }
+    return persistToStorage(jobID, result.DocumentChanges.UpdatedHTML)
+}
+
+func persistToStorage(jobID, html string) error {
+    // Your storage idiom here
+    return nil
+}
+```
+
+## Ruby (Rails service object)
+
+```ruby
+require "net/http"
+require "uri"
+require "json"
+
+class SuperDocsService
+  KEY = ENV.fetch("SUPERDOCS_API_KEY")
+  BASE = "https://api.superdocs.app"
+
+  def self.edit_document(message:, session_id:, document_html:, approval_mode: "approve_all")
+    uri = URI("#{BASE}/v1/chat")
+    req = Net::HTTP::Post.new(uri, {
+      "Authorization" => "Bearer #{KEY}",
+      "Content-Type" => "application/json",
+    })
+    req.body = JSON.generate({
+      message: message,
+      session_id: session_id,
+      document_html: document_html,
+      approval_mode: approval_mode,
+    })
+
+    res = Net::HTTP.start(uri.host, uri.port,
+                          use_ssl: true, read_timeout: 300) { |h| h.request(req) }
+    raise "SuperDocs #{res.code}: #{res.body}" unless res.is_a?(Net::HTTPSuccess)
+    JSON.parse(res.body)
+  end
+end
+
+# Example background job (Sidekiq / Active Job)
+class EditDocumentJob < ApplicationJob
+  queue_as :default
+  retry_on StandardError, wait: :exponentially_longer, attempts: 3
+
+  def perform(document_id, instruction)
+    document = Document.find(document_id)
+    result = SuperDocsService.edit_document(
+      message: instruction,
+      session_id: "doc-#{document_id}",
+      document_html: document.html,
+    )
+    document.update!(html: result["document_changes"]["updated_html"])
+  end
+end
+```
+
+## .NET (C#, minimal API + service)
+
+```csharp
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+
+public class SuperDocsService
+{
+    private readonly HttpClient _http;
+    private readonly string _key = Environment.GetEnvironmentVariable("SUPERDOCS_API_KEY")!;
+
+    public SuperDocsService(HttpClient http)
+    {
+        _http = http;
+        _http.Timeout = TimeSpan.FromSeconds(300);
+        _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {_key}");
+    }
+
+    public async Task<EditResponse> EditDocumentAsync(
+        string message, string sessionId, string documentHtml,
+        string approvalMode = "approve_all", CancellationToken ct = default)
+    {
+        var req = new {
+            message,
+            session_id = sessionId,
+            document_html = documentHtml,
+            approval_mode = approvalMode,
+        };
+        var res = await _http.PostAsJsonAsync("https://api.superdocs.app/v1/chat", req, ct);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<EditResponse>(cancellationToken: ct))!;
+    }
+}
+
+public record EditResponse(
+    [property: JsonPropertyName("response")] string Response,
+    [property: JsonPropertyName("document_changes")] DocumentChanges DocumentChanges,
+    [property: JsonPropertyName("usage")] Usage Usage
+);
+
+public record DocumentChanges(
+    [property: JsonPropertyName("updated_html")] string UpdatedHtml,
+    [property: JsonPropertyName("version_id")] string? VersionId
+);
+
+public record Usage(
+    [property: JsonPropertyName("monthly_used")] int MonthlyUsed,
+    [property: JsonPropertyName("monthly_limit")] int MonthlyLimit,
+    [property: JsonPropertyName("monthly_remaining")] int MonthlyRemaining
+);
+
+// Example background worker
+public class DocumentProcessingWorker(SuperDocsService superdocs, ILogger<DocumentProcessingWorker> log)
+{
+    public async Task ProcessAsync(string jobId, string documentHtml, string instruction)
+    {
+        try {
+            var result = await superdocs.EditDocumentAsync(instruction, $"job-{jobId}", documentHtml);
+            await PersistToStorageAsync(jobId, result.DocumentChanges.UpdatedHtml);
+            log.LogInformation("Processed {JobId}, ops remaining: {Remaining}",
+                               jobId, result.Usage.MonthlyRemaining);
+        } catch (HttpRequestException ex) {
+            log.LogError(ex, "SuperDocs failed for {JobId}", jobId);
+            throw;
+        }
+    }
+
+    private Task PersistToStorageAsync(string jobId, string html) => Task.CompletedTask;
+}
+```
+
+## Persisting `updated_html` to storage
+
+Where the result goes depends on your service's existing storage. Common patterns:
+
+- **Database row.** `UPDATE documents SET html = $1, updated_at = now() WHERE id = $2;`. Make sure your column type accommodates the document size — `text` in Postgres, `LONGTEXT` in MySQL.
+- **S3 / object storage.** `s3.put_object(Bucket="...", Key="documents/{id}.html", Body=updated_html)`. Versioning at the bucket level gives you free history.
+- **Local file.** `with open(f"output/{job_id}.html", "w") as f: f.write(updated_html)`. Fine for batch jobs that produce files.
+- **Message queue.** Publish the updated HTML to a downstream queue for the next step in your pipeline.
+
+The `data-chunk-id` attributes that SuperDocs adds to block-level elements **must round-trip** if you plan to send the document back to SuperDocs again later (e.g., for further edits in the same session). Most string-based storage preserves them automatically; if you parse the HTML through a sanitizer or DOM library, ensure unknown attributes survive.
+
+## Error handling and retries
+
+SuperDocs returns standard HTTP status codes. Worth handling:
+
+- **401 / 403** — bad or missing API key. Not retryable; surface immediately.
+- **429** — rate limit. Wait and retry with exponential backoff. Check the `Retry-After` header.
+- **5xx** — transient server error. Retry with backoff.
+- **4xx (other)** — bad request, malformed HTML, unsupported parameters. Read the response body for the actual error and fix the request shape; not retryable.
+
+For batch / queue workers, lean on your queue's existing retry mechanism (Sidekiq's `retry_on`, Celery's `autoretry_for`, AWS SQS dead-letter queues, etc.) rather than building retry logic in the SuperDocs wrapper itself.
+
+## Auto-approve vs human-out-of-band
+
+If your server-side workflow needs a human's sign-off before applying SuperDocs' edits — even though there's no interactive UI — you have two patterns:
+
+- **Send a notification (Slack, email, SMS) with the proposed change.** The notification includes a button or reply mechanism. When the human responds, your service POSTs to `/v1/chat/{session_id}/approve` to apply the change. Use `approval_mode: "ask_every_time"` and stream the proposed changes via SSE to your notification dispatcher.
+- **Queue proposed changes for batch human review.** The human reviews a list of pending changes in your existing admin UI (or a CSV export, or a Slack digest). Same `ask_every_time` + approve POST pattern, just with a delayed human in the loop.
+
+## Stuck?
+
+If your server stack isn't covered here or your workflow needs a pattern not described above, email [hello@superdocs.app](mailto:hello@superdocs.app) or book a 15-minute integration call at [cal.com/superdocs](https://cal.com/superdocs). We'll talk through the pattern and add a snippet for the next person.
+
+## Related guides
+
+- [Async Jobs](/guides/async-jobs) — when you want polling instead of sync `/v1/chat`.
+- [SSE Streaming](/guides/streaming) — when you want streaming progress events from a server-side consumer.
+- [Agent Tool Integration](/guides/agent-tool-integration) — when your service is wrapping an AI agent that needs SuperDocs as a tool.
+- [Human-in-the-Loop](/guides/human-in-the-loop) — when you need human approval, even out-of-band.
+- [Integration Starter Prompt](/guides/integration-starter-prompt) — paste this into your coding agent to wire all the above up automatically.

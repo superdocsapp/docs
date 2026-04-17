@@ -8,7 +8,7 @@ description: "Make any rich-text editor round-trip SuperDocs document IDs, so su
 SuperDocs identifies every block-level element in your document with a `data-chunk-id` attribute. Your editor must preserve those attributes across the round-trip — HTML in, editor model, HTML back out — for surgical edits to work.
 
 <Note>
-  This guide covers **attribute preservation**. For rendering inline diff overlays inside the editor, see [Human-in-the-Loop → Rendering diffs inline in your editor](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor). For streaming events, see [SSE Streaming](/guides/streaming).
+  This guide covers **attribute preservation in a rich-text editor**. For rendering inline diff overlays inside the editor, see [Human-in-the-Loop → Rendering diffs inline in your editor](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor). For streaming events, see [SSE Streaming](/guides/streaming). If your product doesn't have an editor — your AI agent is the consumer of SuperDocs, or you're running server-side / batch — see [Agent Tool Integration](/guides/agent-tool-integration) or [Server Integration](/guides/server-integration) instead.
 </Note>
 
 ## Why this matters

@@ -7,6 +7,10 @@ description: "Stream real-time progress updates from the AI using Server-Sent Ev
 
 For long-running AI operations, use Server-Sent Events (SSE) to receive real-time progress updates instead of waiting for the full response.
 
+<Note>
+  SSE is one option, not the only option. For non-browser consumers (server-side workers, batch jobs, AI agent tools), the synchronous [`/v1/chat`](/examples/curl) endpoint or [polling on `/v1/jobs/{id}`](/guides/async-jobs) are simpler and equally valid. See [Server Integration](/guides/server-integration) for the patterns.
+</Note>
+
 ## How it works
 
 1. Start an async chat request to get a `job_id`
