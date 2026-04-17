@@ -13,6 +13,22 @@ HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wa
   This guide covers **UI-driven approval** (a human reviewing in your product's interface). If your AI agent is the one deciding whether to approve proposed changes (no human in the loop), see [Agent Tool Integration → Approval modes](/guides/agent-tool-integration#approval-modes-choose-based-on-who-decides). For batch / server-side workflows that auto-approve every change, see [Server Integration](/guides/server-integration) and pass `approval_mode: "approve_all"` instead.
 </Note>
 
+## Recommended UX pattern
+
+**Default your UI to auto-apply; expose Review Mode as an opt-in toggle.**
+
+The simplest, least-friction integration is to send `approval_mode: "approve_all"` by default and put a small in-UI toggle — one control, clearly labelled — that the user can flip on when they want to review each change before it lands. When the toggle is on, your code switches to `approval_mode: "ask_every_time"` and renders the proposed-change UI (chat-side card, inline editor overlay, or native track-changes — see below).
+
+This is the pattern the SuperDocs web app at [use.superdocs.app](https://use.superdocs.app) uses, and it's what most users expect:
+
+- **Auto-apply on by default** — for 90% of edits (rewording, formatting, small additions), users don't want to approve each change. They want the AI to act, then Cmd-Z if they disagree.
+- **Review Mode as an explicit opt-in** — when the user is working on something high-stakes (a contract clause, a regulatory filing, a legal letter) they flip the toggle ON and approve each change explicitly. Persist the toggle state in `localStorage` so it survives page reload.
+- **No hidden state** — both modes should be plainly visible in the UI. Don't bury Review Mode in a settings modal.
+
+A common concrete shape: a two-segment slider or segmented control above the chat input, with "Auto Approve" on one end and "Review Mode" on the other. The active segment is filled, the inactive segment is muted. One glance tells the user which mode they're in.
+
+Going straight to `ask_every_time` without a toggle is valid for high-stakes products (contracts, medical records, court filings) where every change must be reviewed, but expect higher friction in casual editing flows. If in doubt, start with auto-apply by default and a toggle — you can always reverse it later.
+
 ## End-to-end workflow
 
 ### 1. Send a request with approval mode
