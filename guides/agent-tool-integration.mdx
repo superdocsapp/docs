@@ -1,0 +1,352 @@
+---
+title: "Agent Tool Integration"
+description: "Register SuperDocs as a tool in your existing AI agent's tool registry — OpenAI function-calling, Anthropic tool_use, LangChain, LlamaIndex, or any function-calling-compatible framework. Your AI is the consumer; SuperDocs is the document-editing capability it can call."
+---
+
+# Agent Tool Integration
+
+If your product has an existing AI agent (built with OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or a custom framework) that needs to edit documents, the right integration shape is to register SuperDocs as a tool the agent can call — not to build a separate UI around SuperDocs.
+
+This guide covers the pattern + working snippets for the five most common agent frameworks, plus a generic JSON-schema definition you can adapt to any framework that supports tool-calling.
+
+## Why this shape is different from a UI integration
+
+In a typical SuperDocs UI integration, a human types in a chat panel, the chat sends a message to SuperDocs, and SuperDocs returns proposed edits the human reviews. The customer-facing app is the consumer of SuperDocs.
+
+In an agent-tool integration, your AI agent is the consumer. The agent decides — based on its own reasoning, the user's query, and the conversation context — that it needs to edit a document. It invokes SuperDocs as a tool, receives proposed changes as structured data, and either approves them itself (auto-decide), surfaces them through your existing UI for the user to review, or sends them out-of-band (Slack, email).
+
+The integration is server-side, the SuperDocs `sk_` key lives next to your other model API keys, and there is no SuperDocs-specific UI to build — your agent's existing UI is where the result appears.
+
+## The pattern, in 4 steps
+
+1. **Define the SuperDocs tool** in your agent's tool registry. The tool takes three parameters: `message` (the natural-language instruction for the AI), `session_id` (a string that ties multiple turns together), and `document_html` (the HTML the agent wants edited).
+2. **Implement the tool function.** Call `POST /v1/chat` with the three parameters plus your chosen `approval_mode`. Return the response back to the agent — either as the parsed proposed changes (for `ask_every_time`) or as the final updated HTML (for `approve_all`).
+3. **Decide approval shape.** Choose between `approve_all` (your agent's reasoning is the approval — fastest), `ask_every_time` (the agent reviews each proposed change individually before deciding), or surface to a human through your UI.
+4. **Persist the result.** The agent receives the updated HTML and writes it back to wherever your documents live.
+
+That's the whole loop. The snippets below are the same loop in five different framework idioms.
+
+## Generic JSON-schema tool definition
+
+Every framework that supports tool-calling accepts a JSON-schema tool definition. Use this as the canonical version and adapt for your framework:
+
+```json
+{
+  "name": "edit_document",
+  "description": "Edit a document with AI by sending the document HTML and a natural-language instruction. Returns the updated HTML. Use this when the user asks to modify, rewrite, expand, summarize, translate, or improve any document.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "description": "The natural-language instruction for what to do to the document. Examples: 'rewrite the introduction in plain English', 'add a section about pricing', 'tighten the conclusion to one paragraph', 'translate to French'."
+      },
+      "session_id": {
+        "type": "string",
+        "description": "A string that ties multiple turns together. Use the same session_id across multiple tool calls if you want the AI to remember earlier edits in the same conversation."
+      },
+      "document_html": {
+        "type": "string",
+        "description": "The current HTML of the document to be edited. Must be a complete HTML string. The response will include `data-chunk-id` attributes — preserve them on the next call so SuperDocs can target previously-edited sections precisely."
+      },
+      "approval_mode": {
+        "type": "string",
+        "enum": ["approve_all", "ask_every_time"],
+        "description": "Whether to apply all proposed changes automatically (approve_all — best for autonomous agents) or pause for review on each change (ask_every_time — best when a human is in the loop)."
+      }
+    },
+    "required": ["message", "session_id", "document_html"]
+  }
+}
+```
+
+## OpenAI function-calling (Python)
+
+```python
+import os, httpx, json
+from openai import OpenAI
+
+client = OpenAI()
+SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
+
+# 1. Tool definition — registered when you call the model
+edit_document_tool = {
+    "type": "function",
+    "function": {
+        "name": "edit_document",
+        "description": "Edit a document with AI. Returns the updated HTML.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "The instruction for what to do to the document."},
+                "session_id": {"type": "string", "description": "Ties multi-turn edits together."},
+                "document_html": {"type": "string", "description": "Current HTML to edit."},
+                "approval_mode": {"type": "string", "enum": ["approve_all", "ask_every_time"]},
+            },
+            "required": ["message", "session_id", "document_html"],
+        },
+    },
+}
+
+# 2. Tool function — called when the model invokes the tool
+def edit_document(message: str, session_id: str, document_html: str, approval_mode: str = "approve_all") -> dict:
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as c:
+        r = c.post("https://api.superdocs.app/v1/chat", json={
+            "message": message,
+            "session_id": session_id,
+            "document_html": document_html,
+            "approval_mode": approval_mode,
+        })
+        r.raise_for_status()
+        result = r.json()
+    return {
+        "updated_html": result["document_changes"]["updated_html"],
+        "ai_response": result.get("response", ""),
+        "usage": result.get("usage", {}),
+    }
+
+# 3. Standard agent loop — the model decides when to call edit_document
+def run_agent(user_message: str, document_html: str, session_id: str):
+    messages = [
+        {"role": "system", "content": "You are an SOP-editor assistant. When the user asks to modify a document, use the edit_document tool."},
+        {"role": "user", "content": f"{user_message}\n\nCurrent document HTML available — call edit_document with session_id={session_id}."},
+    ]
+    response = client.chat.completions.create(
+        model="gpt-5",  # Your model choice — SuperDocs is provider-agnostic
+        messages=messages,
+        tools=[edit_document_tool],
+    )
+    msg = response.choices[0].message
+    if msg.tool_calls:
+        for call in msg.tool_calls:
+            args = json.loads(call.function.arguments)
+            args["document_html"] = args.get("document_html") or document_html
+            result = edit_document(**args)
+            # Append result back to the conversation if you want a multi-turn flow
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
+            return result
+    return {"ai_response": msg.content}
+```
+
+## Anthropic `tool_use` (Python)
+
+```python
+import os, httpx, anthropic
+
+client = anthropic.Anthropic()
+SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
+
+edit_document_tool = {
+    "name": "edit_document",
+    "description": "Edit a document with AI. Returns the updated HTML.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "message": {"type": "string"},
+            "session_id": {"type": "string"},
+            "document_html": {"type": "string"},
+            "approval_mode": {"type": "string", "enum": ["approve_all", "ask_every_time"]},
+        },
+        "required": ["message", "session_id", "document_html"],
+    },
+}
+
+def edit_document(message, session_id, document_html, approval_mode="approve_all"):
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as c:
+        r = c.post("https://api.superdocs.app/v1/chat", json={
+            "message": message, "session_id": session_id,
+            "document_html": document_html, "approval_mode": approval_mode,
+        })
+        r.raise_for_status()
+        return r.json()
+
+def run_agent(user_message, document_html, session_id):
+    messages = [{"role": "user", "content": f"{user_message} (session_id={session_id})\n\nDocument HTML: {document_html[:500]}..."}]
+    response = client.messages.create(
+        model="claude-opus-4-5",  # Your model choice
+        max_tokens=4096,
+        system="You are an SOP-editor assistant. Call edit_document when the user asks to modify a document.",
+        tools=[edit_document_tool],
+        messages=messages,
+    )
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "edit_document":
+            args = block.input
+            args["document_html"] = args.get("document_html") or document_html
+            result = edit_document(**args)
+            return result["document_changes"]["updated_html"]
+    return None
+```
+
+## LangChain `Tool` (Python)
+
+```python
+import os, httpx
+from langchain.tools import tool
+from langchain.agents import create_react_agent
+from langchain_openai import ChatOpenAI
+
+SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
+
+@tool
+def edit_document(message: str, session_id: str, document_html: str, approval_mode: str = "approve_all") -> str:
+    """Edit a document with AI. Returns the updated HTML.
+
+    Args:
+        message: The natural-language instruction for what to do to the document.
+        session_id: A string that ties multiple turns together.
+        document_html: The current HTML of the document to be edited.
+        approval_mode: 'approve_all' to auto-apply, 'ask_every_time' to pause per change.
+    """
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as c:
+        r = c.post("https://api.superdocs.app/v1/chat", json={
+            "message": message, "session_id": session_id,
+            "document_html": document_html, "approval_mode": approval_mode,
+        })
+        r.raise_for_status()
+        return r.json()["document_changes"]["updated_html"]
+
+# Wire into your agent
+llm = ChatOpenAI(model="gpt-5")
+tools = [edit_document]  # Plus whatever other tools your agent has
+agent = create_react_agent(llm, tools, prompt="...")
+```
+
+## LlamaIndex `FunctionTool` (Python)
+
+```python
+import os, httpx
+from llama_index.core.tools import FunctionTool
+from llama_index.core.agent import ReActAgent
+from llama_index.llms.openai import OpenAI
+
+SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
+
+def edit_document(message: str, session_id: str, document_html: str, approval_mode: str = "approve_all") -> str:
+    """Edit a document with AI. Returns the updated HTML."""
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as c:
+        r = c.post("https://api.superdocs.app/v1/chat", json={
+            "message": message, "session_id": session_id,
+            "document_html": document_html, "approval_mode": approval_mode,
+        })
+        r.raise_for_status()
+        return r.json()["document_changes"]["updated_html"]
+
+edit_tool = FunctionTool.from_defaults(fn=edit_document, name="edit_document",
+                                       description="Edit a document with AI. Returns updated HTML.")
+
+agent = ReActAgent.from_tools([edit_tool], llm=OpenAI(model="gpt-5"), verbose=True)
+```
+
+## TypeScript / Vercel AI SDK
+
+```typescript
+import { tool } from "ai";
+import { z } from "zod";
+
+const SUPERDOCS_KEY = process.env.SUPERDOCS_API_KEY!;
+
+export const editDocument = tool({
+  description: "Edit a document with AI. Returns the updated HTML.",
+  parameters: z.object({
+    message: z.string().describe("The instruction for what to do to the document."),
+    session_id: z.string().describe("Ties multi-turn edits together."),
+    document_html: z.string().describe("Current HTML to edit."),
+    approval_mode: z.enum(["approve_all", "ask_every_time"]).default("approve_all"),
+  }),
+  execute: async ({ message, session_id, document_html, approval_mode }) => {
+    const res = await fetch("https://api.superdocs.app/v1/chat", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SUPERDOCS_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message, session_id, document_html, approval_mode }),
+    });
+    if (!res.ok) throw new Error(`SuperDocs ${res.status}`);
+    const data = await res.json();
+    return {
+      updated_html: data.document_changes.updated_html,
+      ai_response: data.response,
+    };
+  },
+});
+
+// Wire into your agent's tool registry alongside your other tools
+```
+
+## Approval modes — choose based on who decides
+
+### `approve_all` — your agent's reasoning is the approval
+
+The simplest pattern. Pass `approval_mode: "approve_all"` and SuperDocs returns the final updated HTML in one call. Use this when your agent is autonomous and you trust it to make the right call. Most appropriate for:
+
+- Backend AI agents processing a queue without human oversight.
+- Agents whose user already approved the high-level intent (e.g., "rewrite all sections in plain English") and doesn't need per-change review.
+- Server-to-server workflows.
+
+### `ask_every_time` — your agent reviews each proposed change
+
+Pass `approval_mode: "ask_every_time"` and SuperDocs returns proposed changes one at a time via SSE. Your agent reads each `proposed_change` event (parse `event.data` then `JSON.parse` the `content` field again — see the [SSE Streaming guide](/guides/streaming) for the double-parse warning), decides whether to approve based on its own reasoning, and POSTs to `/v1/chat/{session_id}/approve` to either accept or reject.
+
+Use this when:
+
+- Your agent has higher reasoning capability than SuperDocs' edit suggestions and wants to filter them.
+- The user is reviewing the agent's overall plan but trusts the agent to filter individual edits.
+- You want an audit log of every accepted vs rejected change for compliance.
+
+The decision flow inside the agent looks like:
+
+```python
+# Pseudocode — adapt to your framework
+for proposed_change in stream_proposed_changes(job_id, session_id):
+    # The agent reasons about whether to approve
+    decision = await agent.reason(
+        f"SuperDocs proposed: {proposed_change['ai_explanation']}\n"
+        f"Old: {proposed_change['old_html']}\n"
+        f"New: {proposed_change['new_html']}\n"
+        "Approve or deny?"
+    )
+    httpx.post(
+        f"https://api.superdocs.app/v1/chat/{session_id}/approve",
+        headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"},
+        json={"job_id": job_id, "approved": decision == "approve",
+              "changes": [{"change_id": proposed_change["change_id"], "approved": decision == "approve"}]},
+    )
+```
+
+### Surface to a human through your UI
+
+If your agent is in a chat with a human and SuperDocs proposes an edit, your agent can stop, surface the proposed change to the human via your existing chat thread (as a card, a button group, an inline question — whatever your UI does), wait for the human's decision, and then POST the decision back to SuperDocs.
+
+This pattern keeps your AI agent in control of what gets surfaced and when, but defers the binary approve/deny decision to the human. The agent's UI is the only UI involved — there's no SuperDocs-specific UI.
+
+## Document HTML round-trip — same rule as everywhere else
+
+The `data-chunk-id` attributes that SuperDocs adds to block-level elements **must round-trip cleanly** when you send the HTML back on the next call. If your agent stores the HTML in a database, file, or in-memory variable between calls, those attributes must survive the storage cycle. Most string-based storage preserves them automatically; if you parse the HTML through a library that strips unknown attributes, you'll break the round-trip silently.
+
+If you're piping the HTML through a rich-text editor at any point in your agent's UI, see the [Editor Integration guide](/guides/editor-integration) for editor-specific preservation patterns.
+
+## Choosing between sync `/v1/chat` and async `/v1/chat/async`
+
+Most agent-tool integrations should use sync `/v1/chat`. It's a simpler integration (one call, one response) and matches the standard tool-call shape (function in, JSON out, agent reasons over the result).
+
+Use async `/v1/chat/async` + the SSE stream when:
+
+- Your agent has a UI that wants to show streaming progress events to the user as the AI works.
+- The document is very large and you want to fail fast on auth errors before committing to a long edit.
+- You want to use `ask_every_time` and react to each proposed change in real time.
+
+For everything else, sync is enough.
+
+## Stuck?
+
+If your agent framework isn't covered here or the tool-calling pattern doesn't map cleanly to your setup, email [hello@superdocs.app](mailto:hello@superdocs.app) or book a 15-minute integration call at [cal.com/superdocs](https://cal.com/superdocs). We'll talk through the pattern and add a snippet to this guide for the next person.
+
+## Related guides
+
+- [Server Integration](/guides/server-integration) — if your agent is one of several services in a backend, the same patterns apply more broadly.
+- [Human-in-the-Loop](/guides/human-in-the-loop) — if your agent surfaces proposed changes to a human via your UI, the rendering patterns there work for chat-thread cards too.
+- [SSE Streaming](/guides/streaming) — if you choose `ask_every_time` and need to consume proposed changes one at a time.
+- [Async Jobs](/guides/async-jobs) — if you want polling instead of SSE.
+- [Integration Starter Prompt](/guides/integration-starter-prompt) — paste this into your coding agent to wire all the above up automatically.
