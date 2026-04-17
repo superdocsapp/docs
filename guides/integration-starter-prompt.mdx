@@ -5,7 +5,7 @@ description: "Paste this into your coding agent to integrate SuperDocs into any 
 
 # Integration Starter Prompt
 
-**Target fill time: under 5 minutes.** Describe what you want SuperDocs to do in your product (1-3 sentences), optionally paste your existing agent context (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`) or a `package.json`, and the agent figures out the rest. It will tell you what it inferred before it starts writing code, and you'll have one chance to correct it.
+**Target fill time: under 5 minutes.** Optionally describe what you want SuperDocs to do in your product (1-3 sentences) and paste your existing agent context (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`) or a `package.json`. Anything you leave blank, the agent figures out — it auto-discovers your project root context, runs an investigation framework against your codebase, and (if Part 0 was empty) proposes a plain-English integration plan for you to approve before writing any code.
 
 ## What you'll build
 
@@ -23,7 +23,7 @@ This template is built around principles + investigation + cross-references rath
 
 ## Copy this prompt
 
-Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other).
+Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other). The agent will fetch the latest SuperDocs API reference itself — no need to download `llms-full.txt` manually.
 
 ````text
 # SuperDocs Integration Starter Prompt — Universal Template
@@ -36,9 +36,13 @@ This template is published at https://docs.superdocs.app/guides/integration-star
 
 ---
 
-## Part 0 (REQUIRED) — How do you want SuperDocs in your product?
+## Part 0 (recommended) — How do you want SuperDocs in your product?
 
-In 1-3 sentences, describe what you want SuperDocs to do in your product. The coding agent uses this to determine which integration shape applies. **This is the only required field in the entire prompt** — every other section is optional.
+In 1-3 sentences, describe what you want SuperDocs to do in your product. This is the strongest single signal the agent uses to determine which integration shape applies.
+
+**If you fill this in:** the agent goes straight to the investigation framework with a clear target shape.
+
+**If you leave it blank:** the agent reads your `CLAUDE.md` (or whichever context file is in your project root), infers the most likely integration shape from your codebase, and **proposes a plain-English integration plan for you to approve before writing any code.** You can correct or redirect the proposal — the agent will not start writing code until you confirm the shape.
 
 Examples (don't copy verbatim — describe YOUR situation):
 
@@ -50,7 +54,7 @@ Examples (don't copy verbatim — describe YOUR situation):
 - (Anything else — describe the user flow in your product and the agent will figure out where SuperDocs slots in.)
 
 ```
-[describe your situation here, 1-3 sentences]
+[describe your situation here in 1-3 sentences — or leave blank to let the agent propose a plan from your CLAUDE.md / codebase]
 ```
 
 ---
@@ -133,7 +137,7 @@ Before executing **any** part of the integration, the coding agent must:
    a. Search the project root for any context files the integrator may have already maintained. Look for, in this order: `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`, `.aiderrules`, `GEMINI.md`, `COPILOT.md`, `INSTRUCTIONS.md`, or any file matching the pattern `*RULES*.md` / `*AGENT*.md` / `*INSTRUCTIONS*.md` in the project root. If any of these exist, read all of them — these files describe the integrator's product, stack, and conventions and are higher-priority context than anything else. Do NOT assume your coding-agent harness auto-loaded them; read them explicitly via your file-read tool so you know what's in them.
    b. Read every file and URL provided in Part 0A (paste-in context, links to internal docs, package manifests).
    c. Read the integrator's existing codebase — at minimum, the package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.), the main framework config files, any editor component or AI-agent file if declared or discoverable, and the `README` if present.
-   d. Read the SuperDocs API reference at `https://docs.superdocs.app/llms-full.txt`. Fetch it locally if you don't already have it.
+   d. **Fetch the SuperDocs API reference fresh from `https://docs.superdocs.app/llms-full.txt`** — even if a stale local copy exists. Run `curl -sS https://docs.superdocs.app/llms-full.txt -o llms-full.txt` to grab the current version. The live URL is always authoritative; the local copy may be days or weeks old.
 2. **INFER.** For every Part 0B slot the integrator left blank, infer the value from context. If a slot cannot be inferred with reasonable confidence, mark it as `UNSET`.
 3. **RUN THE INVESTIGATION FRAMEWORK** in Part 4 §C below. Answer all five questions about the integrator's product. If you can't answer a question from available context, mark it `UNSET — asking you`.
 4. **ECHO BACK.** Present every Part 0B value AND every Part 4 §C answer with a source tag:
@@ -141,7 +145,8 @@ Before executing **any** part of the integration, the coding agent must:
    - `[inferred from <file or signal>]` — name the source.
    - `[UNSET — asking you]` — genuinely ambiguous.
 5. **ASK.** For each `UNSET` slot, ask the integrator specifically, offering 2–3 suggested options.
-6. **WAIT.** Do not start writing code until the integrator has confirmed the inferred values and answered the `UNSET` questions.
+6. **PROPOSE A PLAN (only if Part 0 was left blank).** If the integrator did not describe their integration goal in Part 0, synthesize a 1-paragraph plain-English integration proposal from your §C answers and Part 0B inferences. Frame it as: *"Here's what I understood from your codebase. I propose to build [X], surfaced in [Y], with [Z] approval mechanism. Confirm or correct this before I start writing code."* Do NOT proceed until the integrator confirms the proposed shape.
+7. **WAIT.** Do not start writing code until the integrator has confirmed the inferred values, answered any `UNSET` questions, and (if applicable) approved the proposed integration plan.
 
 This prevents the agent from confidently integrating into the wrong shape because it misread pasted context or guessed at an ambiguous axis.
 
@@ -183,11 +188,11 @@ Whatever shape your integration takes, verify these five universal checks:
 
 Read these before writing code:
 
-1. The full SuperDocs API reference at `https://docs.superdocs.app/llms-full.txt`. Fetch it locally:
+1. **The full SuperDocs API reference at `https://docs.superdocs.app/llms-full.txt`.** Fetch the latest version yourself — do not assume a local copy is current:
    ```bash
-   curl https://docs.superdocs.app/llms-full.txt > llms-full.txt
+   curl -sS https://docs.superdocs.app/llms-full.txt -o llms-full.txt
    ```
-   This file is authoritative for every request/response shape. Refer to it whenever an API question comes up.
+   Run this even if a stale `llms-full.txt` already exists in the project folder; the API surface evolves and the live URL is always authoritative. Refer to this file whenever an API question comes up.
 2. This prompt, Parts 2–8.
 3. Your own codebase — read enough of `EXISTING_APP_CONTEXT` paths to understand where documents live, where your authenticated backend routes live, and how your frontend (or your AI agent) consumes data.
 
