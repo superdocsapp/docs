@@ -47,7 +47,10 @@ npm install prosemirror-state prosemirror-view prosemirror-model \
   prosemirror-keymap prosemirror-commands
 ```
 
-Create a schema helper that adds `data-chunk-id` to every block node's `attrs`, `parseDOM`, and `toDOM`:
+Your schema needs to do two things:
+
+1. Add `data-chunk-id` as a preserved attribute on every standard block node (paragraph, heading, list, blockquote, code block, horizontal rule).
+2. Register a **wrapper node** for `<div data-chunk-id="…">…</div>` elements. SuperDocs uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). If your schema has no node that matches `div[data-chunk-id]`, the parser will descend into the children, the wrapper's `data-chunk-id` will be silently dropped, and any inline-diff or chunk-targeted edit referencing that ID will fail to render. The basic ProseMirror schema does not include a `<div>` node — you must add one.
 
 ```typescript theme={null}
 // schema.ts
@@ -96,6 +99,28 @@ function withChunkId(spec: NodeSpec): NodeSpec {
   return { ...spec, attrs, parseDOM, toDOM };
 }
 
+// Wrapper node for multi-element chunks: <div data-chunk-id="…">…</div>.
+// Holds one or more block children; preserves the chunk-id on round-trip.
+const chunkWrapperSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: { "data-chunk-id": { default: null } },
+  parseDOM: [{
+    tag: "div[data-chunk-id]",
+    getAttrs: (node) =>
+      typeof node === "string"
+        ? {}
+        : { "data-chunk-id": node.getAttribute("data-chunk-id") },
+  }],
+  toDOM: (node) => [
+    "div",
+    node.attrs["data-chunk-id"]
+      ? { "data-chunk-id": node.attrs["data-chunk-id"] }
+      : {},
+    0,
+  ],
+};
+
 let nodes = basicSchema.spec.nodes;
 for (const name of ["paragraph", "blockquote", "heading", "horizontal_rule", "code_block"]) {
   const spec = nodes.get(name);
@@ -106,6 +131,7 @@ for (const name of ["ordered_list", "bullet_list", "list_item"]) {
   const spec = nodes.get(name);
   if (spec) nodes = nodes.update(name, withChunkId(spec));
 }
+nodes = nodes.addToEnd("chunk_wrapper", chunkWrapperSpec);
 
 export const schema = new Schema({ nodes, marks: basicSchema.spec.marks });
 ```
@@ -123,11 +149,14 @@ Install TipTap:
 npm install @tiptap/react @tiptap/starter-kit
 ```
 
-Create one global-attribute extension that adds `data-chunk-id` to every block node:
+You need two pieces:
+
+1. A **global-attribute extension** that preserves `data-chunk-id` on every standard block node.
+2. A **wrapper Node** for `<div data-chunk-id="…">…</div>` elements. SuperDocs uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). TipTap's StarterKit has no node that matches a `<div>`, so without this extra Node the wrapper's `data-chunk-id` is silently dropped during parsing — and any inline-diff or chunk-targeted edit referencing that ID will fail to render.
 
 ```typescript theme={null}
 // chunk-id-preserver.ts
-import { Extension } from "@tiptap/core";
+import { Extension, Node } from "@tiptap/core";
 
 export const ChunkIdPreserver = Extension.create({
   name: "chunkIdPreserver",
@@ -156,13 +185,38 @@ export const ChunkIdPreserver = Extension.create({
     }];
   },
 });
+
+// Wrapper Node for multi-element chunks: <div data-chunk-id="…">…</div>.
+export const ChunkWrapper = Node.create({
+  name: "chunkWrapper",
+  group: "block",
+  content: "block+",
+  parseHTML() {
+    return [{ tag: "div[data-chunk-id]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", HTMLAttributes, 0];
+  },
+  addAttributes() {
+    return {
+      "data-chunk-id": {
+        default: null,
+        parseHTML: (el) => el.getAttribute("data-chunk-id"),
+        renderHTML: (attrs) =>
+          attrs["data-chunk-id"]
+            ? { "data-chunk-id": attrs["data-chunk-id"] }
+            : {},
+      },
+    };
+  },
+});
 ```
 
-Register it on your editor:
+Register both on your editor:
 
 ```typescript theme={null}
 const editor = useEditor({
-  extensions: [StarterKit, ChunkIdPreserver],
+  extensions: [StarterKit, ChunkIdPreserver, ChunkWrapper],
   content: superDocsHtml,
 });
 ```
