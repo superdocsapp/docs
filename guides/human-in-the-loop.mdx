@@ -145,6 +145,12 @@ The proposed edit appears **directly inside the document** — the affected bloc
 
 For ProseMirror-based editors (ProseMirror, TipTap, BlockNote, Remirror, Atlaskit), use the editor's native decoration system. The plugin below collects `proposed_change` events, builds a `DecorationSet` keyed by `data-chunk-id`, and dispatches `window`-level custom events when the user clicks Approve or Deny.
 
+<Warning>
+  **Schema prerequisite — read first.** The plugin below locates the target block by walking the editor doc and matching `node.attrs["data-chunk-id"]`. If your schema does not preserve `data-chunk-id` on every block node **and** does not register a wrapper Node for `<div data-chunk-id="…">…</div>` elements (used when a chunk spans multiple blocks), the plugin will compile, run, and silently render nothing — `findChunkRange` returns `null` and the decoration is skipped. This is the single most common reason an inline overlay implementation appears broken: the diff event arrives, `addProposedChange` fires, but the editor never lights up.
+
+  Set up the schema first via [Editor Integration](/guides/editor-integration). Both the per-block attribute *and* the `<div data-chunk-id>` wrapper Node are required — neither alone is sufficient.
+</Warning>
+
 ```typescript theme={null}
 // proposed-change-decoration.ts
 import { Plugin, PluginKey, Transaction } from "prosemirror-state";
