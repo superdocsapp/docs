@@ -112,10 +112,7 @@ curl https://api.superdocs.app/v1/sessions/SESSION_ID/jobs \
 
 ### Delete a session
 
-```bash
-curl -X DELETE https://api.superdocs.app/v1/users/me/sessions/SESSION_ID \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
+Session deletion lives under `/v1/users/me/sessions/{id}` — that endpoint is part of the web-app account surface and accepts Firebase tokens only, not `sk_` API keys. To clear sessions programmatically with an API key, simply stop using the `session_id` (sessions persist server-side but are not billed unless used). To delete from the UI, use **Settings > Sessions** in [use.superdocs.app](https://use.superdocs.app).
 
 ## Documents
 
@@ -242,26 +239,20 @@ curl -X POST https://api.superdocs.app/v1/chat/SESSION_ID/approve \
 
 ## User management
 
-### Get profile
+The `/v1/users/*` endpoints (profile, usage, limits, sessions, programmatic API-key management) belong to the web-app account surface and accept **Firebase ID tokens only** — `sk_` API keys are rejected with `401 "Wrong number of segments in token"`. View profile, usage, and tier limits from [use.superdocs.app](https://use.superdocs.app) → Settings.
+
+To check usage from an API-key context, the `usage` block is included in every `/v1/chat` and `/v1/chat/async` response (`monthly_used`, `monthly_limit`, `monthly_remaining`, `was_billable`, `subscription_tier`) and in every SSE `usage` event — see [SSE Streaming](/guides/streaming).
+
+## Verify your API key
+
+The cheapest way to confirm an `sk_` key works:
 
 ```bash
-curl https://api.superdocs.app/v1/users/me \
+curl https://api.superdocs.app/v1/sessions \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-### Get usage stats
-
-```bash
-curl https://api.superdocs.app/v1/users/me/usage \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
-
-### Get tier limits
-
-```bash
-curl https://api.superdocs.app/v1/users/me/limits \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
+A `200` with a JSON list of sessions (possibly empty) confirms the key. A `401` means the key is wrong, revoked, or the header didn't reach the server. **Do not use `/v1/users/me` to verify an API key** — it's Firebase-only and will return `401` even for a valid `sk_` key, which makes the key look bad when it isn't.
 
 ## Health check
 

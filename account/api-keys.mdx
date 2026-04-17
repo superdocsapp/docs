@@ -37,6 +37,23 @@ curl -X POST https://api.superdocs.app/v1/chat \
 
 The same header format works for both REST API and MCP connections.
 
+## Verify your key
+
+The cheapest way to confirm a key works is `GET /v1/sessions` — it consumes no operations, returns immediately, and accepts API keys:
+
+```bash
+curl https://api.superdocs.app/v1/sessions \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+A `200` response with a JSON list of your sessions (possibly empty on a brand-new key) confirms the key is valid. A `401` with `{"detail": "Authentication required..."}` means the key is wrong, revoked, or the `Authorization` header didn't reach the server.
+
+<Warning>
+  **Do not use `/v1/users/me` (or any `/v1/users/*` endpoint) to verify your API key.** Those endpoints are for the web-app session surface — they accept Firebase ID tokens only and reject `sk_` keys with `401 "Wrong number of segments in token"`. The error makes it look like your key is bad; it isn't, you're just hitting an endpoint that doesn't accept API keys.
+
+  Endpoints that accept API keys: `/v1/chat`, `/v1/chat/async`, `/v1/sessions`, `/v1/sessions/{id}/history`, `/v1/sessions/{id}/jobs`, `/v1/jobs`, `/v1/attachments/*`, `/v1/templates`, `/v1/documents/*`, `/v1/chat/{sid}/approve`. Anything under `/v1/users/*` does not.
+</Warning>
+
 ## Key limits
 
 | Plan | Max keys |
@@ -55,22 +72,6 @@ The same header format works for both REST API and MCP connections.
 
 Enterprise organizations can also use organization keys (prefixed `lce_`). These work identically — same `Authorization: Bearer` header, same endpoints. Organization keys are provisioned for B2B customers.
 
-## Manage keys via API
+## Manage keys
 
-You can also manage keys programmatically:
-
-```bash
-# Create a key
-curl -X POST https://api.superdocs.app/v1/users/me/api-keys \
-  -H "Authorization: Bearer sk_YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Production"}'
-
-# List keys
-curl https://api.superdocs.app/v1/users/me/api-keys \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-
-# Revoke a key
-curl -X DELETE https://api.superdocs.app/v1/users/me/api-keys/KEY_ID \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
+Create, list, and revoke keys from **Settings > API Keys** in [use.superdocs.app](https://use.superdocs.app). Programmatic key-management endpoints exist under `/v1/users/me/api-keys` but require a web-app Firebase session — they cannot be called with an `sk_` API key. There is no chicken-and-egg flow for self-service key bootstrapping over the API; create your first key in the UI, then use it for everything else.
