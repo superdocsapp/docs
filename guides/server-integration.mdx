@@ -9,6 +9,10 @@ If your product is a backend service that processes documents — a queue worker
 
 This guide covers the pattern + working snippets for the five most common backend stacks (Node, Python, Go, Ruby, .NET), plus when to choose sync vs async vs polling.
 
+<Tip>
+**For server-side workflows on high-stakes documents** (contracts, regulatory filings, medical records, financial statements) — default to `model_tier: "pro"` in your request body. There's no human in the loop to catch a wrong edit, so spend the extra tokens on a more capable tier. See [Model Selection](/guides/model-selection) for the full matrix.
+</Tip>
+
 ## Why this shape is different from a UI integration
 
 In a typical SuperDocs UI integration, a user types in a chat panel, the chat opens an SSE stream, and the user reviews proposed edits in real time before approving. The whole architecture is shaped around interactive review.

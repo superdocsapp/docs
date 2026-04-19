@@ -7,6 +7,10 @@ description: "Register SuperDocs as a tool in your existing AI agent's tool regi
 
 If your product has an existing AI agent (built with OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or a custom framework) that needs to edit documents, the right integration shape is to register SuperDocs as a tool the agent can call — not to build a separate UI around SuperDocs.
 
+<Tip>
+**Your agent can pick `model_tier` per call based on user intent.** A simple "fix typo" call can use `core`; a contract-clause edit can switch to `max` mid-conversation. Add `model_tier` and `thinking_depth` to your tool's parameter schema and let the agent reason about which tier fits the current task. See [Model Selection](/guides/model-selection) for the full matrix.
+</Tip>
+
 This guide covers the pattern + working snippets for the five most common agent frameworks, plus a generic JSON-schema definition you can adapt to any framework that supports tool-calling.
 
 ## Why this shape is different from a UI integration
