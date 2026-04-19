@@ -91,6 +91,65 @@ When `status` is `"completed"`, the `result` field contains the AI response and 
 | `failed` | Error occurred | Read `error` field |
 | `cancelled` | Cancelled by you | No action needed |
 
+## Latency expectations and timeout strategy
+
+Knowing how long an operation *should* take helps you decide when to surface a "still processing" hint and when to treat a job as broken.
+
+### Typical latency by operation type
+
+| Operation | Expected duration | Surface "still processing" after | Treat as failed after |
+|-----------|------------------|---------------------------------|----------------------|
+| Single-section edit | < 10 seconds | 30 seconds | 2 minutes |
+| Multi-section edit (3–5 sections) | 30–90 seconds | 2 minutes | 5 minutes |
+| Full-document operation (10+ sections) | 60–180 seconds | 3 minutes | 10 minutes |
+| Complex operation (merge, restructure, batch) | 120–300 seconds | 4 minutes | 15 minutes |
+
+These are medians for typical documents (5–20 sections). Larger documents, embedded images, or operations using `model_tier: "max"` with `thinking_depth: "deep"` may exceed these ranges. The `model_tier` and `thinking_depth` you choose materially affect latency — see [Model Selection](/guides/model-selection).
+
+### Polling strategy that surfaces progress
+
+```python theme={null}
+import time
+import requests
+
+MAX_WAIT = 300        # 5 minutes — adjust per operation type
+WARN_AFTER = 60       # surface "still processing" after 60 seconds
+POLL_INTERVAL = 2     # seconds between status checks
+
+def wait_for_job(job_id: str, headers: dict) -> dict:
+    start = time.time()
+    last_warn = 0
+
+    while True:
+        r = requests.get(f"https://api.superdocs.app/v1/jobs/{job_id}", headers=headers)
+        r.raise_for_status()
+        job = r.json()
+        elapsed = time.time() - start
+
+        if job["status"] == "completed":
+            return job["result"]
+        if job["status"] == "failed":
+            raise RuntimeError(job.get("error", "Unknown error"))
+        if job["status"] == "cancelled":
+            raise RuntimeError("Job was cancelled")
+
+        if elapsed > MAX_WAIT:
+            raise TimeoutError(f"Job did not complete within {MAX_WAIT}s")
+
+        # Surface a "still processing" hint to the user every 30s after WARN_AFTER
+        if elapsed > WARN_AFTER and elapsed - last_warn >= 30:
+            print(f"  Still processing... ({int(elapsed)}s elapsed)")
+            last_warn = elapsed
+
+        time.sleep(POLL_INTERVAL)
+```
+
+For real-time progress (instead of polling silence), open the SSE stream in parallel and surface every `intermediate` event to the user — see [Streaming → Rendering intermediate events](/guides/streaming#rendering-intermediate-events-in-your-ui).
+
+### Job retention
+
+All jobs — pending, in-progress, awaiting-approval, or terminal — are automatically removed 1 hour after creation. For user-facing workflows that may run longer (or where the user steps away), keep `MAX_WAIT` well under 1 hour and persist the `job_id` so you can resume polling later.
+
 ## Cancel a job
 
 Only `pending` and `in_progress` jobs can be cancelled:

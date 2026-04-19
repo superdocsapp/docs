@@ -53,6 +53,75 @@ event: intermediate
 data: {"type": "intermediate", "content": "Analyzing document structure...", "sequence": 1, "timestamp": "2026-03-07T10:00:01Z"}
 ```
 
+#### Rendering intermediate events in your UI
+
+Show every `intermediate` event to users in real time. Operations on large documents (or with `model_tier: "max"` + `thinking_depth: "deep"`) can take 30 seconds to several minutes — without visible progress, your UI looks frozen and indistinguishable from a crash.
+
+**Pattern 1 — Append-and-update an in-flight chat bubble (recommended for chat-style UIs):**
+
+```javascript theme={null}
+let inFlightBubble = null;
+
+eventSource.addEventListener("intermediate", (event) => {
+  const data = JSON.parse(event.data);
+
+  if (!inFlightBubble) {
+    // First intermediate of this turn — create a new bubble in the in-flight state.
+    inFlightBubble = {
+      id: "progress-" + Date.now(),
+      role: "assistant",
+      content: data.content,
+      status: "in_flight",
+    };
+    chatLog.push(inFlightBubble);
+    renderChatLog();
+  } else {
+    // Subsequent intermediates — replace the bubble's content with the latest update.
+    inFlightBubble.content = data.content;
+    renderChatLog();
+  }
+});
+
+eventSource.addEventListener("final", (event) => {
+  const data = JSON.parse(event.data);
+  if (inFlightBubble) {
+    // Promote the in-flight bubble to the final response.
+    inFlightBubble.content = data.content;
+    inFlightBubble.status = "complete";
+    inFlightBubble = null;
+  }
+  renderChatLog();
+});
+```
+
+**Pattern 2 — Streaming text indicator (compact toolbar / status bar):**
+
+```javascript theme={null}
+const statusEl = document.querySelector("#ai-status");
+let lastTs = Date.now();
+
+eventSource.addEventListener("intermediate", (event) => {
+  const data = JSON.parse(event.data);
+  statusEl.textContent = data.content;
+  statusEl.classList.add("active");
+  lastTs = Date.now();
+});
+
+// Surface a "still processing" hint if no event arrives for 30s.
+setInterval(() => {
+  if (statusEl.classList.contains("active") && Date.now() - lastTs > 30000) {
+    statusEl.textContent += " (still working — large operations can take a few minutes)";
+  }
+}, 5000);
+
+eventSource.addEventListener("final", () => {
+  statusEl.classList.remove("active");
+  statusEl.textContent = "";
+});
+```
+
+**Cadence expectations.** Intermediate events typically arrive every 1–5 seconds during active processing. A gap of 30+ seconds usually means the AI is in a deep reasoning phase — surface a "still processing" hint rather than a "failed" indicator. Use the `timestamp` field to detect stalls programmatically.
+
 ### `proposed_change`
 
 In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes a document change for review. One event is emitted per proposed change.

@@ -439,6 +439,8 @@ Verify all applicable items before declaring the integration done. Skip items ga
 - [ ] At least one full round-trip succeeds end-to-end and produces a visible result in the customer's actual product.
 - [ ] The SuperDocs `sk_` key never appears in any browser network request, mobile app log, or other client-side surface.
 - [ ] The `data-chunk-id` attribute survives the round-trip on every block node type your product uses (verify with a real document, not a synthetic one).
+- [ ] If using SSE streaming or `approval_mode="ask_every_time"` (or any operation that may take >10 seconds), `intermediate` progress events are rendered to the user as in-flight chat bubbles or a progress indicator. The user sees text updates arriving every few seconds — never a silent screen for 30+ seconds. Long operations on large documents can take minutes; a frozen UI looks identical to a crashed one. See [Streaming → Rendering intermediate events in your UI](/guides/streaming#rendering-intermediate-events-in-your-ui).
+- [ ] Your client validates that `document_html` is non-empty before sending. Editor refs can be transiently `null` during framework remounts (React Strict Mode, HMR, Fast Refresh) and silently return empty strings — cache the last successful `document_html` (from the previous `final.updated_html` or your editor's confirmed state) and fall back to it before sending.
 - [ ] The approval mechanism matches what `APPROVAL_MODE` declared (human-via-UI / AI-decides / auto-approve / human-out-of-band).
 - [ ] A second message in the same session continues the conversation (the AI refers back to the prior edit).
 - [ ] Failure paths are handled — bad API responses surface useful errors; dropped streams reconnect or surface errors.
