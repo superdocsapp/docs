@@ -21,6 +21,16 @@ This template is built around principles + investigation + cross-references rath
 - **MCP client** (Claude Desktop, Cursor, VS Code, Windsurf) — configuration only, no code to write.
 - **Custom architecture you didn't see listed** — the principles + investigation framework are designed to handle this case too.
 
+## Model selection — pick the right tier per request
+
+SuperDocs offers four model tiers (`core`, `turbo`, `pro`, `max`) and three thinking depths (`fast`, `balanced`, `deep`). The default is `core` + `balanced` — fast and accurate for everyday edits.
+
+For document-editing tasks where precision matters (legal contracts, regulatory filings, compliance docs, medical records), pass `model_tier: "pro"` or `model_tier: "max"` in your request body. For batch processing many short edits where speed dominates, use `turbo`. See the full matrix and recommendations at [Model Selection](/guides/model-selection).
+
+**Important:** Plumb `model_tier` and `thinking_depth` through your integrator's UI — either expose them as request parameters from your end users (e.g. a precision/speed slider, or a "high-stakes mode" toggle), or accept them as configuration. **Do not hard-code them** — different users want different precision/speed tradeoffs, and the right default for a contract-editing app is not the right default for a quick-summarisation app.
+
+If you skip this step, every request from your product will use the silent `core` + `balanced` default. That's fine for casual editing but will frustrate users on high-stakes documents who need maximum targeting precision.
+
 ## Copy this prompt
 
 Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other). The agent will fetch the latest SuperDocs API reference itself — no need to download `llms-full.txt` manually.

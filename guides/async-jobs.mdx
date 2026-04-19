@@ -7,6 +7,10 @@ description: "Use async chat requests with job polling for long-running operatio
 
 The sync endpoint (`POST /v1/chat`) waits for the AI to finish before responding. For long operations or background processing, use the async endpoint instead.
 
+<Tip>
+**For batch processing where speed dominates**, consider `model_tier: "turbo"` in your request body — the fastest tier, optimised for high-volume workflows. For high-stakes documents in your batch, use `pro` or `max` instead. See [Model Selection](/guides/model-selection) for the full matrix.
+</Tip>
+
 ## When to use async
 
 | Use sync (`/v1/chat`) | Use async (`/v1/chat/async`) |

@@ -73,6 +73,44 @@ curl -X POST https://api.superdocs.app/v1/chat \
 | Analyze a complex contract | `pro` or `max` | `deep` (max only) |
 | Batch processing many documents | `turbo` | — |
 
+## Choosing for precision
+
+If the AI's output isn't what you wanted, the right tier change is usually obvious once you name the symptom:
+
+| Symptom | What to try |
+|---------|------------|
+| **AI edited sections you didn't ask about** | Switch to `model_tier: "pro"` or `"max"`. Also verify your prompt is single-section explicit (e.g. "edit Section 3" rather than "fix the document"). Vague prompts invite wide edits. |
+| **Edits miss nuance in legal / regulatory / medical language** | `model_tier: "max"` with `thinking_depth: "deep"`. Max is the most capable model and Deep gives it room to reason carefully about wording. |
+| **Too slow** | `model_tier: "turbo"` (loses some precision but is the fastest). Or stay on `core` and pass `thinking_depth: "fast"` (smaller cost, smaller precision drop). |
+| **Want a balance — don't know which to pick** | Stay on the default: `core` + `balanced`. The model picks reasoning effort dynamically per request. Most edits won't need deep reasoning; complex ones will. |
+| **Want maximum precision, cost is no object** | `model_tier: "max"` + `thinking_depth: "deep"`. Most expensive, most accurate. |
+
+## What `balanced` actually does
+
+`thinking_depth: "balanced"` is **dynamic** — the model decides how much reasoning to apply based on the prompt's complexity. Most everyday edits trigger minimal reasoning (cheap and fast); complex multi-step edits trigger more (slower, more expensive). This is the recommended default for general editing, and it's what `core + balanced` gives you out of the box.
+
+`fast` (2,048-token reasoning ceiling) is faster but can over-narrow on the AI's part — sometimes it picks a wider scope than the prompt warranted because it didn't have budget to reason carefully about scope. Use `fast` when you've verified your prompts are unambiguous and you want the speed.
+
+`deep` (16,384-token reasoning ceiling) gives the model room to reason carefully. Use it for high-stakes edits where one bad output is more expensive than the extra tokens.
+
+## When to use Deep — and what it costs
+
+Deep reasoning roughly **6× the output tokens** versus Balanced for a typical 1,000-token edit. On `core` (`gemini-2.5-flash`) that translates to ~$0.04 vs ~$0.007 per edit. On `max` (`gemini-3-flash-preview`) it's higher — ~$0.05 vs ~$0.009. The wall-clock latency increase is typically 1–3 seconds.
+
+That cost is well worth it when:
+- The document is high-stakes (a contract clause, a regulatory disclosure, a medical instruction)
+- Output errors are expensive to fix downstream (executive review, lawyer hours)
+- You're running few-but-important edits, not high-volume batch work
+
+It is NOT worth it when:
+- You're doing fast iterative editing (a writer's draft, a Slack-formatting cleanup)
+- You're processing high volumes (use `turbo` instead)
+- The user is sitting in front of the screen waiting (latency dominates UX)
+
+<Note>
+**For legal, regulatory, medical, financial, or compliance documents — default to Pro or Max.** The cost of one wrong edit on a contract clause or a HIPAA-relevant medical instruction massively exceeds the cost of running a more capable tier. Don't optimise for token cost on documents where the human cost of a mistake is in lawyer hours, regulatory exposure, or patient harm.
+</Note>
+
 ## Default model preference
 
 You can set a default model tier in your account preferences (via the web app). Per-request `model_tier` overrides your default.

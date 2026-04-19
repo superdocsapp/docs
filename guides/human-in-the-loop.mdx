@@ -9,6 +9,10 @@ By default, the AI applies changes immediately. Set `approval_mode` to `"ask_eve
 
 HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wait for your approval.
 
+<Tip>
+**Maximum precision on high-stakes documents** (contracts, regulatory filings, compliance language) — set `model_tier: "max"` in your request body. The default `core` tier is fast and accurate for everyday edits, but `max` gives you the most capable model for nuanced edits where one wrong word matters. See [Model Selection](/guides/model-selection) for the full matrix.
+</Tip>
+
 <Note>
   This guide covers **UI-driven approval** (a human reviewing in your product's interface). If your AI agent is the one deciding whether to approve proposed changes (no human in the loop), see [Agent Tool Integration → Approval modes](/guides/agent-tool-integration#approval-modes-choose-based-on-who-decides). For batch / server-side workflows that auto-approve every change, see [Server Integration](/guides/server-integration) and pass `approval_mode: "approve_all"` instead.
 </Note>
