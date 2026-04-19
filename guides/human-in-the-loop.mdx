@@ -78,6 +78,18 @@ When `status` is `"awaiting_approval"`, check `metadata.pending_changes`:
 
 ### 3. Approve or deny changes
 
+<Warning>
+  **The `approved` field is required at the top level of every approve request — including batch shapes.** A common integration trap is to send `{ "job_id": "...", "changes": [...] }` for a batch decision, omitting top-level `approved`. The endpoint rejects this with a generic `422` because the top-level `approved` is required by the request schema. The top-level value acts as the default for any change inside `changes` that does not specify its own `approved`. If every entry inside `changes` carries its own `approved`, the top-level value is unused but still required — set it to `true` or `false`, it doesn't matter which.
+
+  **Correct shapes (one of these three) — all carry top-level `approved`:**
+
+  - **Single change:** `{ "job_id": "...", "change_id": "...", "approved": true }`
+  - **Batch — same decision for all:** `{ "job_id": "...", "approved": true, "changes": [{"change_id": "ch_1"}, {"change_id": "ch_2"}] }`
+  - **Batch — per-change decisions:** `{ "job_id": "...", "approved": true, "changes": [{"change_id": "ch_1", "approved": true}, {"change_id": "ch_2", "approved": false}] }`
+
+  **Incorrect — missing top-level `approved`:** `{ "job_id": "...", "changes": [...] }` → `422 Unprocessable Entity`.
+</Warning>
+
 **Approve a single change:**
 
 ```bash
