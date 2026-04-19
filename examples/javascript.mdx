@@ -248,6 +248,100 @@ async function chatWithApproval(message, sessionId, documentHtml) {
 }
 ```
 
+## HITL approval with SSE streaming (real-time progress)
+
+The polling pattern above is fine for server-to-server flows where no human is watching. For interactive editor integrations — where a user is staring at the chat panel waiting for their edit — open the SSE stream alongside the async job so progress events arrive in real time and the UI never goes silent for more than a few seconds.
+
+```javascript theme={null}
+async function chatWithApprovalAndStreaming(message, sessionId, documentHtml, callbacks) {
+  // 1. Start async job
+  const r = await fetch(`${BASE}/v1/chat/async`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      session_id: sessionId,
+      document_html: documentHtml,
+      approval_mode: "ask_every_time",
+    }),
+  });
+  const { job_id } = await r.json();
+
+  // 2. Open SSE stream and surface every event to the UI in real time
+  return new Promise((resolve, reject) => {
+    const es = new EventSource(
+      `${BASE}/v1/chat/${sessionId}/stream?job_id=${job_id}&api_key=${API_KEY}`
+    );
+
+    // Render in-flight progress so the UI never looks frozen
+    es.addEventListener("intermediate", (event) => {
+      const data = JSON.parse(event.data);
+      callbacks.onProgress?.(data.content);
+    });
+
+    // Each proposed change appears as soon as the AI generates it
+    es.addEventListener("proposed_change", (event) => {
+      const envelope = JSON.parse(event.data);
+      const change = JSON.parse(envelope.content);  // double-parse — required
+      callbacks.onProposedChange?.(change, async (decision) => {
+        // Send the user's approve/deny decision back. SSE stays open through the cycle.
+        await fetch(`${BASE}/v1/chat/${sessionId}/approve`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            job_id,
+            changes: [{ change_id: change.change_id, ...decision }],
+          }),
+        });
+      });
+    });
+
+    es.addEventListener("final", (event) => {
+      es.close();
+      resolve(JSON.parse(event.data));
+    });
+
+    es.addEventListener("error", (event) => {
+      es.close();
+      reject(new Error(event.data ? JSON.parse(event.data).error : "SSE stream error"));
+    });
+  });
+}
+
+// Usage in a chat UI:
+chatWithApprovalAndStreaming(
+  "Tighten the OBLIGATIONS section",
+  "session-abc",
+  document.querySelector("#editor").innerHTML,
+  {
+    onProgress: (text) => {
+      // Update the in-flight chat bubble — see Streaming guide for the bubble pattern
+      updateInFlightBubble(text);
+    },
+    onProposedChange: (change, respond) => {
+      showInlineDiffCard({
+        chunkId: change.chunk_id,
+        oldHtml: change.old_html,
+        newHtml: change.new_html,
+        explanation: change.ai_explanation,
+        onApprove: () => respond({ approved: true }),
+        onDeny: (feedback) => respond({ approved: false, feedback }),
+      });
+    },
+  }
+).then((result) => {
+  // Replace the in-flight bubble with the final response, swap in result.updated_html if present
+  finalizeBubble(result);
+});
+```
+
+**When to use streaming vs polling.**
+
+- **Streaming** — interactive editor UIs, any flow where a user is watching. Users see progress text within 1–5 seconds and proposed changes appear inline the moment the AI generates them.
+- **Polling** — background batch processing, server-to-server flows, queues where the user isn't waiting. Simpler to implement; perfectly fine when latency feedback isn't a UX requirement.
+
+See [Streaming → Rendering intermediate events](/guides/streaming#rendering-intermediate-events-in-your-ui) for the in-flight bubble pattern, and [Async jobs → Latency expectations](/guides/async-jobs#latency-expectations-and-timeout-strategy) for typical operation durations.
+
 ## Frontend layout
 
 Most products that integrate SuperDocs converge on a two-pane layout: the document editor on the left (primary area) and a chat panel on the right (fixed width, 380–440 px). The skeleton below is framework-agnostic — the same shape works in React, Vue, Svelte, or plain HTML.

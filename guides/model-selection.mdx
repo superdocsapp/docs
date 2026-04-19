@@ -73,6 +73,40 @@ curl -X POST https://api.superdocs.app/v1/chat \
 | Analyze a complex contract | `pro` or `max` | `deep` (max only) |
 | Batch processing many documents | `turbo` | — |
 
+## Token cost expectations by operation type
+
+Use this as a planning guide for how many output tokens — and roughly how much money — a given operation will spend.
+
+### Typical per-operation output token usage
+
+| Operation | Sections involved | Expected output tokens | Approx. cost (default tier) |
+|-----------|-------------------|------------------------|----------------------------|
+| Single-section edit (typo, reword, format) | 1 | 5,000 – 20,000 | $0.001 – $0.004 |
+| Multi-section edit (3–5 sections) | 3–5 | 20,000 – 80,000 | $0.004 – $0.016 |
+| Full-document operation (rewrite, restructure) | 10–20 | 80,000 – 250,000 | $0.016 – $0.050 |
+
+Anything materially above these ranges (e.g. a single-section edit using 100,000+ output tokens) suggests a runaway plan or an unusually large section. Inspect the operation in your usage dashboard if you see this — and feel free to flag it to us, since it's also useful as a signal for our own quality monitoring.
+
+### Reasoning tokens are additive
+
+Each thinking depth adds reasoning tokens on top of the operation's output:
+
+| Thinking depth | Approx. reasoning tokens added | Latency added |
+|----------------|-------------------------------|---------------|
+| `fast` | up to 2,000 | < 1 s |
+| `balanced` (default) | dynamic — typically 4,000 – 8,000 | 1 – 3 s |
+| `deep` | up to 16,000 | 3 – 8 s |
+
+Reasoning tokens are billed at the model's standard output rate, so on the default tier a `deep` reasoning addition contributes < $0.005 per request even at the upper end.
+
+### Picking a tier for batch jobs
+
+If you're processing 100+ documents in a batch:
+
+- **Cost-first** — `model_tier: "turbo"`. Fastest, lowest cost, slight precision tradeoff. Good for analytics-style passes (extract, classify, summarize).
+- **Balanced** — `model_tier: "core"` with `thinking_depth: "fast"`. Solid precision, moderate speed and cost. Good default for most batch flows.
+- **High-stakes** — `model_tier: "pro"` or `"max"`. Use when the cost of a wrong edit (lawyer review hours, regulatory exposure, reputational damage) far exceeds the per-document token cost — i.e. always for legal, regulatory, medical, or financial documents.
+
 ## Choosing for precision
 
 If the AI's output isn't what you wanted, the right tier change is usually obvious once you name the symptom:
