@@ -47,3 +47,16 @@ After connecting, ask your AI tool:
 > "Use the SuperDocs health tool to check the API status"
 
 If the connection is working, you'll get back `{"status": "healthy"}`.
+
+## Troubleshooting
+
+**Tools panel says "Loading tools" forever** — restart your AI tool. MCP servers load at startup, so a fresh session is required after adding the server.
+
+**Connection fails or times out** — verify your API key works:
+
+```bash
+curl https://api.superdocs.app/v1/sessions \
+  -H "Authorization: Bearer sk_YOUR_KEY"
+```
+
+A `200` response (with a JSON list of your sessions, possibly empty) confirms the key is valid. A `401` means the key is wrong, revoked, or the `Authorization` header didn't reach the server.

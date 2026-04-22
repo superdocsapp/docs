@@ -16,6 +16,20 @@ claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
 
 That's it. SuperDocs tools are now available in your Claude Code session.
 
+## Verify the connection
+
+```bash
+claude mcp list
+```
+
+You should see:
+
+```
+superdocs: https://api.superdocs.app/mcp (HTTP) - ✓
+```
+
+If you see `✗ Failed to connect`, restart Claude Code (`Ctrl+C` then `claude` in a new shell). MCP servers load at session startup, so a fresh session is required after `claude mcp add`.
+
 ## Test it
 
 ```bash
