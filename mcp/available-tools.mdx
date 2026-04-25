@@ -5,63 +5,63 @@ description: "All 18 MCP tools available when connecting to the SuperDocs MCP se
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 18 tools become available to your AI tool.
+When you connect to the SuperDocs MCP server, these 18 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, and human-in-the-loop approval.
 
 ## Chat
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `chat` | Send a message with optional document HTML. Returns AI response and document changes. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
-| `chat_async` | Start an async chat that processes in the background. Returns a job ID for polling. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
-| `approve_change` | Approve or deny AI-proposed document changes (HITL workflow). | `job_id`, `change_id`, `approved`, `feedback`, `changes` |
+| `chat` | Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting. Returns AI response and structural changes with chunk IDs. | `message`, `session_id`, `document_html`, `model_tier`, `thinking_depth`, `approval_mode`, `image_attachments` |
+| `chat_async` | Start a long-running or HITL-approved AI edit; returns a job_id to poll. Use for multi-step edits or `approval_mode='ask_every_time'`. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
+| `approve_change` | Approve or deny AI-proposed document changes one-by-one or in batch (HITL workflow). Supports per-change feedback for the AI to revise on. | `session_id`, `job_id`, `change_id`, `approved`, `feedback`, `changes` |
 
 ## Documents
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_document_base64` | Upload a document (base64-encoded) and load it as the active document. | `filename`, `file_base64`, `session_id` |
-| `export_document` | Export a document as a downloadable Word file (.doc or .docx). | `session_id`, `html`, `format`, `filename` |
+| `upload_document_base64` | Upload `.docx` / PDF / HTML / MD / RTF as the active editable document with chunk-ID structural editing. Tables, borders, shading, and styling preserved on edit and export. Also works for AI-generated outlines. | `filename`, `file_base64`, `session_id` |
+| `export_document` | Export the current document as a styled `.doc`, `.docx`, `.pdf`, or `.html` file with full fidelity. Round-trips through the original docx renderer to preserve every visual element. | `session_id`, `html`, `format`, `filename` |
 
 ## Sessions
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `list_sessions` | List all sessions with message counts and timestamps. | `limit` |
-| `get_session_history` | Get conversation history and document state for a session. | `session_id` |
-| `get_session_jobs` | List jobs for a specific session. | `session_id` |
+| `list_sessions` | List your active document editing sessions to resume or audit prior work. | `limit` |
+| `get_session_history` | Restore the full conversation and document state for a previous session, including chunk IDs, attachments, and editor actions. | `session_id` |
+| `get_session_jobs` | List all async chat jobs for a specific session, most recent first. | `session_id`, `limit` |
 
 ## Attachments
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_attachment_base64` | Upload a file (base64-encoded) as an attachment for AI context. Processed asynchronously. | `filename`, `file_base64`, `session_id` |
-| `delete_attachment` | Remove an attachment from a session. | `attachment_id`, `session_id` |
-| `get_attachment_status` | Check processing status of session attachments. | `session_id` |
+| `upload_attachment_base64` | Upload a reference file (PDF/DOCX/image) for the AI to query while editing. Processed asynchronously; queryable via semantic search and multimodal vision. | `filename`, `file_base64`, `session_id` |
+| `delete_attachment` | Remove an attachment from a session or cancel its in-progress processing. | `attachment_id`, `session_id` |
+| `get_attachment_status` | Check processing status of all attachments in a session. Poll after upload to know when ready. | `session_id` |
 
 ## Jobs
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `list_jobs` | List all jobs for the authenticated user. | `status`, `limit` |
-| `get_job` | Get status and result of a specific job. | `job_id` |
-| `cancel_job` | Cancel a pending or in-progress job. | `job_id` |
+| `list_jobs` | List your async chat jobs (in-progress, awaiting approval, completed, failed). | `status`, `limit` |
+| `get_job` | Get the status, partial results, and any pending changes for an async chat job. Poll after `chat_async`. | `job_id` |
+| `cancel_job` | Cancel a pending or in-progress async chat job. Already-applied changes are preserved. | `job_id` |
 
 ## Templates
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_template_base64` | Upload a document template (base64-encoded). | `filename`, `file_base64` |
-| `list_user_templates` | List all uploaded templates. | — |
-| `delete_user_template` | Delete a user template. | `template_id` |
+| `upload_template_base64` | Save a document template (NDA, contract, SOP, letterhead) for reuse across sessions. Referenceable by the AI when drafting new documents. | `filename`, `file_base64` |
+| `list_user_templates` | List all saved document templates available to the user or organization. | — |
+| `delete_user_template` | Delete a saved document template by ID (soft-delete). | `template_id` |
 
 ## Health
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `health` | Check if the SuperDocs API is healthy. | — |
+| `health` | Verify the SuperDocs MCP server is reachable and serving traffic. No auth required. | — |
 
 <Note>
-  **File uploads via MCP:** Upload tools accept base64-encoded file content in the `file_base64` parameter. Encode your file to base64 and pass it as a string along with the original `filename` (used for file type detection). Supported file types: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Maximum file size: 50 MB.
+  **File uploads via MCP:** The current upload tools accept base64-encoded file content in the `file_base64` parameter. For files >100KB, base64 through the agent's context window is slow and token-expensive. A pre-signed URL upload flow (`request_upload_url`) is shipping next to bypass this for large files. Encode your file to base64 and pass it as a string along with the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 50 MB.
 </Note>
 
 For full request/response schemas, see the [API Reference](/api-reference).
