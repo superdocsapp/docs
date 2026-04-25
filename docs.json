@@ -75,9 +75,10 @@
             "group": "MCP Integration",
             "pages": [
               "mcp/setup",
+              "mcp/plugin",
+              "mcp/claude-code",
               "mcp/claude-desktop",
               "mcp/cursor-vscode",
-              "mcp/claude-code",
               "mcp/available-tools",
               "mcp/skill"
             ]

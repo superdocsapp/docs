@@ -5,16 +5,38 @@ description: "Connect SuperDocs to Claude Code (CLI) with a single command."
 
 # Claude Code
 
-Connect SuperDocs to Claude Code with one CLI command.
+The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (21 tools), the 5 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
 
-## Setup
+## Install via plugin (recommended)
+
+In a Claude Code session, run:
 
 ```bash
-claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
+claude plugin install superdocsapp/superdocs-plugin
+```
+
+You'll be prompted for your SuperDocs API key (`sk_…`). It's stored securely in your OS keychain — never in plaintext config. Get a key from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
+
+After install:
+
+- All 21 MCP tools are available
+- 5 workflow prompts appear in your `/` slash menu (`/superdocs:draft_nda`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:draft_from_outline`, `/superdocs:review_contract_for_redflags`)
+- The SuperDocs skill auto-loads when you ask document-editing questions
+
+For full plugin reference (auto-update behavior, troubleshooting, advanced config), see [/mcp/plugin](/mcp/plugin).
+
+## Manual setup (advanced)
+
+If you prefer to configure the MCP server directly without the plugin (e.g., to share a `.mcp.json` across a team via project scope), run:
+
+```bash
+claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
   --header "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-That's it. SuperDocs tools are now available in your Claude Code session.
+Note the trailing slash on `/mcp/` — clients without slash get a 307 redirect.
+
+That installs only the MCP server (21 tools). To get the 5 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
 
 ## Verify the connection
 
