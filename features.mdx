@@ -61,7 +61,7 @@ Upload multiple documents into a session and the AI references any of them while
 
 ### Full rich-text formatting toolbar
 
-Beyond basic editing — the AI applies bold, italic, underline, strikethrough, text color (10-color palette), text highlight, custom font selection, font size from 12px to 30px, line height from 1.0 to 2.0, and text alignment (left, center, right, justify). All preserved on round-trip exports. The format painter lets you copy a style from one selection and apply it to another with a single click — useful for matching styling across a long document.
+Beyond basic editing — the AI applies bold, italic, underline, strikethrough, text color (10-color palette), text highlight, custom font selection, six preset font sizes (12px–30px), configurable line spacing (single, 1.15, 1.5, double), and text alignment (left, center, right, justify). All preserved on round-trip exports. The format painter lets you copy a style from one selection and apply it to another with a single click — useful for matching styling across a long document.
 
 **Best for:** Visually distinctive documents, applying brand style guides, adapting documents for different audiences, preserving template styling on edit.
 
@@ -95,7 +95,7 @@ Attach images (PNG, JPG, GIF, WebP), screenshots, scanned forms, diagrams, and c
 
 ### Build a knowledge base from attachments
 
-Upload your organization's template library, style guides, past contracts, or SOP documents as attachments. The AI references them automatically when editing the active document — **"make this sound like our standard tone"**, **"follow the format of our usual NDAs"**, **"use the indemnity language from our gold-standard contract"**. Builds an institutional memory that shapes AI behavior over time. Each session has its own attachment set; B2B orgs can share attachments across sessions.
+Upload your organization's template library, style guides, past contracts, or SOP documents as attachments. The AI references them automatically when editing the active document — **"make this sound like our standard tone"**, **"follow the format of our usual NDAs"**, **"use the indemnity language from our gold-standard contract"**. Builds an institutional memory that shapes AI behavior. Attachments are scoped per session, so a knowledge-base session can be reused as a starting point and copied for each new document.
 
 **Best for:** B2B teams with house styles or templates, legal teams with clause libraries, marketing teams with brand voice, compliance teams with corporate policies.
 
@@ -238,9 +238,9 @@ Issue promo codes that grant temporary operation allowances ("LAUNCH50" = 50 ops
 
 **Best for:** Product launches, partner programs, customer pilots, trials, conferences, hackathons.
 
-### Multi-language editing (16+ languages)
+### Multi-language editing
 
-Edit documents in English, Spanish, French, German, Mandarin, Japanese, Hindi, Hebrew, Arabic, Portuguese, Russian, Italian, Korean, Dutch, Polish, and Turkish. Natural-language instructions work in any of them — write your prompt in Hindi, edit a document in Spanish, get the AI's reply in whatever language you wrote the request in. Multilingual documents (e.g., bilingual contracts) handled correctly. Tone and formality conventions adapted per language.
+Natural-language instructions and document content both work across many languages — production users have edited documents in English, Spanish, French, Hebrew, Korean, Mandarin, and others (16+ languages confirmed in real usage so far). Write your prompt in one language, edit a document in another, get the AI's reply in whichever language you wrote the request. Multilingual documents (e.g., bilingual contracts) handled correctly. Tone and formality conventions adapted per language.
 
 **Best for:** International teams, multilingual document workflows, organizations serving non-English markets, contract translation and adaptation, cross-border legal work.
 
@@ -256,7 +256,7 @@ Combine attachments (your domain knowledge), sessions (long-running workflows), 
 
 ### Time Travel & Version History (Coming Soon)
 
-Restore documents to any prior state and browse a timeline of every edit. Useful for **"oops, undo that"** moments, compliance audits, and exploring alternate editing paths without losing the current version. Audit trail of who edited what, when. Targeted to ship within the next 2-4 weeks.
+Restore documents to any prior state and browse a timeline of every edit. Useful for **"oops, undo that"** moments, compliance audits, and exploring alternate editing paths without losing the current version. Audit trail of who edited what, when. The state-snapshot infrastructure already runs internally on every chat turn; the user-facing API and UI to browse and restore versions ships next.
 
 **Best for:** Multi-stakeholder workflows, regulatory compliance audits, exploring alternate edits without losing the current version, recovering from mistakes.
 
@@ -275,8 +275,8 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 | 2026-04-25 | Capability-forward MCP tool descriptions across all 21 tools | Agents form correct mental models of when to use SuperDocs vs build from scratch |
 | 2026-04-23 | MCP HTTP transport reliability fix | Eliminates 5-minute hang clients (Claude Code, Cursor, Bun) saw on first connect |
 | 2026-04-22 | OAuth Protected Resource Metadata (RFC 9728) for MCP | Cursor 3.x / Claude Code 2.x / mcp-remote can now connect without 60s metadata-probe timeout |
-| 2026-04-19 | Workflow-precision improvements (search-then-edit in one step, chunk-id-first-class dispatch) | 4m55s → ~10s for typical edit operations on large documents |
-| 2026-04-18 | Triage-precision tuning (no fast-default for simple edits) | Eliminates over-broad section editing on demos |
+| 2026-04-19 | Editing latency improvements for large documents | 4m55s → ~10s for typical edit operations on large documents |
+| 2026-04-18 | Editing precision improvements for nuanced instructions | Eliminates over-broad edits when the user's instruction was narrowly-scoped |
 | Earlier 2026 | Async jobs + HITL durable state, SSE streaming, multimodal vision, multi-format export, MCP server, promo codes, billing | Foundation |
 
 ---
