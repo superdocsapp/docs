@@ -1,11 +1,11 @@
 ---
 title: "Available Tools"
-description: "All 18 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 21 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 18 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, and human-in-the-loop approval.
+When you connect to the SuperDocs MCP server, these 21 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
@@ -19,8 +19,11 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `upload_document_base64` | Upload `.docx` / PDF / HTML / MD / RTF as the active editable document with chunk-ID structural editing. Tables, borders, shading, and styling preserved on edit and export. Also works for AI-generated outlines. | `filename`, `file_base64`, `session_id` |
+| `upload_document_base64` | Upload `.docx` / PDF / HTML / MD / RTF as the active editable document with chunk-ID structural editing. Tables, borders, shading, and styling preserved on edit and export. Also works for AI-generated outlines. **For files >100KB, prefer the `request_upload_url` flow below** — base64 through the agent's context is slow and token-expensive at scale. | `filename`, `file_base64`, `session_id` |
+| `request_upload_url` | Get a pre-signed URL to upload large files (`.docx` / PDF / HTML / MD / RTF) without bloating agent context. Returns a 5-minute PUT URL plus a ready-to-run curl example — your agent shells the file directly to cloud storage, so bytes never pass through the context window. After upload, call `process_uploaded_document` with the returned `upload_id`. Max file size: 100 MB. Supported formats: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. | `filename`, `content_type`, `size_bytes`, `purpose` |
+| `process_uploaded_document` | Parse a file uploaded via `request_upload_url` into structured HTML with chunk IDs for targeted AI editing. Same parsing pipeline as `upload_document_base64` — tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. Pass `parse_mode='document'` to load as the active editable document, or `parse_mode='attachment'` to load as a read-only AI-searchable reference. Counts as one billable operation. | `upload_id`, `filename`, `session_id`, `parse_mode` |
 | `export_document` | Export the current document as a styled `.doc`, `.docx`, `.pdf`, or `.html` file with full fidelity. Round-trips through the original docx renderer to preserve every visual element. | `session_id`, `html`, `format`, `filename` |
+| `request_download_url` | Get a pre-signed URL to download an exported document without proxying through the agent. Returns a 15-minute GET URL plus a curl example — your agent fetches the file directly from cloud storage. Pair with `export_document` for any file the user wants to retrieve at scale. | `blob_path`, `format` |
 
 ## Sessions
 
@@ -61,7 +64,11 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 | `health` | Verify the SuperDocs MCP server is reachable and serving traffic. No auth required. | — |
 
 <Note>
-  **File uploads via MCP:** The current upload tools accept base64-encoded file content in the `file_base64` parameter. For files >100KB, base64 through the agent's context window is slow and token-expensive. A pre-signed URL upload flow (`request_upload_url`) is shipping next to bypass this for large files. Encode your file to base64 and pass it as a string along with the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 50 MB.
+  **Two upload paths — pick by file size.** For **files >100KB**, use the pre-signed URL flow (`request_upload_url` → upload via curl → `process_uploaded_document`). Bytes stream directly to cloud storage and never pass through your agent's context window, saving thousands of tokens per upload. For **files <100KB** where token cost is trivial, `upload_document_base64` still works inline — encode to base64 and pass the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 100 MB.
+</Note>
+
+<Note>
+  **Compact response mode for editing large documents.** When working with documents larger than ~20 pages, set `response_mode='compact'` on `chat` and `chat_async`. Instead of returning the full updated HTML on every turn (~130K tokens for a 100-page styled doc), the response includes only `chunk_diffs` — the per-section before/after for chunks that were actually changed. To read sections, just ask in natural language ("show me the force majeure clause") and the AI returns the content in the reply text. A 5-turn editing session on a 100-page doc drops from ~700K tokens to ~3K tokens this way.
 </Note>
 
 For full request/response schemas, see the [API Reference](/api-reference).
