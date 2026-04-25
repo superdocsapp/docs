@@ -11,8 +11,8 @@ When you connect to the SuperDocs MCP server, these 18 tools become available to
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `chat` | Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting. Returns AI response and structural changes with chunk IDs. | `message`, `session_id`, `document_html`, `model_tier`, `thinking_depth`, `approval_mode`, `image_attachments` |
-| `chat_async` | Start a long-running or HITL-approved AI edit; returns a job_id to poll. Use for multi-step edits or `approval_mode='ask_every_time'`. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode` |
+| `chat` | Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting. Returns AI response and structural changes. **For large documents (>20 pages), set `response_mode='compact'`** to skip the full HTML in the response and get only per-section diffs (`chunk_diffs`) instead — saves thousands of tokens per turn. To read sections, just ask in natural language ("show me the force majeure section") and the AI returns the content in the reply. | `message`, `session_id`, `document_html`, `model_tier`, `thinking_depth`, `approval_mode`, `response_mode`, `image_attachments` |
+| `chat_async` | Start a long-running or HITL-approved AI edit; returns a job_id to poll. Use for multi-step edits or `approval_mode='ask_every_time'`. **For large documents, set `response_mode='compact'`** so polled job results skip the full HTML and surface only per-section diffs. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode`, `response_mode` |
 | `approve_change` | Approve or deny AI-proposed document changes one-by-one or in batch (HITL workflow). Supports per-change feedback for the AI to revise on. | `session_id`, `job_id`, `change_id`, `approved`, `feedback`, `changes` |
 
 ## Documents
