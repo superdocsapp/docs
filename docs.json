@@ -33,6 +33,12 @@
             ]
           },
           {
+            "group": "Capabilities",
+            "pages": [
+              "features"
+            ]
+          },
+          {
             "group": "Account & Billing",
             "pages": [
               "account/account-setup",
@@ -72,7 +78,8 @@
               "mcp/claude-desktop",
               "mcp/cursor-vscode",
               "mcp/claude-code",
-              "mcp/available-tools"
+              "mcp/available-tools",
+              "mcp/skill"
             ]
           },
           {

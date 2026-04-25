@@ -1,0 +1,127 @@
+---
+title: "Features"
+description: "What SuperDocs can do — capability-forward reference for every feature shipped on the platform."
+---
+
+# Features
+
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server (`https://api.superdocs.app/mcp`).
+
+## Structural editing with section precision
+
+Documents load as structured HTML where every paragraph, heading, table, row, and cell carries a unique identifier internally. The AI can target a specific section without touching anything else — **"remove row 3 of the pricing table"**, **"bold the second paragraph in section 4"**, **"replace the governing-law clause"** all work as natural-language instructions.
+
+This survives across multi-turn editing, so a 100-page document edited 30 times still has the same coherent structure at the end as it did at the start. Plain-text rewrites lose this completely.
+
+**Best for:** Long documents, contracts, SOPs, formal reports, anywhere targeted edits matter more than wholesale rewrites.
+
+## Style preservation on edit and export
+
+Tables (with borders, alternating row shading, merged cells), fonts, font sizes, colors, inline styling, lists, indentation, and headers/footers all survive both AI edits AND the round-trip to `.docx` / PDF / HTML. Most general-purpose AI tools strip or mangle these — SuperDocs is built around preserving them.
+
+**Best for:** Branded templates, legal documents, formal correspondence, anything where format fidelity is part of the deliverable.
+
+## Multi-format input and output
+
+| Input formats | Output formats |
+|---|---|
+| `.docx`, PDF, HTML, Markdown, RTF, plain text | `.docx`, PDF, HTML |
+
+Same parsing pipeline regardless of input — once a document is loaded into a session, every editing tool works identically. Export from any session in any of the three output formats.
+
+**Best for:** Format conversion workflows (HTML → styled `.docx`, Markdown → PDF), or accepting user uploads in whatever format they have.
+
+## Pre-signed URL upload and download
+
+For files larger than ~100KB, the agent gets a 5-minute pre-signed PUT URL plus a ready-to-run curl example. The agent shells the file directly to cloud storage — bytes never pass through the agent's context window. Same pattern in reverse for downloads (15-minute GET URL).
+
+For a 100-page styled `.docx`, this saves the agent ~70K tokens per upload (vs base64 inline). Five turns of editing on the same document drops from ~700K tokens of context overhead to ~3K tokens with the matching `response_mode='compact'` on chat.
+
+**Best for:** Production AI agents working with real-world document sizes (multi-page contracts, manuals, regulatory filings). Max file size 100 MB.
+
+## Multimodal vision on attachments
+
+Attach images (PNG, JPG, GIF, WebP), screenshots, scanned forms, diagrams, and charts — the AI reads them visually while editing the active document. Use cases: transcribe a screenshot into structured text, extract numbers from a chart, reference a diagram while drafting documentation, identify entities in a scanned form.
+
+**Best for:** Workflows that mix text documents with image references — design docs that reference mockups, compliance docs that reference scanned forms, technical writing that references architecture diagrams.
+
+## Human-in-the-loop approval
+
+For sensitive edits (legal contracts, financial filings, anything user-facing), set `approval_mode='ask_every_time'` on `chat_async` and the agent surfaces each proposed change as a structured diff (chunk-level before/after HTML + an explanation) for the user to approve, deny, or send back with feedback. Approved changes apply atomically; denied changes leave the document untouched.
+
+**Best for:** Multi-stakeholder workflows, regulated industries, anywhere the cost of a bad edit landing without review exceeds the cost of a confirmation click.
+
+## Compact response mode for long editing sessions
+
+On large documents, the default `chat` response includes the entire updated HTML on every turn — that's ~130K tokens for a 100-page styled document. Set `response_mode='compact'` and the response includes only `chunk_diffs` (the per-section before/after for sections that actually changed) — typically 1-3 chunks, ~500-2,000 tokens.
+
+For a 5-turn editing session on a 100-page doc, the compact mode reduces total response context from ~650K tokens to ~3K tokens. To read sections in compact mode, just ask in natural language — `"show me the force majeure clause"` returns the content in the chat reply text.
+
+**Best for:** Any AI agent editing documents larger than ~20 pages where context window pressure matters.
+
+## MCP server — 21 tools, every major client
+
+The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp` (Streamable HTTP transport). Compatible clients render the 21 tools natively:
+
+| Client | Status |
+|---|---|
+| Claude Code | Tools + Prompts ✓ |
+| Claude Desktop | Tools + Prompts ✓ |
+| Cursor | Tools + Prompts ✓ |
+| VS Code (GitHub Copilot) | Tools + Prompts ✓ |
+| Zed, Continue, Amazon Q CLI, and others | Tools + Prompts ✓ |
+| Windsurf, Cline | Tools only |
+
+A separate prompts sidecar at `https://api.superdocs.app/mcp-prompts` exposes 5 user-invocable workflow templates (`/mcp__superdocs__draft_nda`, `/mcp__superdocs__edit_styled_docx`, etc.) for clients that surface MCP prompts in their slash-command menus.
+
+**Best for:** AI-coding-tool users who want SuperDocs available in their editor without writing API integration code.
+
+## Sessions and persistence
+
+Every conversation is a `session_id` — a string the caller chooses. The full document state, conversation history, attachments, pending HITL changes, and AI working memory persist across calls and across server restarts (state lives in PostgreSQL, not in-memory). Reload an old session days later and the AI still has the full context.
+
+**Best for:** Long-running document workflows, async editing where the user comes back hours later, multi-turn editing where state carries between turns.
+
+## Three authentication paths
+
+| Method | Best for |
+|---|---|
+| Firebase token | The web app at `use.superdocs.app` (auto-issued via Google Sign-In or email/password) |
+| User API key (`sk_…`) | Individual developers, MCP integrations, scripts |
+| Organization API key (`lce_…`) | B2B integrations with shared usage limits |
+
+All three reach the same 21 MCP tools and 22 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
+
+## Async jobs with HITL state
+
+Long-running edits and HITL workflows run asynchronously — the API returns a `job_id`, the client polls or subscribes to SSE updates. State persists in a `jobs` table so any backend instance can pick up a job mid-flight (Cloud Run autoscaling, restarts, redeploys all safe). Approved changes resume automatically.
+
+**Best for:** Any workflow that takes >30 seconds to complete or needs human approval mid-flight.
+
+## Real-time progress via SSE
+
+Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress events while the agent works — `intermediate` (status updates), `proposed_change` (HITL diffs), `document_sync` (chunk-ID sync after upload), `final` (completed response), `usage` (operation count + tokens), `error`. Auto-reconnect on drop.
+
+**Best for:** Frontends that show live progress, status bars, or partial results before the full answer is ready.
+
+---
+
+## What ships when
+
+A live timeline of major capabilities and when they shipped. Older capabilities don't get less reliable over time — once shipped, they stay covered by the regression suite and the production monitoring stack.
+
+| Date | Capability | Why it matters |
+|---|---|---|
+| 2026-04-25 | MCP prompts sidecar at `/mcp-prompts` (5 user-invocable workflow templates) | Discoverable slash commands for Cursor/Claude Code/Claude Desktop users |
+| 2026-04-25 | Pre-signed URL upload/download flow (`request_upload_url`, `process_uploaded_document`, `request_download_url`) | Bytes no longer pass through agent context window; viable for real-world file sizes |
+| 2026-04-25 | Compact response mode (`response_mode='compact'` + `chunk_diffs`) | ~140× token reduction for editing sessions on large documents |
+| 2026-04-25 | Capability-forward MCP tool descriptions across all 21 tools | Agents form correct mental models of when to use SuperDocs vs build from scratch |
+| 2026-04-23 | MCP HTTP transport reliability fix | Eliminates 5-minute hang clients (Claude Code, Cursor, Bun) saw on first connect |
+| 2026-04-22 | OAuth Protected Resource Metadata (RFC 9728) for MCP | Cursor 3.x / Claude Code 2.x / mcp-remote can now connect without 60s metadata-probe timeout |
+| 2026-04-19 | Workflow-precision improvements (search-then-edit in one step, chunk-id-first-class dispatch) | 4m55s → ~10s for typical edit operations on large documents |
+| 2026-04-18 | Triage-precision tuning (no fast-default for simple edits) | Eliminates over-broad section editing on demos |
+| Earlier 2026 | Async jobs + HITL durable state, SSE streaming, multimodal vision, multi-format export, MCP server, promo codes, billing | Foundation |
+
+---
+
+For schemas, parameters, and code examples, see the [API Reference](/api-reference) and the [MCP Tools Reference](/mcp/available-tools). For workflow guides, see the [Guides](/guides) section.
