@@ -5,7 +5,7 @@ description: "Comprehensive capability reference for SuperDocs — every shipped
 
 # Features
 
-SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (21 tools + 5 user-invocable workflow prompts on a single endpoint).
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (21 tools + 4 user-invocable workflow prompts on a single endpoint).
 
 This page is exhaustive — it's a reference, not a marketing summary. Skip to the group that matches what you're trying to build.
 
@@ -184,7 +184,7 @@ The same capabilities are exposed as a Model Context Protocol server at `https:/
 | Zed, Continue, Amazon Q CLI, and others | Tools + Prompts ✓ |
 | Windsurf, Cline | Tools only |
 
-The same MCP server also exposes 5 user-invocable workflow templates (surfaced as `/superdocs:draft_nda`, `/superdocs:edit_styled_docx`, etc. in clients that render MCP prompts as slash commands). One MCP server entry in your client config; both tools and prompts come together.
+The same MCP server also exposes 4 user-invocable workflow templates (surfaced as `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, etc. in clients that render MCP prompts as slash commands). One MCP server entry in your client config; both tools and prompts come together.
 
 **Best for:** AI-coding-tool users who want SuperDocs available in their editor without writing API integration code.
 
@@ -269,7 +269,7 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 | Date | Capability | Why it matters |
 |---|---|---|
 | 2026-04-25 | Expanded features documentation (this page) — 30+ capabilities grouped by use case | Developers and AI agents form a complete mental model of what SuperDocs can do |
-| 2026-04-25 | MCP server unified — 21 tools + 5 user-invocable workflow prompts on a single `/mcp` endpoint | Single MCP config entry covers both; discoverable slash commands for Cursor/Claude Code/Claude Desktop users |
+| 2026-04-25 | MCP server unified — 21 tools + 4 user-invocable workflow prompts on a single `/mcp` endpoint | Single MCP config entry covers both; discoverable slash commands for Cursor/Claude Code/Claude Desktop users |
 | 2026-04-25 | Pre-signed URL upload/download flow (`request_upload_url`, `process_uploaded_document`, `request_download_url`) | Bytes no longer pass through agent context window; viable for real-world file sizes |
 | 2026-04-25 | Compact response mode (`response_mode='compact'` + `chunk_diffs`) | ~140× token reduction for editing sessions on large documents |
 | 2026-04-25 | Capability-forward MCP tool descriptions across all 21 tools | Agents form correct mental models of when to use SuperDocs vs build from scratch |

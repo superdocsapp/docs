@@ -1,6 +1,6 @@
 ---
 title: "SuperDocs Plugin"
-description: "The official Claude Code plugin — single install bundles 21 MCP tools, 5 workflow prompts, and the auto-loading skill."
+description: "The official Claude Code plugin — single install bundles 21 MCP tools, 4 workflow prompts, and the auto-loading skill."
 ---
 
 # SuperDocs Plugin for Claude Code
@@ -12,7 +12,7 @@ The fastest way to install SuperDocs in Claude Code. One command, one prompt for
 | Component | Count | What it does |
 |---|---|---|
 | **MCP tools** | 21 | Chat, structural editing, attachments, sessions, jobs, templates, pre-signed upload/download |
-| **Workflow prompts** | 5 | `/superdocs:draft_from_outline`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:draft_nda`, `/superdocs:review_contract_for_redflags` |
+| **Workflow prompts** | 4 | `/superdocs:draft_from_outline`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:review_contract_for_redflags` |
 | **Skill** | 1 | Auto-loads when you ask Claude to edit, draft, or export documents — no need to think about which tool to use |
 
 ## Install
@@ -31,7 +31,7 @@ The key is stored in your OS keychain (macOS Keychain, Windows Credential Manage
 claude plugin list
 ```
 
-You should see `superdocs` in the list. Then in a Claude Code session, type `/` and you'll see the 5 workflow prompts in the slash menu.
+You should see `superdocs` in the list. Then in a Claude Code session, type `/` and you'll see the 4 workflow prompts in the slash menu.
 
 To test the connection:
 
@@ -54,7 +54,7 @@ After install, just ask Claude to do document work. The skill auto-loads and Cla
 Or invoke a workflow prompt directly:
 
 ```
-/superdocs:draft_nda
+/superdocs:draft_from_outline
 ```
 
 ## Updates
@@ -83,7 +83,7 @@ claude plugin uninstall superdocs
 
 ## What's bundled vs. backend-served
 
-The plugin itself is small — just the manifest + the skill markdown. The 21 tools and 5 prompts are served live from `https://api.superdocs.app/mcp/` (Streamable HTTP, sk_ Bearer auth). Tool descriptions, prompt templates, and behavior changes ship from the backend instantly — no plugin update needed for those.
+The plugin itself is small — just the manifest + the skill markdown. The 21 tools and 4 prompts are served live from `https://api.superdocs.app/mcp/` (Streamable HTTP, sk_ Bearer auth). Tool descriptions, prompt templates, and behavior changes ship from the backend instantly — no plugin update needed for those.
 
 The plugin's job is to make install painless. The smarts live on the server.
 
