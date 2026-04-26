@@ -9,6 +9,19 @@ The Model Context Protocol (MCP) lets AI tools connect to external services. Sup
 
 When connected, SuperDocs tools appear natively in your AI tool — no API client code needed.
 
+## Where to find SuperDocs
+
+You can install SuperDocs from any of these public channels (most users only need one):
+
+| Channel | What it gives you | Install |
+|---|---|---|
+| **Claude Code plugin** (recommended for Claude Code) | MCP server + 4 workflow prompts + auto-loading skill in one command | `claude plugin marketplace add superdocsapp/superdocs-plugin && claude plugin install superdocs@superdocs-plugin` |
+| **Official MCP Registry** | Streamable HTTP endpoint discovered automatically by VS Code Copilot `@mcp` search, GitHub MCP Registry, Goose Extensions, PulseMCP, Glama and other MCP-aware tools | Auto-pulled — no action needed in supported clients (search `superdocs` in your tool's MCP catalog) |
+| **skills.sh** (cross-agent skill registry) | Auto-loading skill that works with Cursor, GitHub Copilot, Gemini CLI, Cline, Codex, Continue, Goose, Windsurf, Amp, and more | `npx skills add superdocsapp/superdocs-plugin` |
+| **Manual MCP config** (any MCP client) | Direct endpoint connection via your tool's MCP config file | See per-client setup below |
+
+The plugin and the skill both include a "Setup check" snippet that tells your AI agent to add the MCP server itself (once per session, not per tool call) if it's not already connected — so installing the skill alone is enough to get a working integration on any agent that can run shell commands. The reverse also works: connecting the MCP server alone surfaces a recommendation to load the skill, via the MCP `instructions` field returned during the protocol handshake.
+
 ## Prerequisites
 
 - A SuperDocs account ([sign up free](https://use.superdocs.app))
