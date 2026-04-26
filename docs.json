@@ -79,8 +79,7 @@
               "mcp/claude-code",
               "mcp/claude-desktop",
               "mcp/cursor-vscode",
-              "mcp/available-tools",
-              "mcp/skill"
+              "mcp/available-tools"
             ]
           },
           {
