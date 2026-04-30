@@ -1,11 +1,11 @@
 ---
 title: "Available Tools"
-description: "All 21 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 22 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 21 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
+When you connect to the SuperDocs MCP server, these 22 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
@@ -32,6 +32,7 @@ When you connect to the SuperDocs MCP server, these 21 tools become available to
 | `list_sessions` | List your active document editing sessions to resume or audit prior work. | `limit` |
 | `get_session_history` | Restore the full conversation and document state for a previous session, including chunk IDs, attachments, and editor actions. | `session_id` |
 | `get_session_jobs` | List all async chat jobs for a specific session, most recent first. | `session_id`, `limit` |
+| `revert_session_to_message` | Rewind a chat session to before a specific user message — restores both the document and the conversation in one call. Returns the reverted message text so you can pre-fill a compose box for editing. The original branch is preserved server-side but hidden from active reads. | `session_id`, `turn_index` |
 
 ## Attachments
 

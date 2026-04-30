@@ -17,6 +17,10 @@ HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wa
   This guide covers **UI-driven approval** (a human reviewing in your product's interface). If your AI agent is the one deciding whether to approve proposed changes (no human in the loop), see [Agent Tool Integration → Approval modes](/guides/agent-tool-integration#approval-modes-choose-based-on-who-decides). For batch / server-side workflows that auto-approve every change, see [Server Integration](/guides/server-integration) and pass `approval_mode: "approve_all"` instead.
 </Note>
 
+<Note>
+  **Revert vs. pending approval.** While a session is `awaiting_approval` (one or more proposed changes pending review), calling [revert](/concepts/sessions#revert-a-session-to-a-previous-message) returns `409`. Resolve the pending approvals first — accept or deny each change, or cancel the in-flight job via `POST /v1/jobs/{job_id}/cancel` — then retry revert.
+</Note>
+
 ## Recommended UX pattern
 
 **Default your UI to auto-apply; expose Review Mode as an opt-in toggle.**

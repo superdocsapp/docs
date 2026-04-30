@@ -91,6 +91,10 @@ When `status` is `"completed"`, the `result` field contains the AI response and 
 | `failed` | Error occurred | Read `error` field |
 | `cancelled` | Cancelled by you | No action needed |
 
+<Note>
+  **Revert vs. in-flight jobs.** [Revert](/concepts/sessions#revert-a-session-to-a-previous-message) returns `409` while a chat job on the same session is in `pending`, `in_progress`, or `awaiting_approval`. Wait for the job to land in `completed`/`failed`/`cancelled`, or cancel it explicitly via `POST /v1/jobs/{job_id}/cancel`, before retrying revert.
+</Note>
+
 ## Latency expectations and timeout strategy
 
 Knowing how long an operation *should* take helps you decide when to surface a "still processing" hint and when to treat a job as broken.

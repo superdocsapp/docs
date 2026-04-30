@@ -39,6 +39,8 @@ response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, j
 
 The returned HTML contains `data-chunk-id` attributes on elements. These identify document sections and enable the AI to make targeted edits without reprocessing the entire document. These same IDs appear in API responses — for example, `chunk_id` and `insert_after_chunk_id` in [HITL proposed changes](/guides/human-in-the-loop#understanding-proposed-changes).
 
+If you make an edit you want to undo, you can rewind both the chat history and the document state to before any user message — see [Revert a session to a previous message](/concepts/sessions#revert-a-session-to-a-previous-message).
+
 ## Loading documents from files
 
 Upload a file to load it as the active document in a session. The file is processed synchronously — the response includes the full document HTML ready for editing.

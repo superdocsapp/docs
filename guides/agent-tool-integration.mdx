@@ -331,6 +331,25 @@ The `data-chunk-id` attributes that SuperDocs adds to block-level elements **mus
 
 If you're piping the HTML through a rich-text editor at any point in your agent's UI, see the [Editor Integration guide](/guides/editor-integration) for editor-specific preservation patterns.
 
+## Letting your agent undo a step
+
+If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. SuperDocs returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original branch stays in the database for audit but is hidden from active reads.
+
+Concrete shape — register revert as a second tool alongside `edit_document`:
+
+```python
+def revert_session(session_id: str, turn_index: int) -> dict:
+    with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=30) as c:
+        r = c.post(f"https://api.superdocs.app/v1/sessions/{session_id}/revert",
+                   json={"turn_index": turn_index})
+        r.raise_for_status()
+        return r.json()  # {compose_text, reverted_to_turn, document_state, editor_action, archived_turn_count}
+```
+
+The agent reasons "this edit went wrong, let me try a different prompt" and chains `revert_session` → `edit_document` with the corrected instruction. Returns `409` if a chat job is still in flight on the session — wait for it to settle first.
+
+See the full revert contract in [Sessions → Revert a session to a previous message](/concepts/sessions#revert-a-session-to-a-previous-message).
+
 ## Choosing between sync `/v1/chat` and async `/v1/chat/async`
 
 Most agent-tool integrations should use sync `/v1/chat`. It's a simpler integration (one call, one response) and matches the standard tool-call shape (function in, JSON out, agent reasons over the result).

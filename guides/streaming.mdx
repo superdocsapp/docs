@@ -11,6 +11,10 @@ For long-running AI operations, use Server-Sent Events (SSE) to receive real-tim
   SSE is one option, not the only option. For non-browser consumers (server-side workers, batch jobs, AI agent tools), the synchronous [`/v1/chat`](/examples/curl) endpoint or [polling on `/v1/jobs/{id}`](/guides/async-jobs) are simpler and equally valid. See [Server Integration](/guides/server-integration) for the patterns.
 </Note>
 
+<Note>
+  **Revert + active SSE.** If your UI lets users [revert a session](/concepts/sessions#revert-a-session-to-a-previous-message) while an SSE stream is still open, close the `EventSource` first (or wait for the `final` event) before sending the revert call. Revert returns `409` while a chat job is in flight on the session, and any updates that arrive after revert from the original branch are stale.
+</Note>
+
 ## How it works
 
 1. Start an async chat request to get a `job_id`

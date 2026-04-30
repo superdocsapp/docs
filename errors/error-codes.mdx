@@ -20,8 +20,9 @@ All API errors return a JSON response with a `detail` field:
 | **400** | Bad Request | Empty message, unsupported file type, invalid parameters |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
 | **403** | Forbidden | Accessing a resource you don't own |
-| **404** | Not Found | Job, session, template, or attachment doesn't exist |
-| **422** | Validation Error | Request body doesn't match expected schema |
+| **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history |
+| **409** | Conflict | Revert blocked because a chat job is currently running on the same session |
+| **422** | Validation Error | Request body doesn't match expected schema; or revert target message predates the revert feature |
 | **429** | Too Many Requests | Monthly operation limit reached |
 | **500** | Internal Server Error | Unexpected server error |
 | **504** | Gateway Timeout | AI processing exceeded 10 minutes |
@@ -79,3 +80,19 @@ All API errors return a JSON response with a `detail` field:
 ```
 
 **Fix:** Jobs are cleaned up 1 hour after completion. Check the job ID and timing. Use `/v1/jobs` to list active jobs.
+
+### Revert conflicts (409)
+
+```json
+{"detail": "Cannot revert while a chat job is running for this session. Wait for it to complete or cancel it first."}
+```
+
+**Fix:** Wait for the in-flight job to finish (poll `/v1/jobs/{job_id}` or watch the SSE stream until you see `final`), or cancel it via `POST /v1/jobs/{job_id}/cancel` before retrying revert.
+
+### Revert target too old (422)
+
+```json
+{"detail": "This message predates the revertability feature and cannot be reverted. Start a new chat to use revert."}
+```
+
+**Fix:** Per-message revert only works for chats started after the feature shipped. Older sessions remain readable but their messages don't carry the marker the rewind needs. Start a new session for full revert support.

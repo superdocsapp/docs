@@ -76,6 +76,24 @@ requests.post(BASE, headers=HEADERS, json={
 })
 ```
 
+## Undoing a step
+
+If your agent realizes one of its earlier edits was wrong, it can rewind the session instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo:
+
+```python
+revert = requests.post(
+    f"https://api.superdocs.app/v1/sessions/agent-contract/revert",
+    headers=HEADERS,
+    json={"turn_index": 4},  # the user message you want to undo
+)
+result = revert.json()
+# result["compose_text"]      → the original message text
+# result["document_state"]    → the document HTML at the rewind point
+# result["reverted_to_turn"]  → the turn the conversation now ends at
+```
+
+The agent receives the document state from before that turn plus the original message text, rewrites the instruction more carefully, and re-sends. The original branch stays in the database for audit but is hidden from active reads. Returns `409` if a chat job is currently running on the same session — wait for it to settle first. See [Revert a session to a previous message](/concepts/sessions#revert-a-session-to-a-previous-message).
+
 ## With MCP
 
-If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Integration](/mcp/setup) for setup. The AI agent gets native access to all 16 SuperDocs tools without writing any API client code.
+If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Integration](/mcp/setup) for setup. The AI agent gets native access to all 22 SuperDocs tools — including `revert_session_to_message` — without writing any API client code.
