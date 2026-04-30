@@ -112,6 +112,9 @@ Common use cases:
 - **Reference a diagram** in generated content ("Write a paragraph describing the architecture in this image")
 - **Extract data from a chart** ("Summarize the trends in this chart and add a section about them")
 - **Identify objects or text in a photo** ("What does the sign in this photo say? Add it as a quote")
+- **Swap an image in the document** ("Replace the cover photo with this attached image", "Use this as the new company logo") — pure URL swap, no AI generation cost
+
+The same `image_attachments` field also drives image generation and editing inside the document — see [Visual content](/features#visual-content--media). Tell the AI **"generate an image of a glass office building at sunrise"** and it creates one and inserts it; click any image in the editor and tell the AI **"brighten this dramatically"** or **"recolor with warm sepia"** and the AI rewrites the bytes.
 
 Images are handled inline with your chat request — no separate upload step is required:
 
