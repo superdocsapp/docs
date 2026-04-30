@@ -5,7 +5,7 @@ description: "Comprehensive capability reference for SuperDocs — every shipped
 
 # Features
 
-SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (21 tools + 4 user-invocable workflow prompts on a single endpoint).
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (22 tools + 4 user-invocable workflow prompts on a single endpoint).
 
 This page is exhaustive — it's a reference, not a marketing summary. Skip to the group that matches what you're trying to build.
 
@@ -82,6 +82,64 @@ Insert and delete tables and rows. Merge or split cells. Apply alternating row s
 Add headers and footers that appear on every page (or specific pages) — page numbers, document titles, company names, dates. Edit existing headers/footers directly. All survives PDF and `.docx` export. Hyperlinks work the same way: **"make this text link to our website"** or **"remove the broken link in section 4"**. Both internal document references and external URLs supported.
 
 **Best for:** Formal business documents, branded templates, compliance documents requiring page numbering, documents with cross-references or call-to-action links.
+
+---
+
+## Visual content & media
+
+Generate, edit, and embed images, diagrams, drawings, and equations directly inside your document — all by chatting. Every operation rides the same chat interface; no separate tools or modes to learn.
+
+### Generate images from a description
+
+Describe the image you want and the AI creates it and inserts it into the document. Photorealistic shots, illustrations, hero images, logos, infographics with text — all by natural-language instruction. The AI picks the right generation model automatically: a photorealistic image generator by default, and a text-rendering-optimized model for prompts that need legible text on the image (logos, infographics, slide hero shots, anything where letterforms matter more than photographic realism).
+
+Generated images live in the document like any other photo — they can be edited, replaced, or removed afterward by chat.
+
+**Best for:** Marketing pages, proposals, sales decks, blog posts, product specs, anything where finding stock imagery is friction.
+
+### Edit any image with natural language
+
+Click any image in the editor and tell the AI what to change. Supported edits include brightness, darkness, contrast, recolor (e.g., "warm sepia", "cooler blues"), circular mask with transparent corners, tight crop to the subject, semi-transparent fade, and full background removal — plus anything else you'd describe in plain English to a photo editor.
+
+The AI generates new bytes and swaps them in. Subject identity (faces, geometry, branding) is preserved across the edit. Each edit takes about 20 seconds. You can iterate (**"a bit warmer"**, **"now crop tighter"**) and use **Reset to Original** to revert to the original bytes at any time.
+
+**Best for:** Marketing assets that need to match a campaign, reports and contracts where logos need a quick cleanup, design docs where reference shots need treatment, anywhere a small photo edit would otherwise mean leaving the document.
+
+### Replace an image with an attachment
+
+Attach a fresh image to chat (the new logo, the updated headshot, the corrected diagram screenshot) and ask the AI to swap it in for an existing image in the document. Pure URL swap — no AI generation cost, no waiting. Works for one-off updates (**"replace the cover photo with this"**) and for recurring patterns where users supply a fresh asset on every iteration of the document.
+
+**Best for:** Branded templates that need per-customer assets, document workflows where users supply their own imagery, content updates after a rebrand.
+
+### Auto-rendered diagrams (Mermaid)
+
+Describe a flowchart, sequence diagram, org chart, ER diagram, mindmap, timeline, or Gantt and the AI emits the diagram code; the editor live-renders it as a clean SVG. Re-editing is instant and free of regeneration cost — say **"add a Police Verification step after Background Check"** and the AI rewrites the diagram in place rather than regenerating the whole image.
+
+Diagrams export correctly in PDF and `.docx` (rendered to image at export time). The full Mermaid syntax catalog is supported — flowchart, sequence, class, state, ER, user journey, gantt, pie, mindmap, timeline, xychart.
+
+**Best for:** Technical documentation, process docs, runbooks, architecture overviews, training materials — anywhere a diagram beats a paragraph.
+
+### Hand-drawn sketches with a built-in canvas
+
+Open a freehand drawing canvas inside the editor — sketch quickly with shapes, arrows, and freehand strokes, save, and the drawing lands in the document as an image. Click it later, hit **Redraw**, and the canvas reopens with your original strokes so you can tweak them.
+
+The same drawing can also be edited as an image via natural language (**"turn this rough sketch into a realistic logo"**) — and the original strokes are still kept on the image, so you can redraw from scratch even after AI editing.
+
+**Best for:** Whiteboarding inside a doc, quick architecture sketches, annotating a screenshot, turning a hand-sketched logo into something polished without leaving the editor.
+
+### Math equations (LaTeX / KaTeX)
+
+Insert math equations using familiar LaTeX syntax — inline (`$x^2$`) or block (`$$x^2 + y^2 = z^2$$`). The editor live-renders them with KaTeX. Equations survive `.docx` and PDF export.
+
+The toolbar has an equation button that prompts for LaTeX so you don't have to remember the delimiters; in chat you can also just say **"add the quadratic formula here"** and the AI will insert the right LaTeX in place.
+
+**Best for:** Academic papers, technical reports, finance documents with formulas, engineering specs, anywhere math notation needs to be written correctly the first time.
+
+### Auto-generated table of contents
+
+Drop a table-of-contents block into the document and it auto-populates from your H1/H2/H3 headings. Add or rename a heading later — the TOC updates itself. Click a TOC entry to jump to that section. Survives export to PDF and `.docx` (rendered as a list of section titles).
+
+**Best for:** Long documents, manuals, books, regulatory filings — anywhere 10+ pages where readers need to navigate.
 
 ---
 
@@ -171,9 +229,9 @@ For a 100-page styled `.docx`, this saves the agent ~70K tokens per upload (vs b
 
 ## Developer & integration
 
-### MCP server — 21 tools, every major client
+### MCP server — 22 tools, every major client
 
-The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp` (Streamable HTTP transport). Compatible clients render the 21 tools natively:
+The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp` (Streamable HTTP transport). Compatible clients render the 22 tools natively:
 
 | Client | Status |
 |---|---|
@@ -196,7 +254,7 @@ The same MCP server also exposes 4 user-invocable workflow templates (surfaced a
 | User API key (`sk_…`) | Individual developers, MCP integrations, scripts |
 | Organization API key (`lce_…`) | B2B integrations with shared usage limits |
 
-All three reach the same 21 MCP tools and 22 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
+All three reach the same 22 MCP tools and 23 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
 
 ### REST API works with any programming language
 
@@ -252,13 +310,26 @@ Combine attachments (your domain knowledge), sessions (long-running workflows), 
 
 ---
 
+### Per-message chat revert
+
+Rewind a chat session to before any specific user message — both the conversation **and** the document state snap back together. The reverted message text is returned so your UI can pre-fill a compose box for editing. The original branch is kept on the server for audit; the new branch becomes the active timeline.
+
+Available three ways:
+- **Web app**: a "↶ Revert" button under every user message bubble, with a confirmation dialog before the rewind.
+- **REST**: `POST /v1/sessions/{session_id}/revert` with `{turn_index}` — see [Sessions](/concepts/sessions#revert-a-session-to-a-previous-message).
+- **MCP**: the `revert_session_to_message` tool, callable by Claude Code, Cursor, Claude Desktop, and any MCP-compatible agent.
+
+If a chat job is currently running for the session, revert returns `409` — wait for it to settle. Available on chats started after the feature shipped (older sessions don't carry the marker the rewind needs).
+
+**Best for:** "oops, undo that AI change" moments, exploring an alternate prompt without starting from scratch, recovering from a misunderstood instruction without losing the rest of your work.
+
+---
+
 ## On the roadmap
 
-### Time Travel & Version History (Coming Soon)
+### Branch switcher
 
-Restore documents to any prior state and browse a timeline of every edit. Useful for **"oops, undo that"** moments, compliance audits, and exploring alternate editing paths without losing the current version. Audit trail of who edited what, when. The state-snapshot infrastructure already runs internally on every chat turn; the user-facing API and UI to browse and restore versions ships next.
-
-**Best for:** Multi-stakeholder workflows, regulatory compliance audits, exploring alternate edits without losing the current version, recovering from mistakes.
+Today the original branch is preserved on the server side after a revert, but it isn't visible in the UI — your active timeline is always the new branch. A future update will surface a switcher so you can navigate between alternate conversation paths the way ChatGPT and Claude do.
 
 ---
 
@@ -268,6 +339,8 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 
 | Date | Capability | Why it matters |
 |---|---|---|
+| 2026-04-30 | Visual content & media — image generate / edit / replace by chat, auto-rendered Mermaid diagrams, in-editor drawing canvas, KaTeX equations, auto table of contents | Documents are no longer text-only; images, diagrams, drawings, and equations live in the same chat-driven editing flow as the rest of the content |
+| 2026-04-29 | Per-message chat revert (web app + REST + MCP `revert_session_to_message`) | "Oops, undo that" rewinds chat and document together; original branch preserved server-side |
 | 2026-04-25 | Expanded features documentation (this page) — 30+ capabilities grouped by use case | Developers and AI agents form a complete mental model of what SuperDocs can do |
 | 2026-04-25 | MCP server unified — 21 tools + 4 user-invocable workflow prompts on a single `/mcp` endpoint | Single MCP config entry covers both; discoverable slash commands for Cursor/Claude Code/Claude Desktop users |
 | 2026-04-25 | Pre-signed URL upload/download flow (`request_upload_url`, `process_uploaded_document`, `request_download_url`) | Bytes no longer pass through agent context window; viable for real-world file sizes |
