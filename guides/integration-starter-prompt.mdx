@@ -390,6 +390,7 @@ All requests go through your API client (Phase 2). Paths are relative to `https:
 - `GET v1/chat/{session_id}/stream?job_id=...&api_key=...` — SSE stream of six event types (`document_sync`, `intermediate`, `proposed_change`, `final`, `usage`, `error`). Browser-side requires the `api_key` query param because `EventSource` can't set custom headers.
 - `GET v1/jobs/{job_id}` — poll for async job status. Use as an alternative to SSE for non-browser consumers.
 - `POST v1/chat/{session_id}/approve` — body: `{ job_id, approved, changes?: [{ change_id, approved, feedback? }] }`. Resumes the AI on the already-open SSE stream.
+- `POST v1/sessions/{session_id}/revert` — body: `{ turn_index }` → returns `{ compose_text, reverted_to_turn, document_state, editor_action, archived_turn_count }`. Rewinds chat + document to the state before the user message at `turn_index`. Returns `409` if a chat job is in flight on the session, `422` if the target message predates the revert feature.
 - `POST v1/documents/export` — body: `{ html?, session_id?, format: "doc" | "docx", filename? }` → binary Word file.
 
 SSE event `data:` shapes (all JSON):
@@ -422,6 +423,8 @@ Parsed `proposed_change.content` shape:
 | 401 from any endpoint | key wrong or includes `Bearer ` literal | Value is just `sk_...` with no quotes, no "Bearer" prefix. |
 | SSE connection opens then closes | proxy transforms or buffers headers | Pipe upstream body unchanged; set `Cache-Control: no-cache, no-transform`. Disable buffering at any reverse proxy (nginx, Caddy, CloudFront). |
 | `proposed_change` fires, approve POST returns 404 | wrong session_id in the URL | Path must include the session ID exactly as sent in the original `/v1/chat/async` request. |
+| Revert returns 409 | A chat job is in flight on the session | Wait for the SSE `final` event (or poll `/v1/jobs/{job_id}` until status is `completed`/`failed`) before retrying revert. Optionally cancel the job via `POST /v1/jobs/{job_id}/cancel` first. |
+| Revert returns 422 | The target user message predates the revert feature | Per-message revert only works on chats started after the feature shipped. Older sessions stay readable but their messages don't carry the rewind marker. Start a new session for full revert support. |
 | Document loses `data-chunk-id` after first edit | editor schema/config missing a node type | Add the missing node to your chunk-id-preservation config (see [Editor Integration](https://docs.superdocs.app/guides/editor-integration)). |
 | Diff card has empty `old_html` | operation is `create`, not `edit` | Correct — creates have no `old_html`. Render them as "new section" cards. |
 | `proposed_change.content` fields all undefined | missed the JSON double-parse | `JSON.parse(JSON.parse(event.data).content)` to access the change object. |

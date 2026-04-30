@@ -56,9 +56,34 @@ curl https://api.superdocs.app/v1/sessions/project-proposal-v1/history \
 ```
 
 The response includes:
-- `messages` — Full conversation history
+- `messages` — Full conversation history. Each message carries `turn_index` (the position in the session) and `checkpoint_id` (a marker used by the revert endpoint; `null` for older messages recorded before the revert feature shipped).
 - `document_state` — Current document HTML, version ID, and attachment list
 - `editor_action` — What to do with the document: `"update"` (load the HTML), `"clear"` (reset), or `"keep"` (no change)
+
+## Revert a session to a previous message
+
+Rewind both the chat and the document to the state immediately before a specific user message.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/sessions/project-proposal-v1/revert \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"turn_index": 4}'
+```
+
+`turn_index` is the position of the **user message** you want to undo. Pass it from a `messages[i].turn_index` you got back from the history endpoint above.
+
+The response gives you:
+- `compose_text` — The text of the user message that was reverted. Useful to pre-fill a compose box so the user can edit and resend.
+- `reverted_to_turn` — The turn the conversation now ends at (the previous AI reply), or `-1` if the session was reset to its initial empty state.
+- `document_state` + `editor_action` — Same shape as the history endpoint. Apply them to your editor.
+- `archived_turn_count` — How many rows were soft-archived.
+
+What happens server-side:
+- The chat session is forked at the checkpoint stored on the previous AI reply. The original branch (the messages and document state from the reverted point onward) is kept in the database for audit but hidden from active reads.
+- Subsequent messages on this session continue from the fork point. There is no branch-switcher in the API today — the new branch becomes the only visible timeline.
+- If the session has a chat job currently running (in progress or awaiting approval), the revert call returns `409`. Wait for the job to settle or cancel it first.
+- If the user message predates the revert feature (no checkpoint marker recorded), the call returns `422`. Older sessions can still be loaded; only their per-message revert is unavailable.
 
 ## Session isolation
 

@@ -5,7 +5,7 @@ description: "Connect SuperDocs to Claude Code (CLI) with a single command."
 
 # Claude Code
 
-The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (21 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
+The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (22 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
 
 ## Install via plugin (recommended)
 
@@ -19,7 +19,7 @@ You'll be prompted for your SuperDocs API key (`sk_…`). It's stored securely i
 
 After install:
 
-- All 21 MCP tools are available
+- All 22 MCP tools are available
 - 4 workflow prompts appear in your `/` slash menu (`/superdocs:draft_from_outline`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:review_contract_for_redflags`)
 - The SuperDocs skill auto-loads when you ask document-editing questions
 
@@ -36,7 +36,7 @@ claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
 
 Note the trailing slash on `/mcp/` — clients without slash get a 307 redirect.
 
-That installs only the MCP server (21 tools). To get the 4 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
+That installs only the MCP server (22 tools). To get the 4 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
 
 ## Verify the connection
 
