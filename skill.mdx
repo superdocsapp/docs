@@ -112,7 +112,7 @@ Restart Claude Code. The 21 SuperDocs tools become available; this skill auto-lo
 
 ## Pattern 1 — Upload an existing file the user wants to edit
 
-**Files <100KB** (small contracts, single-page memos, brief outlines): inline base64 is fine.
+**Files smaller than 100KB** (small contracts, single-page memos, brief outlines): inline base64 is fine.
 
 ```
 TOOL: upload_document_base64
@@ -316,7 +316,7 @@ STEP 3 — Continue with chat. The AI now has the attachment available for retri
 
 3. **`session_id` is sticky.** Use the same `session_id` across all calls for one document. Generate a new one (e.g., `user-${timestamp}`) per logical document. State persists across restarts via the SuperDocs backend.
 
-4. **Default `response_mode='full'`** is fine for documents <20 pages. Switch to `compact` only when context cost matters.
+4. **Default `response_mode='full'`** is fine for documents under 20 pages. Switch to `compact` only when context cost matters.
 
 5. **`parse_mode` matters for `process_uploaded_document`** — `'document'` loads as the active editable doc, `'attachment'` loads as a read-only AI-searchable reference. Don't mix them up.
 

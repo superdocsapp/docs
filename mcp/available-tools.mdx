@@ -65,7 +65,7 @@ When you connect to the SuperDocs MCP server, these 22 tools become available to
 | `health` | Verify the SuperDocs MCP server is reachable and serving traffic. No auth required. | — |
 
 <Note>
-  **Two upload paths — pick by file size.** For **files >100KB**, use the pre-signed URL flow (`request_upload_url` → upload via curl → `process_uploaded_document`). Bytes stream directly to cloud storage and never pass through your agent's context window, saving thousands of tokens per upload. For **files <100KB** where token cost is trivial, `upload_document_base64` still works inline — encode to base64 and pass the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 100 MB.
+  **Two upload paths — pick by file size.** For **files larger than 100KB**, use the pre-signed URL flow (`request_upload_url` → upload via curl → `process_uploaded_document`). Bytes stream directly to cloud storage and never pass through your agent's context window, saving thousands of tokens per upload. For **files smaller than 100KB** where token cost is trivial, `upload_document_base64` still works inline — encode to base64 and pass the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 100 MB.
 </Note>
 
 <Note>
