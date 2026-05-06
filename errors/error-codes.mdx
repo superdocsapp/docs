@@ -68,10 +68,10 @@ All API errors return a JSON response with a `detail` field:
 ### Timeout (504)
 
 ```json
-{"detail": "Request timed out. The AI agent took longer than 10 minutes to process your request. Please try again with a simpler request or contact support."}
+{"detail": "The AI agent took longer than 10 minutes to process your request. For long edits or multi-step tasks, use chat_async — it streams progress, supports human-in-the-loop approval, and lets you split the work across multiple turns. Try chat_async with a smaller scope per turn (e.g. one section at a time)."}
 ```
 
-**Fix:** Simplify your request, or break a complex task into smaller steps. Use the async endpoint (`/v1/chat/async`) for long operations.
+**Fix:** Use the async endpoint (`/v1/chat/async`) for long operations — it streams `intermediate` progress events as the work runs and supports human-in-the-loop approval. Split large requests into smaller turns (one section per turn).
 
 ### Not found (404)
 
