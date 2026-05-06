@@ -217,6 +217,30 @@ Same parsing pipeline regardless of input — once a document is loaded into a s
 
 **Best for:** Format conversion workflows (HTML → styled `.docx`, Markdown → PDF), or accepting user uploads in whatever format they have.
 
+### High-fidelity PDF import
+
+PDFs upload with their full content preserved — page text, **annotations** (sticky notes, highlights, FreeText callouts, reviewer comments), and **embedded images**. Every annotation is visible to the AI with the original author and date attached, so editing instructions like **"apply the corrections from the auditor's notes"** or **"reflect the reviewer's comments in section 3"** work natively. Embedded images (logos, photos, diagrams) become full first-class images you can replace, edit, or reference visually — they don't get silently dropped to text-only.
+
+**Best for:** Compliance and audit workflows where PDFs carry reviewer annotations; brand and marketing collateral PDFs where embedded photos must round-trip; any enterprise GRC review cycle that uses annotated PDFs.
+
+### Word track-changes import
+
+Word documents uploaded with **Track Changes** enabled keep all of it on import — insertions, deletions, comments — each tagged with the reviewer's name and date. The AI sees who edited what and can act on it: **"apply all the proofreader's insertions"**, **"reject the deletions in section 2"**, **"address the comments from the legal reviewer"**. Editorial workflows that depend on review markup (academic supervisor edits, legal redlines, teacher-corrected student work) translate straight from Word into SuperDocs.
+
+**Best for:** Editorial review cycles, redline workflows, teacher-student document review, multi-stakeholder review where preserving the trail of who-changed-what matters.
+
+### Reliable multi-file attachments
+
+Attach more than one file in the same message and reference each by filename — **"compare the clauses in `contract_v2.pdf` against `contract_v1.pdf`"** or **"merge `outline.txt` into `proposal.docx`"**. Filename-based lookup is exact (case-insensitive, partial match) so the AI doesn't have to guess from content similarity which file you mean.
+
+**Best for:** Document comparison and merge workflows, multi-file review, proposal assembly from supporting attachments.
+
+### Document length awareness
+
+Ask **"how many pages is this?"** and get a real answer — exact for paginated formats (`.docx`, PDF) and a clearly-labelled approximation ("approximately N pages") for unpaginated formats (HTML, Markdown, plain text). The page count is available as part of attachment metadata so any agent can read it without an extra round trip.
+
+**Best for:** Length-sensitive workflows (briefs with strict page limits, summaries that target a length, budgeting AI work against document size).
+
 ### Pre-signed URL upload and download
 
 For files larger than ~100KB, the agent gets a 5-minute pre-signed PUT URL plus a ready-to-run curl example. The agent shells the file directly to cloud storage — bytes never pass through the agent's context window. Same pattern in reverse for downloads (15-minute GET URL).
@@ -339,6 +363,7 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 
 | Date | Capability | Why it matters |
 |---|---|---|
+| 2026-05-06 | High-fidelity ingest — PDF annotations + embedded images + Word track-changes preserved on import; reliable multi-file attachment-by-filename; document length awareness ("how many pages?") | PDFs, annotated review documents, and Word redlines no longer get silently flattened on upload; multi-file workflows resolve files by name; users get real page-count answers |
 | 2026-05-06 | Web app first-paint upload affordances — empty editor renders a drop zone for drag-drop, click-to-pick file picker, and a paste-as-content prompt when long content is pasted into a blank editor; "Starter Templates" relabel on the templates surface so it's clearly distinct from per-session attachments | First-time visitors find the upload path in seconds without asking; users who paste content as their first action get explicit "load as document content vs. treat as a chat instruction" choice |
 | 2026-04-30 | Visual content & media — image generate / edit / replace by chat, auto-rendered Mermaid diagrams, in-editor drawing canvas, KaTeX equations, auto table of contents | Documents are no longer text-only; images, diagrams, drawings, and equations live in the same chat-driven editing flow as the rest of the content |
 | 2026-04-29 | Per-message chat revert (web app + REST + MCP `revert_session_to_message`) | "Oops, undo that" rewinds chat and document together; original branch preserved server-side |
