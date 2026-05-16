@@ -46,7 +46,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 6 event types:
+The stream emits 7 event types:
 
 ### `intermediate`
 
@@ -208,6 +208,42 @@ Emitted after `final` with usage consumption data.
 event: usage
 data: {"monthly_used": 43, "monthly_limit": 500, "monthly_remaining": 457, "was_billable": true, "subscription_tier": "free"}
 ```
+
+### `ui_pointer`
+
+Side-channel hint that the user's last message expressed intent for a specific UI affordance — most commonly export / download / "open in Word". Use it to surface the relevant button in your UI (e.g., glow the Export button) instead of having the AI describe its location in prose. Fires alongside `final`, not before it.
+
+```
+event: ui_pointer
+data: {"type": "ui_pointer", "ui_pointer": {"target": "export_button", "reason": "User asked how to download the document"}}
+```
+
+**Payload shape**:
+
+- `target` — the affordance the user wants. Current values: `export_button`. Treat as forward-compatible — new targets may be added without changing the event-type contract; ignore values you don't recognise.
+- `reason` — short human-readable note describing the inferred intent. Surface in telemetry; never to end users.
+
+**When it fires**: only when the AI recognises a UI-affordance intent in the user's message. Skipped for content-edit turns and for ambiguous "where's my file" queries (those get handled in the `final` content). Multilingual — recognition is intent-based, not keyword-based.
+
+**Rendering pattern (recommended)**:
+
+```javascript theme={null}
+eventSource.addEventListener("ui_pointer", (event) => {
+  const data = JSON.parse(event.data);
+  const target = data.ui_pointer?.target;
+  if (target === "export_button") {
+    // Briefly highlight your Export button so the user can find it.
+    document.querySelector("#export-button")?.classList.add("glow");
+    setTimeout(() => {
+      document.querySelector("#export-button")?.classList.remove("glow");
+    }, 3000);
+  }
+  // Unknown targets: ignore silently. The `final` event's content
+  // already covers the affordance in prose as a safety net.
+});
+```
+
+**Don't show end users the raw `reason` text** — it's a trace string for your telemetry, not a user-facing message.
 
 ### `error`
 

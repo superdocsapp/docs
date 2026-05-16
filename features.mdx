@@ -199,7 +199,7 @@ For a 5-turn editing session on a 100-page doc, compact mode reduces total respo
 
 ### Real-time progress via SSE
 
-Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress events while the agent works — `intermediate` (status updates), `proposed_change` (HITL diffs), `document_sync` (chunk-ID sync after upload), `final` (completed response), `usage` (operation count + tokens), `error`. Auto-reconnect on drop.
+Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress events while the agent works — `intermediate` (status updates), `proposed_change` (HITL diffs), `document_sync` (chunk-ID sync after upload), `final` (completed response), `usage` (operation count + tokens), `ui_pointer` (highlight an export/download UI affordance the user asked about), `error`. Auto-reconnect on drop.
 
 **Best for:** Frontends that show live progress, status bars, or partial results before the full answer is ready.
 
@@ -363,6 +363,7 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 
 | Date | Capability | Why it matters |
 |---|---|---|
+| 2026-05-16 | Multilingual + multi-cohort reliability — the AI reasons about user intent across all languages (not enumerated phrase lists); RTL emails render correctly in Hebrew / Arabic / Persian / Urdu / etc.; per-cohort response tone (fresh vs returning vs committed users); style-attribute search ("change all the blue writing") matches inline HTML; `ui_pointer` SSE event for export-affordance hints | Non-English and RTL-language users get parity quality; first-touch users see encouragement-shaped responses, returning users see direct-and-literal responses; visual-style queries resolve correctly across any HTML structure; safety-filtered AI responses degrade gracefully instead of crashing |
 | 2026-05-06 | High-fidelity ingest — PDF annotations + embedded images + Word track-changes preserved on import; reliable multi-file attachment-by-filename; document length awareness ("how many pages?") | PDFs, annotated review documents, and Word redlines no longer get silently flattened on upload; multi-file workflows resolve files by name; users get real page-count answers |
 | 2026-05-06 | Web app first-paint upload affordances — empty editor renders a drop zone for drag-drop, click-to-pick file picker, and a paste-as-content prompt when long content is pasted into a blank editor; "Starter Templates" relabel on the templates surface so it's clearly distinct from per-session attachments | First-time visitors find the upload path in seconds without asking; users who paste content as their first action get explicit "load as document content vs. treat as a chat instruction" choice |
 | 2026-04-30 | Visual content & media — image generate / edit / replace by chat, auto-rendered Mermaid diagrams, in-editor drawing canvas, KaTeX equations, auto table of contents | Documents are no longer text-only; images, diagrams, drawings, and equations live in the same chat-driven editing flow as the rest of the content |
