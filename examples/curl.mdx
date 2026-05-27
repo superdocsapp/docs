@@ -125,23 +125,29 @@ curl -X POST https://api.superdocs.app/v1/documents/upload \
   -F "session_id=my-session"
 ```
 
-### Export a document as Word file
+### Export a document
 
 ```bash
-# From session
+# From session — DOCX (default format)
 curl -X POST https://api.superdocs.app/v1/documents/export \
   -H "Authorization: Bearer sk_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"session_id": "my-session", "format": "docx"}' \
   --output document.docx
 
-# From HTML
+# From HTML — PDF with paper and watermark options
 curl -X POST https://api.superdocs.app/v1/documents/export \
   -H "Authorization: Bearer sk_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"html": "<h1>Title</h1><p>Content</p>", "format": "doc"}' \
-  --output document.doc
+  -d '{
+    "html": "<h1>Title</h1><p>Content</p>",
+    "format": "pdf",
+    "options": {"paper_size": "A4", "watermark_text": "DRAFT"}
+  }' \
+  --output document.pdf
 ```
+
+Formats: `docx` (default), `pdf`, `html`, `markdown`, `txt`. See [Exporting documents](/concepts/documents#exporting-documents) for the full options reference.
 
 ## Attachments
 

@@ -127,24 +127,41 @@ async function uploadDocument(file, sessionId) {
   return res.json(); // { html, session_id, filename, chunks_count, version_id }
 }
 
-// Export and download as Word file
-async function exportDocument(sessionId, format = "docx") {
+// Export and download a document. Supported formats: "docx" (default),
+// "pdf", "html", "markdown", "txt".
+async function exportDocument(sessionId, format = "docx", options = {}) {
   const res = await fetch(`${BASE}/v1/documents/export`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, format }),
+    body: JSON.stringify({ session_id: sessionId, format, options }),
   });
+
+  // Surface any non-fatal warnings from the export pipeline
+  const warningsHeader = res.headers.get("X-Export-Warnings");
+  if (warningsHeader) {
+    const warnings = JSON.parse(atob(warningsHeader));
+    console.warn(`Export completed with ${warnings.length} warning(s):`, warnings);
+  }
+
   const blob = await res.blob();
+
+  // File extension mirrors the format value, with one exception
+  const ext = format === "markdown" ? "md" : format;
 
   // Trigger download in browser
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `document.${format}`;
+  a.download = `document.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// Example: PDF export with paper-size override
+await exportDocument("my-session", "pdf", { paper_size: "A4", watermark_text: "DRAFT" });
 ```
+
+See [Exporting documents](/concepts/documents#exporting-documents) for the full options reference and the upload-then-export pattern for documents over 20 MB.
 
 ## File upload
 

@@ -46,7 +46,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 7 event types:
+The stream emits 8 event types:
 
 ### `intermediate`
 
@@ -128,7 +128,7 @@ eventSource.addEventListener("final", () => {
 
 ### `proposed_change`
 
-In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes a document change for review. One event is emitted per proposed change.
+In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes a document change for review. Single, isolated changes still arrive as one `proposed_change` event; multi-change turns are delivered via [`proposed_change_batch`](#proposed_change_batch) instead (a single event carrying every change in the batch).
 
 ```
 event: proposed_change
@@ -175,6 +175,66 @@ The `content` field is a JSON string. Parse it to get the change details:
 | `insert_after_chunk_id` | string \| null | For `create`: where to insert the new section in the document. |
 
 See the [Human-in-the-Loop guide](/guides/human-in-the-loop) for the complete approval workflow.
+
+### `proposed_change_batch`
+
+When the AI proposes multiple changes in a single turn (common for sweeping edits across many sections of a document), the entire batch arrives as **one** SSE event instead of a fan-out of N `proposed_change` events. This keeps the wire load proportional to turns, not changes, and lets HITL UIs render the whole approval card at once.
+
+```
+event: proposed_change_batch
+data: {"type": "proposed_change_batch", "content": "{\"batch_id\": \"ch_1\", \"batch_total\": 32, \"changes\": [...]}", "sequence": 2}
+```
+
+Like `proposed_change.content`, the `content` field is a JSON-stringified string that must be parsed once more:
+
+```javascript theme={null}
+eventSource.addEventListener("proposed_change_batch", (event) => {
+  const data = JSON.parse(event.data);
+  const batch = JSON.parse(data.content);
+  // batch.batch_id, batch.batch_total, batch.changes[*]
+});
+```
+
+The parsed payload:
+
+```json
+{
+  "type": "batch_approval",
+  "batch_id": "ch_1",
+  "batch_total": 32,
+  "changes": [
+    {
+      "change_id": "ch_1",
+      "operation": "edit",
+      "chunk_id": "550e8400-e29b-41d4-a716-446655440000",
+      "old_html": "<p>Original...</p>",
+      "new_html": "<p>Updated...</p>",
+      "ai_explanation": "Tightened phrasing",
+      "insert_after_chunk_id": null
+    },
+    {
+      "change_id": "ch_2",
+      "operation": "edit",
+      "chunk_id": "660f9511-...",
+      "old_html": "...",
+      "new_html": "...",
+      "ai_explanation": "...",
+      "insert_after_chunk_id": null
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | `"batch_approval"` for multi-change turns, `"single_approval"` for one-change turns delivered through this event for uniformity. |
+| `batch_id` | string | Shared identifier across the batch — equals the first change's `change_id`. |
+| `batch_total` | number | Number of entries in `changes`. |
+| `changes` | array | Per-change objects with the same fields as `proposed_change` (`change_id`, `operation`, `chunk_id`, `old_html`, `new_html`, `ai_explanation`, `insert_after_chunk_id`). |
+
+<Warning>
+  **Register both listeners.** If your client only subscribes to `proposed_change`, you will silently miss every batched HITL turn (the common path for multi-section edits). The two events are mutually exclusive within a single turn — one or the other fires, not both — but you need both listeners registered to cover both cases.
+</Warning>
 
 ### `document_sync`
 

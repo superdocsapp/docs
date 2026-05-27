@@ -5,7 +5,7 @@ description: "Comprehensive capability reference for SuperDocs — every shipped
 
 # Features
 
-SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, RTF). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (22 tools + 4 user-invocable workflow prompts on a single endpoint).
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, plain text). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (22 tools + 4 user-invocable workflow prompts on a single endpoint).
 
 This page is exhaustive — it's a reference, not a marketing summary. Skip to the group that matches what you're trying to build.
 
@@ -199,7 +199,7 @@ For a 5-turn editing session on a 100-page doc, compact mode reduces total respo
 
 ### Real-time progress via SSE
 
-Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress events while the agent works — `intermediate` (status updates), `proposed_change` (HITL diffs), `document_sync` (chunk-ID sync after upload), `final` (completed response), `usage` (operation count + tokens), `ui_pointer` (highlight an export/download UI affordance the user asked about), `error`. Auto-reconnect on drop.
+Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress events while the agent works — `intermediate` (status updates), `proposed_change` (HITL diff for an isolated change), `proposed_change_batch` (HITL diff for a multi-change turn delivered as one event), `document_sync` (chunk-ID sync after upload), `final` (completed response), `usage` (operation count + tokens), `ui_pointer` (highlight an export/download UI affordance the user asked about), `error`. Auto-reconnect on drop.
 
 **Best for:** Frontends that show live progress, status bars, or partial results before the full answer is ready.
 
@@ -211,11 +211,11 @@ Subscribe to `/v1/chat/{session_id}/stream` to receive intermediate progress eve
 
 | Input formats | Output formats |
 |---|---|
-| `.docx`, PDF, HTML, Markdown, RTF, plain text | `.docx`, PDF, HTML |
+| `.docx`, PDF, HTML, Markdown, RTF, plain text | `.docx`, PDF, HTML, Markdown, plain text |
 
-Same parsing pipeline regardless of input — once a document is loaded into a session, every editing tool works identically. Export from any session in any of the three output formats.
+Same parsing pipeline regardless of input — once a document is loaded into a session, every editing tool works identically. Export from any session in any of the five output formats, with per-export customisation for paper size, orientation, margins, filename, image embedding, and optional PDF watermarks. Documents above 20 MB use a pre-signed upload pattern to bypass standard request body limits; documents above 100 MB are rendered asynchronously and delivered via email.
 
-**Best for:** Format conversion workflows (HTML → styled `.docx`, Markdown → PDF), or accepting user uploads in whatever format they have.
+**Best for:** Format conversion workflows (HTML → styled `.docx`, Markdown → PDF, `.docx` → Markdown), accepting user uploads in whatever format they have, or producing print-ready PDFs with custom paper sizes and watermarks.
 
 ### High-fidelity PDF import
 
@@ -278,11 +278,11 @@ The same MCP server also exposes 4 user-invocable workflow templates (surfaced a
 | User API key (`sk_…`) | Individual developers, MCP integrations, scripts |
 | Organization API key (`lce_…`) | B2B integrations with shared usage limits |
 
-All three reach the same 22 MCP tools and 23 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
+All three reach the same 22 MCP tools and 24 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
 
 ### REST API works with any programming language
 
-One REST API (22 endpoints) works with any language that can make HTTP requests. No NPM packages to keep current, no language-specific SDKs to maintain, no framework dependencies to upgrade. Integrate with a few lines of code in whatever language your backend already speaks. Full OpenAPI specification published — generate your own typed client with `openapi-generator`, Stainless, or any other codegen tool of your choice if you want type hints in your editor.
+One REST API (24 endpoints) works with any language that can make HTTP requests. No NPM packages to keep current, no language-specific SDKs to maintain, no framework dependencies to upgrade. Integrate with a few lines of code in whatever language your backend already speaks. Full OpenAPI specification published — generate your own typed client with `openapi-generator`, Stainless, or any other codegen tool of your choice if you want type hints in your editor.
 
 **Best for:** Polyglot engineering teams, backend services across multiple languages, avoiding SDK lock-in, simple integrations that don't warrant a full SDK.
 
@@ -363,6 +363,9 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 
 | Date | Capability | Why it matters |
 |---|---|---|
+| 2026-05-27 | Export pipeline overhaul — multi-format export (`docx` default, `pdf`, `html`, `markdown`, `txt`) with per-request `options` (paper size, orientation, margins, filename, image embedding, PDF watermark + opacity), structured `X-Export-Warnings` header for non-fatal issues, three-tier flow for large documents (direct POST up to 20 MB → pre-signed upload for 20-100 MB via `upload_id` → email fallback for &gt;100 MB via `POST /v1/documents/export/email-request`), structured 413 detail body with `error_code` and `suggested_action`, and full round-trip of Word track-changes on `.docx` export. | Integrators get five output formats from one endpoint, predictable size handling without a 413 surprise, and clear error contracts. The default-format flip from `doc` to `docx` is a soft compatibility change — callers that omit `format` and switch on `Content-Type` now receive Open XML. |
+| 2026-05-26 | Batched HITL approvals — multi-change turns deliver every proposed change in a single `proposed_change_batch` SSE event instead of fanning out N individual `proposed_change` events. Single-change turns continue to use `proposed_change`. | Editors approving large changesets render one approval card instead of N. Wire load scales with turns, not changes. **Register both `proposed_change` and `proposed_change_batch` listeners** — clients that only listen to the original event will silently miss every batched turn. |
+| 2026-05-25 | 30-minute wall-clock cap on chat turns (up from 10 minutes), parallel-edit speedup, latency improvements for very large documents. | Hundred-section edits in a single turn now finish inside the cap instead of timing out. Same 504 contract; the failure copy points users to splitting the work across smaller turns. |
 | 2026-05-17 | Context-aware AI inserts — when you ask the AI to insert an image, diagram, or new section without naming a position ("insert an image of a circle", "add a flowchart showing X", "add a new section here"), it now lands right after the section the user's cursor was in instead of always appending at end-of-document. Send the new optional `cursor_context` field on `/v1/chat` and `/v1/chat/async` to enable this; omit it and prior end-of-doc behaviour is preserved. The web app at use.superdocs.app sends it automatically. **Vague-verb clarification** — broad ambiguous requests like "improve this document" or "make this better" now trigger a clarifying question with concrete options instead of an unexpected wide rewrite. | Integrators get a single-param opt-in to a noticeable UX improvement; existing integrations behave exactly as before if they omit the field. Web-app users see new content land near where they were looking. Vague broad-edit prompts no longer produce surprise rewrites — the AI checks intent first. |
 | 2026-05-16 | Multilingual + multi-cohort reliability — the AI reasons about user intent across all languages (not enumerated phrase lists); RTL emails render correctly in Hebrew / Arabic / Persian / Urdu / etc.; per-cohort response tone (fresh vs returning vs committed users); style-attribute search ("change all the blue writing") matches inline HTML; `ui_pointer` SSE event for export-affordance hints | Non-English and RTL-language users get parity quality; first-touch users see encouragement-shaped responses, returning users see direct-and-literal responses; visual-style queries resolve correctly across any HTML structure; safety-filtered AI responses degrade gracefully instead of crashing |
 | 2026-05-06 | High-fidelity ingest — PDF annotations + embedded images + Word track-changes preserved on import; reliable multi-file attachment-by-filename; document length awareness ("how many pages?") | PDFs, annotated review documents, and Word redlines no longer get silently flattened on upload; multi-file workflows resolve files by name; users get real page-count answers |

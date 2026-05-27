@@ -107,8 +107,9 @@ Knowing how long an operation *should* take helps you decide when to surface a "
 | Multi-section edit (3–5 sections) | 30–90 seconds | 2 minutes | 5 minutes |
 | Full-document operation (10+ sections) | 60–180 seconds | 3 minutes | 10 minutes |
 | Complex operation (merge, restructure, batch) | 120–300 seconds | 4 minutes | 15 minutes |
+| Very large document (hundreds of sections) | 5–25 minutes | 8 minutes | 30 minutes (server cap) |
 
-These are medians for typical documents (5–20 sections). Larger documents, embedded images, or operations using `model_tier: "max"` with `thinking_depth: "deep"` may exceed these ranges. The `model_tier` and `thinking_depth` you choose materially affect latency — see [Model Selection](/guides/model-selection).
+These are medians for typical documents (5–20 sections). Larger documents, embedded images, or operations using `model_tier: "max"` with `thinking_depth: "deep"` may exceed these ranges. The `model_tier` and `thinking_depth` you choose materially affect latency — see [Model Selection](/guides/model-selection). The server enforces a hard 30-minute wall-clock cap on every chat turn (sync and async); requests that exceed it return a graceful `504` with a suggestion to split the work across smaller turns.
 
 ### Polling strategy that surfaces progress
 
@@ -153,6 +154,18 @@ For real-time progress (instead of polling silence), open the SSE stream in para
 ### Job retention
 
 All jobs — pending, in-progress, awaiting-approval, or terminal — are automatically removed 1 hour after creation. For user-facing workflows that may run longer (or where the user steps away), keep `MAX_WAIT` well under 1 hour and persist the `job_id` so you can resume polling later.
+
+## Job types
+
+The `job_type` field on every job row tells you which lifecycle to expect.
+
+| `job_type` | Triggered by | Lifecycle |
+|------------|--------------|-----------|
+| `chat` | `POST /v1/chat/async` | Standard chat turn. Supports `awaiting_approval` for HITL. SSE stream available at `/v1/chat/{session_id}/stream?job_id=...`. |
+| `attachment_processing` | Background attachment ingestion | Internal; usually completes in seconds. |
+| `large_export` | `POST /v1/documents/export/email-request` | Background export of an oversize document. No SSE; poll `/v1/jobs/{job_id}`. On `completed`, `result.download_url` carries a 7-day signed link and an email has been sent to the recipient. 24-hour SLA. See [Email fallback for very large documents](/concepts/documents#email-fallback-for-very-large-documents). |
+
+`large_export` jobs are fire-and-forget — the recipient receives an email when the render finishes, so polling is optional. Use it when you want to surface progress in your UI rather than letting the user check their inbox.
 
 ## Cancel a job
 

@@ -20,12 +20,13 @@ All API errors return a JSON response with a `detail` field:
 | **400** | Bad Request | Empty message, unsupported file type, invalid parameters |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
 | **403** | Forbidden | Accessing a resource you don't own |
-| **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history |
+| **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired |
 | **409** | Conflict | Revert blocked because a chat job is currently running on the same session |
-| **422** | Validation Error | Request body doesn't match expected schema; or revert target message predates the revert feature |
+| **413** | Request Entity Too Large | Request body or export payload above the size cap |
+| **422** | Validation Error | Request body doesn't match expected schema; format value outside the allowed enum; revert target message predates the revert feature |
 | **429** | Too Many Requests | Monthly operation limit reached |
 | **500** | Internal Server Error | Unexpected server error |
-| **504** | Gateway Timeout | AI processing exceeded 10 minutes |
+| **504** | Gateway Timeout | AI processing exceeded 30 minutes |
 
 ## Common errors and fixes
 
@@ -67,11 +68,75 @@ All API errors return a JSON response with a `detail` field:
 
 ### Timeout (504)
 
-```json
-{"detail": "The AI agent took longer than 10 minutes to process your request. For long edits or multi-step tasks, use chat_async — it streams progress, supports human-in-the-loop approval, and lets you split the work across multiple turns. Try chat_async with a smaller scope per turn (e.g. one section at a time)."}
+The synchronous `/v1/chat` and async `/v1/chat/async` endpoints both apply a 30-minute wall-clock cap. When the cap is reached, the response carries a short summary and a suggestion to split the work across smaller turns:
+
+```
+⏱️ Your request ran past my 30-minute cap and I had to wrap up. For very large
+documents, try splitting the task into multiple smaller turns — e.g. one section
+at a time. Your prompt is still in your history above; you can revise it and
+re-send.
 ```
 
 **Fix:** Use the async endpoint (`/v1/chat/async`) for long operations — it streams `intermediate` progress events as the work runs and supports human-in-the-loop approval. Split large requests into smaller turns (one section per turn).
+
+### Request too large (413)
+
+The 413 response covers two distinct cases — caller-too-large and document-too-large for the chosen export format — with a structured JSON detail body so clients can react appropriately.
+
+**Caller payload exceeds the transport limit:**
+
+```json
+{
+  "detail": "Request body too large",
+  "error_code": "request_too_large",
+  "message_user": "Your request is too large. The current limit is 32 MB.",
+  "request_size_mb": 47.2,
+  "max_size_mb": 32,
+  "suggested_action": "split_request",
+  "contact_email": "hello@superdocs.app",
+  "support_event_id": "abc1234567890"
+}
+```
+
+**Fix:** For exports, switch to the upload-then-export pattern — see [Large documents](/concepts/documents#large-documents). For other endpoints, split the work into smaller requests.
+
+**Export payload exceeds the format-specific cap:**
+
+```json
+{
+  "detail": {
+    "error_code": "document_too_large",
+    "message_user": "This document is 142.3 MB, which exceeds the 100 MB export limit for the chosen format. Email hello@superdocs.app or use the in-app 'Email me a copy' button — we'll send you the rendered file within 24 hours.",
+    "suggested_action": "email_request",
+    "contact_email": "hello@superdocs.app",
+    "document_size_mb": 142.3,
+    "max_size_mb": 100,
+    "format": "docx",
+    "support_event_id": "abc1234567890"
+  }
+}
+```
+
+**Fix:** Call `POST /v1/documents/export/email-request` instead — the file will be rendered in the background and emailed as a 7-day signed download link. See [Email fallback for very large documents](/concepts/documents#email-fallback-for-very-large-documents).
+
+| Field | Description |
+|-------|-------------|
+| `error_code` | `request_too_large` (transport layer) or `document_too_large` (export cap). |
+| `message_user` | Human-readable explanation safe to surface in your UI. |
+| `suggested_action` | `split_request` or `email_request`. Use to switch your client between paths. |
+| `request_size_mb` / `document_size_mb` | Observed payload size. |
+| `max_size_mb` | Configured cap for the format / endpoint. |
+| `format` | Export format that triggered the cap (only on `document_too_large`). |
+| `contact_email` | Support contact for follow-up. |
+| `support_event_id` | Opaque correlation ID. Share with `hello@superdocs.app` when reporting an issue. |
+
+### Validation errors (422)
+
+```json
+{"detail": [{"type": "literal_error", "loc": ["body", "format"], "msg": "Input should be 'docx', 'pdf', 'html', 'markdown', 'txt' or 'doc'"}]}
+```
+
+**Fix:** `format` is now a strict enum on `/v1/documents/export`. Use one of `"docx"`, `"pdf"`, `"html"`, `"markdown"`, `"txt"`. The value `"doc"` is accepted as a legacy alias and will be removed in a future release.
 
 ### Not found (404)
 

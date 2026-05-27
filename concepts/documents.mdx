@@ -109,15 +109,21 @@ The AI generates structured, formatted HTML that you can then continue editing w
 
 ## Exporting documents
 
-Export the current document as a downloadable Word file.
+Export the current document as a downloadable file.
 
-**Two modes:**
-- **Mode A** — send HTML content directly (use when you have the document HTML in your app)
+**Three input modes:**
+- **Mode A** — send HTML content inline (use when you have the document HTML in your app, up to 20 MB)
 - **Mode B** — send a session ID (the API retrieves the document from the session)
+- **Mode C** — upload the HTML to a pre-signed URL first, then send `upload_id` (use for documents between 20 MB and 100 MB — see [Large documents](#large-documents) below)
 
-**Two formats:**
-- `doc` (default) — Word-compatible file with high formatting fidelity
-- `docx` — native OOXML format, better for programmatic processing
+**Five output formats:**
+- `docx` (default) — Microsoft Word (Open XML), preserves tables, formatting, embedded images
+- `pdf` — paginated, print-ready PDF
+- `html` — standalone HTML file with inlined CSS
+- `markdown` — Markdown (.md) with ATX headings
+- `txt` — plain text
+
+A sixth value, `doc` (Word-compatible HTML wrapper), is accepted as a legacy alias and will be removed in a future release. New integrations should use `docx`.
 
 ### Mode A: Export from HTML
 
@@ -128,7 +134,7 @@ curl -X POST https://api.superdocs.app/v1/documents/export \
   -d '{
     "html": "<h1>My Document</h1><p>Content here...</p>",
     "format": "docx",
-    "filename": "my-document"
+    "options": { "filename": "my-document" }
   }' \
   --output my-document.docx
 ```
@@ -141,9 +147,9 @@ curl -X POST https://api.superdocs.app/v1/documents/export \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "my-session",
-    "format": "doc"
+    "format": "pdf"
   }' \
-  --output exported-document.doc
+  --output exported-document.pdf
 ```
 
 ### Export in Python
@@ -154,7 +160,11 @@ response = requests.post("https://api.superdocs.app/v1/documents/export",
     json={
         "session_id": "my-session",
         "format": "docx",
-        "filename": "final-contract"
+        "options": {
+            "paper_size": "A4",
+            "margins": "normal",
+            "filename": "final-contract"
+        }
     }
 )
 
@@ -166,12 +176,151 @@ with open("final-contract.docx", "wb") as f:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `html` | string | One of `html` or `session_id` required | HTML content to convert |
-| `session_id` | string | One of `html` or `session_id` required | Session to export from |
-| `format` | string | No | `"doc"` (default) or `"docx"` |
-| `filename` | string | No | Custom filename (without extension). Auto-detected from the first heading if not provided. |
+| `html` | string | One of `html` / `session_id` / `upload_id` required | HTML content to convert (Mode A) |
+| `session_id` | string | One of `html` / `session_id` / `upload_id` required | Session to export from (Mode B) |
+| `upload_id` | string | One of `html` / `session_id` / `upload_id` required | Pre-signed URL upload reference (Mode C) |
+| `format` | string | No | `"docx"` (default), `"pdf"`, `"html"`, `"markdown"`, or `"txt"`. `"doc"` accepted as a legacy alias. |
+| `options` | object | No | Customisation block — see [Export options](#export-options) below. |
+| `filename` | string | No | Legacy top-level filename. Prefer `options.filename`. |
 
-The response is a binary file download with the appropriate Content-Type header.
+### Export options
+
+Pass an `options` object to customise the rendered output. Defaults are sensible for English-language documents; override only what you need.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `paper_size` | string | `"Letter"` | `"Letter"`, `"A4"`, `"A3"`, or `"Legal"`. Applies to DOCX/PDF. |
+| `orientation` | string | `"portrait"` | `"portrait"` or `"landscape"`. Applies to DOCX/PDF. |
+| `margins` | string | `"normal"` | `"narrow"` (0.5 in), `"normal"` (1 in), `"wide"` (1.5 in), or `"custom"`. |
+| `custom_margins_inches` | object | — | Required when `margins="custom"`. Object with `top`, `right`, `bottom`, `left` floats between 0.25 and 3.0. |
+| `filename` | string | — | File name without extension. Auto-detected from the first heading if unset. |
+| `embed_images` | boolean | `false` | HTML export only. When `true`, images are base64-embedded for offline portability. Raises the size cap from 100 MB to 150 MB. |
+| `watermark_text` | string | — | PDF only. Optional text watermark overlaid on every page (max 64 chars). |
+| `watermark_opacity` | number | `0.3` | PDF watermark opacity, between 0.05 and 1.0. |
+
+```python
+options = {
+    "paper_size": "A4",
+    "orientation": "landscape",
+    "margins": "wide",
+    "filename": "Q4-Report",
+    "watermark_text": "DRAFT",
+    "watermark_opacity": 0.15,
+}
+```
+
+The response is a binary file download with the appropriate `Content-Type` header. The `Content-Disposition` header carries the filename (RFC 5987 encoded for non-ASCII characters).
+
+### Non-fatal warnings
+
+Exports may complete successfully but with non-fatal issues — an image URL that 404'd, a diagram that exceeded the render timeout, an unsupported field code that was skipped. The response carries these in the `X-Export-Warnings` header as a base64-encoded JSON list. The header is always present alongside `Content-Disposition` in `Access-Control-Expose-Headers`, so browser clients can read it via `fetch`.
+
+```javascript
+const response = await fetch('/v1/documents/export', { ... });
+const warningsHeader = response.headers.get('X-Export-Warnings');
+if (warningsHeader) {
+  const warnings = JSON.parse(atob(warningsHeader));
+  // [{ code: "image_download_failed", message: "...", detail: { src: "..." } }, ...]
+}
+```
+
+| Warning code | Meaning |
+|--------------|---------|
+| `image_download_failed` | An embedded image URL could not be fetched. The image is omitted from the output. |
+| `mermaid_render_failed` | A Mermaid diagram could not be rendered. The diagram source is kept in the output as a code block. |
+| `mermaid_timeout` | A Mermaid diagram took too long to render. Same fallback as above. |
+| `excalidraw_corrupt` | An Excalidraw drawing's JSON payload could not be parsed. |
+| `footnote_orphan` | A footnote reference has no matching footnote body. |
+| `track_change_unmatched` | A tracked change anchor could not be placed inline; the change is appended at the end of the document. |
+| `field_code_unsupported` | A citation or other field code could not be re-emitted in the output format. |
+| `watermark_skipped` | A requested PDF watermark could not be applied. |
+| `embed_image_skipped` | An image could not be inlined into an HTML export with `embed_images=true`. |
+| `size_cap_warning` | The document is close to the per-format size limit. |
+
+### Large documents
+
+Direct POSTs to `/v1/documents/export` are capped at 25 MB on the hosted plan. For larger documents, use the **upload-then-export** pattern (Mode C) instead.
+
+**Three-tier flow:**
+
+| Document HTML size | Path |
+|-----|---|
+| Up to 20 MB | Direct POST to `/v1/documents/export` with inline `html`. |
+| 20 MB – 100 MB | Request a pre-signed upload URL via `POST /v1/uploads` (`purpose: "export-html"`), PUT the HTML to it, then call `/v1/documents/export` with `upload_id`. |
+| Over 100 MB | Use the [email-fallback endpoint](#email-fallback-for-very-large-documents). |
+
+```python
+# 1. Request a pre-signed PUT URL
+upload = requests.post("https://api.superdocs.app/v1/uploads",
+    headers=HEADERS,
+    json={
+        "filename": "export.html",
+        "content_type": "text/html",
+        "size_bytes": len(html.encode()),
+        "purpose": "export-html",
+    }
+).json()
+
+# 2. PUT the HTML directly to storage
+requests.put(upload["upload_url"],
+    headers={"Content-Type": "text/html"},
+    data=html)
+
+# 3. Export, referencing the upload_id
+response = requests.post("https://api.superdocs.app/v1/documents/export",
+    headers=HEADERS,
+    json={
+        "upload_id": upload["upload_id"],
+        "filename": "export.html",
+        "format": "docx",
+    }
+)
+
+with open("output.docx", "wb") as f:
+    f.write(response.content)
+```
+
+The signed URL is valid for 5 minutes; the uploaded blob is retained for 24 hours.
+
+### Email fallback for very large documents
+
+For documents over 100 MB, render asynchronously and deliver via email. The endpoint accepts a session ID, queues a background job, and emails a 7-day signed download link to the recipient.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/export/email-request \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "my-session",
+    "format": "docx",
+    "recipient_email": "user@example.com",
+    "options": { "paper_size": "A4" }
+  }'
+```
+
+Response:
+
+```json
+{
+  "job_id": "9c2f...e3a",
+  "recipient_email": "user@example.com",
+  "status": "queued",
+  "eta": "24h",
+  "message": "Your file will be emailed to user@example.com within 24 hours."
+}
+```
+
+`recipient_email` falls back to the email on file for the authenticated user account when omitted. The job appears in `/v1/jobs/{job_id}` with `job_type: "large_export"`. See [Async jobs](/guides/async-jobs) for the polling pattern.
+
+### Size and error responses
+
+| Format | Cap |
+|--------|-----|
+| `docx`, `pdf`, `html`, `doc` | 100 MB |
+| `html` with `embed_images=true` | 150 MB |
+| `markdown`, `txt` | 50 MB |
+
+Direct POST requests above 25 MB return `413 Request Entity Too Large` from the hosted infrastructure before reaching the renderer; use Mode C instead. Requests above the format-specific cap return a structured 413 with a JSON body explaining the limit and pointing to the email-fallback endpoint — see [Error codes](/errors/error-codes#413-request-entity-too-large).
 
 ## Supported formatting
 

@@ -73,28 +73,34 @@ response = requests.post(f"{BASE}/v1/chat", headers=HEADERS, json={
 updated_html = response.json()["document_changes"]["updated_html"]
 ```
 
-## Export document as Word file
+## Export a document
 
 ```python
-# Export from a session
+# Export from a session as DOCX (default format)
 response = requests.post(f"{BASE}/v1/documents/export", headers=HEADERS, json={
     "session_id": "doc-edit",
     "format": "docx",
-    "filename": "simplified-contract"
+    "options": {"filename": "simplified-contract"},
 })
 
 with open("simplified-contract.docx", "wb") as f:
     f.write(response.content)
 
-# Or export from HTML directly
+# Export from HTML directly as PDF with A4 paper and a watermark
 response = requests.post(f"{BASE}/v1/documents/export", headers=HEADERS, json={
     "html": updated_html,
-    "format": "doc"
+    "format": "pdf",
+    "options": {
+        "paper_size": "A4",
+        "watermark_text": "DRAFT",
+    },
 })
 
-with open("export.doc", "wb") as f:
+with open("export.pdf", "wb") as f:
     f.write(response.content)
 ```
+
+Supported formats: `docx` (default), `pdf`, `html`, `markdown`, `txt`. See [Exporting documents](/concepts/documents#exporting-documents) for the full options reference and large-document workflows.
 
 ## Upload attachment and poll for completion
 

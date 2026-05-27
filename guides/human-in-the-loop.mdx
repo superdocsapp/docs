@@ -429,14 +429,12 @@ If your editor already supports track-changes (CKEditor 5 with the Track Changes
 
 ### Batch changes
 
-When the AI proposes multiple changes at once, each change includes:
+When the AI proposes multiple changes at once (common for sweeping edits across many sections), every change in the turn arrives together. The shape depends on whether you're polling or streaming:
 
-- `batch_id` — Groups related changes. All changes in a batch share the same `batch_id`.
-- `batch_total` — How many changes are in this batch.
+- **Polling**: all changes appear in the `metadata.pending_changes` array on a single `/v1/jobs/{job_id}` poll. Each change carries `batch_id` (the first change's `change_id`) and `batch_total` (the count) for convenience.
+- **Streaming (recommended)**: a single `proposed_change_batch` SSE event carries the full batch as a `changes` array. See [Streaming guide → `proposed_change_batch`](/guides/streaming#proposed_change_batch).
 
-If you're receiving changes via SSE, wait for `batch_total` events with the same `batch_id` before showing the review UI. You can then offer "Accept All" and "Deny All" buttons alongside individual change controls.
-
-For polling, all changes appear together in the `metadata.pending_changes` array.
+Use the batched shape to render one "Accept all" / "Deny all" card without waiting on a fan-out of N events.
 
 ## Alternative: SSE streaming workflow
 
@@ -461,27 +459,33 @@ const es = new EventSource(
   `https://api.superdocs.app/v1/chat/contract-review/stream?job_id=${job_id}&api_key=sk_YOUR_API_KEY`
 );
 
-// 3. Collect proposed changes
-const pendingChanges = [];
+// 3. Collect proposed changes. Multi-change turns arrive as a single
+//    `proposed_change_batch` event; isolated single-change turns arrive
+//    as a `proposed_change` event. Register both listeners.
+let pendingChanges = [];
+
+const showReviewUi = (changes) => {
+  // Render approve/deny UI here with the full batch.
+  // When the user decides, call POST /v1/chat/{session_id}/approve
+  // with the change_id list and the decision.
+  console.log(`Reviewing ${changes.length} change(s)`);
+  for (const change of changes) {
+    console.log(`  ${change.change_id}: ${change.operation} — ${change.ai_explanation}`);
+  }
+};
 
 es.addEventListener("proposed_change", (event) => {
   const data = JSON.parse(event.data);
   const change = JSON.parse(data.content);  // content is JSON-stringified
-  pendingChanges.push(change);
+  pendingChanges = [change];
+  showReviewUi(pendingChanges);
+});
 
-  // Show the change to the user with a diff view
-  console.log(`Change ${change.change_id}: ${change.operation}`);
-  console.log(`  Explanation: ${change.ai_explanation}`);
-  console.log(`  Old: ${change.old_html}`);
-  console.log(`  New: ${change.new_html}`);
-
-  // If batch, wait for all changes before showing review UI
-  if (change.batch_total && pendingChanges.length < change.batch_total) {
-    return;  // Wait for more changes
-  }
-
-  // Show approve/deny UI to the user here
-  // When user decides, call the approve endpoint (see step 3 above)
+es.addEventListener("proposed_change_batch", (event) => {
+  const data = JSON.parse(event.data);
+  const batch = JSON.parse(data.content);   // { type, batch_id, batch_total, changes }
+  pendingChanges = batch.changes;
+  showReviewUi(pendingChanges);
 });
 
 es.addEventListener("final", (event) => {
@@ -501,8 +505,12 @@ es.addEventListener("error", (event) => {
 ```
 
 <Note>
-After calling `/approve`, the AI resumes processing. If approved changes were applied, the SSE connection will eventually emit a `final` event with the updated document. If you denied with feedback, you may receive new `proposed_change` events as the AI tries again.
+After calling `/approve`, the AI resumes processing. If approved changes were applied, the SSE connection will eventually emit a `final` event with the updated document. If you denied with feedback, you may receive new `proposed_change` or `proposed_change_batch` events as the AI tries again.
 </Note>
+
+<Warning>
+  **Listen for both event names.** Multi-change turns are delivered as a single `proposed_change_batch` event; isolated single-change turns may still arrive as `proposed_change`. If you only subscribe to `proposed_change`, you will silently miss every batched HITL turn — the most common shape for edits across many sections.
+</Warning>
 
 ## Complete Python example
 
