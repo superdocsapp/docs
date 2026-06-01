@@ -62,6 +62,10 @@ curl https://api.superdocs.app/v1/jobs/JOB_ID \
 
 When `status` is `"awaiting_approval"`, check `metadata.pending_changes`:
 
+<Note>
+  `awaiting_approval` is also used for the [large-edit continue prompt](/guides/async-jobs#continuing-a-large-edit). Tell them apart with `metadata.awaiting_kind`: when it is `"continue_prompt"` there are no `pending_changes` — resume that with `/continue`, not `/approve`.
+</Note>
+
 ```json
 {
   "status": "awaiting_approval",

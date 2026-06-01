@@ -86,7 +86,7 @@ When `status` is `"completed"`, the `result` field contains the AI response and 
 |--------|---------|-----------|
 | `pending` | Queued, waiting to start | Keep polling |
 | `in_progress` | AI is processing | Keep polling |
-| `awaiting_approval` | HITL mode — changes need your review | Check `metadata.pending_changes`, then call `/approve` |
+| `awaiting_approval` | The job is paused for your input — check `metadata.awaiting_kind` | **Change review** (HITL): read `metadata.pending_changes`, call `/approve`. **Continue prompt** (large edit): read `metadata.continue_prompt`, call `/continue` — see [Continuing a large edit](#continuing-a-large-edit) |
 | `completed` | Finished | Read `result` |
 | `failed` | Error occurred | Read `error` field |
 | `cancelled` | Cancelled by you | No action needed |
@@ -94,6 +94,41 @@ When `status` is `"completed"`, the `result` field contains the AI response and 
 <Note>
   **Revert vs. in-flight jobs.** [Revert](/concepts/sessions#revert-a-session-to-a-previous-message) returns `409` while a chat job on the same session is in `pending`, `in_progress`, or `awaiting_approval`. Wait for the job to land in `completed`/`failed`/`cancelled`, or cancel it explicitly via `POST /v1/jobs/{job_id}/cancel`, before retrying revert.
 </Note>
+
+## Continuing a large edit
+
+A very large edit can be too big to finish in a single turn. When that happens the AI applies as much as it can, keeps that work, and pauses with `status: "awaiting_approval"` and `metadata.awaiting_kind: "continue_prompt"` — asking whether to continue with the rest. This is distinct from HITL change review (which instead sets `metadata.pending_changes`) and can occur in either approval mode.
+
+The pause carries a `metadata.continue_prompt` object:
+
+```json
+{
+  "status": "awaiting_approval",
+  "metadata": {
+    "awaiting_kind": "continue_prompt",
+    "continue_prompt": {
+      "message": "I've updated 500 of 864 sections so far. 364 remain. Want me to continue with the rest?",
+      "done": 500,
+      "total": 864,
+      "remaining": 364
+    }
+  }
+}
+```
+
+Resume — or stop — by calling `/continue`:
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat/{session_id}/continue \
+  -H "Authorization: Bearer $SUPERDOCS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"job_id": "job_abc123", "continue": true}'
+```
+
+- `continue: true` — resume; the job returns to `in_progress` and finishes the rest.
+- `continue: false` — stop here; everything applied so far is kept.
+
+The job may pause again for the next segment, so handle `continue_prompt` in your polling loop just like repeated HITL rounds — keep going until `status` is `completed`. If you never respond, the job is cleaned up after 1 hour, like any other `awaiting_approval` job.
 
 ## Latency expectations and timeout strategy
 
@@ -210,8 +245,18 @@ while True:
         print("Error:", job["error"])
         break
     elif job["status"] == "awaiting_approval":
-        print("Changes need approval:", job["metadata"]["pending_changes"])
-        break
+        meta = job.get("metadata", {})
+        if meta.get("awaiting_kind") == "continue_prompt":
+            # Large edit paused mid-way — resume it (send continue=false to stop instead).
+            print(meta["continue_prompt"]["message"])
+            requests.post("https://api.superdocs.app/v1/chat/my-session/continue",
+                headers={**HEADERS, "Content-Type": "application/json"},
+                json={"job_id": job_id, "continue": True})
+            # keep polling — the job returns to in_progress and may pause again
+        else:
+            # HITL change review — inspect the changes, then call /approve.
+            print("Changes need approval:", meta.get("pending_changes"))
+            break
 
     time.sleep(2)
 ```

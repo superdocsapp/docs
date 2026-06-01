@@ -1324,6 +1324,79 @@
         }
       }
     },
+    "/v1/chat/{session_id}/continue": {
+      "post": {
+        "tags": [
+          "v1",
+          "chat"
+        ],
+        "summary": "Resume or stop a large edit that paused to ask whether to continue.",
+        "description": "Used with chat_async. A very large edit can pause partway with status=awaiting_approval and metadata.awaiting_kind='continue_prompt' (distinct from HITL change review, which sets metadata.pending_changes). Read metadata.continue_prompt for the message and progress counts, then call this endpoint: continue=true resumes the job (it returns to in_progress and finishes the rest); continue=false stops and keeps the work applied so far. The job may pause again for the next segment, so poll until status=completed.",
+        "operationId": "continue_chat",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContinueRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/poll/{session_id}": {
       "get": {
         "tags": [
@@ -2881,6 +2954,27 @@
         ],
         "title": "ApprovalRequest",
         "description": "Approve or deny proposed AI document changes."
+      },
+      "ContinueRequest": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Job ID that is awaiting a continue decision (status=awaiting_approval with metadata.awaiting_kind='continue_prompt')."
+          },
+          "continue": {
+            "type": "boolean",
+            "title": "Continue",
+            "description": "true to resume the job so it finishes the rest of the edit; false to stop and keep the work applied so far."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "continue"
+        ],
+        "title": "ContinueRequest",
+        "description": "Resume or stop a chat job that paused with a large-edit continue prompt."
       },
       "AsyncChatRequest": {
         "properties": {

@@ -46,7 +46,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 8 event types:
+The stream emits 9 event types:
 
 ### `intermediate`
 
@@ -235,6 +235,30 @@ The parsed payload:
 <Warning>
   **Register both listeners.** If your client only subscribes to `proposed_change`, you will silently miss every batched HITL turn (the common path for multi-section edits). The two events are mutually exclusive within a single turn — one or the other fires, not both — but you need both listeners registered to cover both cases.
 </Warning>
+
+### `continue_prompt`
+
+For a very large edit, the AI completes as much as it can in one turn, keeps that work, and asks whether to continue with the rest. This can happen in either approval mode. Resume (or stop) by calling [`POST /v1/chat/{session_id}/continue`](/guides/async-jobs#continuing-a-large-edit).
+
+```
+event: continue_prompt
+data: {"type": "continue_prompt", "content": "{\"message\": \"I've updated 500 of 864 sections so far. 364 remain. Want me to continue with the rest?\", \"done\": 500, \"total\": 864, \"remaining\": 364}"}
+```
+
+The `content` field is a JSON string — parse it for:
+
+- `message` — a ready-to-display prompt, already in the user's language.
+- `done` / `total` / `remaining` — progress counts you can show alongside it.
+
+```javascript theme={null}
+eventSource.addEventListener("continue_prompt", (event) => {
+  const payload = JSON.parse(JSON.parse(event.data).content);
+  // Show payload.message and a Continue / Stop choice, then POST the decision:
+  //   POST /v1/chat/{session_id}/continue  { "job_id": "...", "continue": true }
+});
+```
+
+Send `continue: true` to keep going or `false` to stop and keep what's done. The job resumes and may emit another `continue_prompt` for the next segment — handle it in a loop, the same way you handle repeated `proposed_change` rounds.
 
 ### `document_sync`
 
