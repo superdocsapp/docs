@@ -66,6 +66,20 @@ Response:
 }
 ```
 
+**Multiple documents per session.** By default an upload **replaces** the session's focused document. Pass `open_mode=new_focused` to open the file as an additional document (and focus it), or `open_mode=background` to open it without stealing focus. The response also includes the session's document roster (every open document's id + title + which is focused) so you can render tabs immediately. See the [Multi-Document Sessions guide](/guides/multi-document).
+
+**Page geometry.** For DOCX and PDF uploads, document payloads include a nullable `page_setup` object — detected page size, orientation, and margins — anywhere a document is returned (upload responses, the session-documents roster, session history). It's `null` when the source format carries no geometry (e.g. plain text or HTML).
+
+```json
+{
+  "page_setup": {
+    "paper_size": "a4",
+    "orientation": "portrait",
+    "margins": {"top": 1.0, "right": 1.0, "bottom": 1.0, "left": 1.0}
+  }
+}
+```
+
 After uploading, you can immediately send chat messages to edit the document:
 
 ```python

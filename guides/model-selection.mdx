@@ -14,8 +14,8 @@ Set `model_tier` in your request to choose a model:
 | Tier | Best for | Speed | Thinking depth control |
 |------|----------|-------|----------------------|
 | `core` | Everyday editing, quick tasks | Fast | Yes |
-| `turbo` | Speed-critical workflows | Fastest | No — always optimized |
-| `pro` | Complex analysis, multi-step edits | Moderate | No — always optimized |
+| `turbo` | Speed-critical workflows | Fastest | Yes |
+| `pro` | Complex analysis, multi-step edits | Moderate | Yes |
 | `max` | Challenging documents, nuanced tasks | Slower | Yes |
 
 Default: `core`
@@ -33,7 +33,7 @@ Set `thinking_depth` to control how much reasoning the AI applies:
 Default: `balanced`
 
 <Note>
-Thinking depth control is available for the `core` and `max` tiers. The `turbo` and `pro` tiers use their own optimized reasoning — the `thinking_depth` parameter is ignored for these models. You don't need to configure it; they always use the best reasoning depth for the task.
+`thinking_depth` is honored on **all four tiers**. Each tier maps the three depths to reasoning budgets tuned for that tier, so `deep` on `turbo` and `deep` on `max` both mean "reason harder than this tier's default" — not identical budgets. If you previously skipped `thinking_depth` on `turbo`/`pro` (it used to be ignored there), it now takes effect; the default `balanced` keeps prior behavior.
 </Note>
 
 ## Usage
@@ -51,7 +51,7 @@ curl -X POST https://api.superdocs.app/v1/chat \
     "thinking_depth": "deep"
   }'
 
-# Pro — no thinking_depth needed, reasoning is always optimized
+# Pro with deep reasoning for a high-stakes pass
 curl -X POST https://api.superdocs.app/v1/chat \
   -H "Authorization: Bearer sk_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -59,7 +59,8 @@ curl -X POST https://api.superdocs.app/v1/chat \
     "message": "Analyze this contract for potential risks",
     "session_id": "my-session",
     "document_html": "...",
-    "model_tier": "pro"
+    "model_tier": "pro",
+    "thinking_depth": "deep"
   }'
 ```
 
@@ -70,7 +71,7 @@ curl -X POST https://api.superdocs.app/v1/chat \
 | Fix a typo | `core` | `fast` |
 | Rewrite a paragraph | `core` | `balanced` |
 | Draft a multi-section document | `core` or `max` | `deep` |
-| Analyze a complex contract | `pro` or `max` | `deep` (max only) |
+| Analyze a complex contract | `pro` or `max` | `deep` |
 | Batch processing many documents | `turbo` | — |
 
 ## Token cost expectations by operation type
@@ -123,9 +124,9 @@ If the AI's output isn't what you wanted, the right tier change is usually obvio
 
 `thinking_depth: "balanced"` is **dynamic** — the model decides how much reasoning to apply based on the prompt's complexity. Most everyday edits trigger minimal reasoning (cheap and fast); complex multi-step edits trigger more (slower, more expensive). This is the recommended default for general editing, and it's what `core + balanced` gives you out of the box.
 
-`fast` (2,048-token reasoning ceiling) is faster but can over-narrow on the AI's part — sometimes it picks a wider scope than the prompt warranted because it didn't have budget to reason carefully about scope. Use `fast` when you've verified your prompts are unambiguous and you want the speed.
+`fast` (a tight per-tier reasoning ceiling) is faster but can over-narrow on the AI's part — sometimes it picks a wider scope than the prompt warranted because it didn't have budget to reason carefully about scope. Use `fast` when you've verified your prompts are unambiguous and you want the speed.
 
-`deep` (16,384-token reasoning ceiling) gives the model room to reason carefully. Use it for high-stakes edits where one bad output is more expensive than the extra tokens.
+`deep` (a large per-tier reasoning ceiling) gives the model room to reason carefully. Use it for high-stakes edits where one bad output is more expensive than the extra tokens.
 
 ## When to use Deep — and what it costs
 

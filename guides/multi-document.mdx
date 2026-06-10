@@ -1,0 +1,86 @@
+---
+title: "Multi-Document Sessions"
+description: "Work with several open documents in one session — target any of them by id, let the AI move content between them, or have it open a brand-new document."
+---
+
+# Multi-Document Sessions
+
+A SuperDocs session can hold **several open documents at once** — like tabs in an editor. The AI sees all of them, can read or search any of them, and edits whichever one your request targets. One document is always the **focused** document: the default target for any chat turn that doesn't say otherwise.
+
+Everything here works identically over the REST API and the MCP tools.
+
+## The mental model
+
+- **Session** — one conversation thread with the AI.
+- **Open documents** — the set of documents loaded in that session, each with a stable `document_id` and a title.
+- **Focused document** — the one a turn targets when you don't specify a `document_id`. Uploading with default settings replaces it; single-document integrations never need to think about any of this (one document = it's always focused).
+
+## Opening more documents
+
+`POST /v1/documents/upload` accepts an `open_mode` form field:
+
+| `open_mode` | Behavior |
+|---|---|
+| `replace` (default) | The uploaded file replaces the focused document — the pre-multi-document behavior. |
+| `new_focused` | Opens the file as a **new** document and focuses it. Existing documents stay open. |
+| `background` | Opens the file as a new document but keeps the current focus. |
+
+(`new_tab` is also accepted as an alias of `new_focused`.)
+
+The upload response includes the session's full document roster (document ids, chunk counts, and which one is focused), so you can render tabs immediately — derive tab titles from each document's content; the roster endpoint also returns each document's HTML.
+
+The AI can also **create** a new document itself: ask in chat — "put the summary in a new document called Q3 Summary" — and the turn opens a fresh document with the generated content (this bills one operation like other content creation).
+
+## Listing, focusing, closing
+
+```bash
+# Roster: every open document + which one is focused
+curl https://api.superdocs.app/v1/sessions/my-session/documents \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+
+# Switch focus
+curl -X POST https://api.superdocs.app/v1/sessions/my-session/documents/{document_id}/focus \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+
+# Close one document (the session stays alive); optionally pick the next focus
+curl -X DELETE "https://api.superdocs.app/v1/sessions/my-session/documents/{document_id}?next_focus={other_id}" \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+The same three operations are MCP tools: `list_session_documents`, `focus_session_document`, `close_session_document`.
+
+## Targeting a document in chat
+
+Three ways, in order of precedence:
+
+1. **Explicit `document_id`** on the chat request (REST `/v1/chat`, `/v1/chat/async`, or the MCP `chat`/`chat_async` tools). That document also becomes the focus for the turn.
+2. **Name it in the message** — "fix the totals in the invoice" routes to the open document titled like an invoice. The AI resolves references the way a colleague would, including follow-ups like "now add those notes to the meeting doc".
+3. **Neither** — the turn targets the focused document.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Standardize the date format in this document",
+    "session_id": "my-session",
+    "document_id": "doc_2f6c…"
+  }'
+```
+
+The AI can also work **across** documents in one turn: read one document and apply what it found to another ("use the rates from the rate card to fill the invoice"), search all open documents at once, or update several documents in a single request.
+
+## What changes on the wire
+
+If you only ever open one document per session, nothing changes. With multiple documents:
+
+- `proposed_change_batch` (review mode): every change in `changes[]` carries its `document_id`, so you can group the approval list per document. See [SSE Streaming](/guides/streaming#proposed_change_batch).
+- `documents_changed`: emitted when an auto-apply turn changed 2+ documents, or when a document was **created** (in either approval mode) — so background tabs can badge and new tabs appear. See [SSE Streaming](/guides/streaming#documents_changed).
+- The `final` result includes `focused_document_id`.
+- Document payloads (upload responses, the roster, session history) may include a nullable `page_setup` object — the page size, orientation, and margins detected from `.docx`/PDF uploads — useful if your UI renders true-size pages.
+
+## Notes
+
+- Document order in the roster is stable insertion order — safe to use as tab order.
+- Session history restore (`get_session_history`) returns the conversation plus the **focused** document's state; call `list_session_documents` to rebuild the full tab set when restoring a multi-document session.
+- Closing a document doesn't delete anything from your storage; it just removes it from the session.

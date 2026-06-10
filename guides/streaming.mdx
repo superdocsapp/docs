@@ -46,7 +46,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 9 event types:
+The stream emits 11 event types:
 
 ### `intermediate`
 
@@ -195,6 +195,8 @@ eventSource.addEventListener("proposed_change_batch", (event) => {
 });
 ```
 
+In sessions with multiple open documents, every change in `changes[]` also carries the `document_id` it belongs to, so your UI can group the review list per document.
+
 The parsed payload:
 
 ```json
@@ -275,6 +277,22 @@ data: {"type": "document_sync", "content": "<p data-chunk-id=\"...\">Section 1</
 
 If you do not render diffs in an editor (e.g., you only display the final response), you can ignore this event.
 
+### `documents_changed`
+
+Emitted when a turn touched **more than one open document** on auto-apply, or **created a new document** (creation applies immediately in either approval mode). Tells your UI which documents changed so non-focused tabs can badge and newly created tabs appear — for review-mode *edits*, `proposed_change_batch` already carries per-change `document_id`, so this event isn't needed there.
+
+```
+event: documents_changed
+data: {"type": "documents_changed", "content": "{\"documents\": [{\"document_id\": \"d1\", \"title\": \"Invoice\", \"change_count\": 3, \"changed_chunk_ids\": [\"c1\", \"c2\", \"c7\"], \"created\": false}], \"focused_document_id\": \"d1\"}"}
+```
+
+**Payload shape** (JSON-encoded in `content`):
+
+- `documents[]` — one entry per changed document: `document_id`, `title`, `change_count`, `changed_chunk_ids` (sections to flash on tab switch), and `created` (`true` when the AI opened this as a brand-new document this turn — add a tab for it; its `change_count` is `0`).
+- `focused_document_id` — the document currently in focus after the turn.
+
+**When it fires**: on auto-apply (`approval_mode: "approve_all"`) turns that changed 2+ documents, and on any turn — **either approval mode** — where the AI created a new document (creation applies immediately even in review mode). Single-document edit turns don't emit it. Ignore it if your integration only ever works with one document per session.
+
 ### `final`
 
 Job completed successfully. Contains the full result.
@@ -283,6 +301,8 @@ Job completed successfully. Contains the full result.
 event: final
 data: {"content": "I've made all sections more concise.", "result": {"response": "...", "document_changes": {...}, "usage": {...}}}
 ```
+
+In multi-document sessions, `result` also includes `focused_document_id` so you know which open document the turn finished on.
 
 ### `usage`
 
@@ -337,6 +357,27 @@ Job failed, was cancelled, or an auth error occurred.
 event: error
 data: {"error": "Request timed out"}
 ```
+
+### `model_fallback`
+
+Emitted only when the AI tier you requested is temporarily unresponsive upstream and SuperDocs **automatically completed your request on the `pro` tier instead**. Your request still succeeds — this event just tells you (and lets you tell your users) that a different tier served it.
+
+```
+event: model_fallback
+data: {"type": "model_fallback", "content": "{\"from_tier\": \"core\", \"to_tier\": \"pro\"}"}
+```
+
+**What to do with it**: optional. Show a small notice ("the default model is busy — this response used the Pro tier") or just log it. Billing is unchanged — the operation counts exactly as it normally would. During healthy operation this event never fires.
+
+## Reconnect & resume
+
+Every event carries a monotonically increasing `sequence` number. If your EventSource connection drops mid-job, reconnect with the `last_sequence` query parameter set to the highest sequence you already processed — the stream replays **only newer events**, never the full history:
+
+```bash
+curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=job_abc123&last_sequence=17&api_key=sk_YOUR_API_KEY"
+```
+
+Omit `last_sequence` (or pass `0`) to receive the full event history for the job — useful when a fresh client attaches to an already-running job. This also makes reconnecting after `approve_change` safe: already-rendered `proposed_change_batch` / `document_sync` events are not re-delivered.
 
 ## JavaScript example
 

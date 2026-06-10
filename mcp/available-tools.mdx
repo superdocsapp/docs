@@ -1,18 +1,18 @@
 ---
 title: "Available Tools"
-description: "All 22 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 25 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 22 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
+When you connect to the SuperDocs MCP server, these 25 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `chat` | Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting. Returns AI response and structural changes. **For large documents (>20 pages), set `response_mode='compact'`** to skip the full HTML in the response and get only per-section diffs (`chunk_diffs`) instead — saves thousands of tokens per turn. To read sections, just ask in natural language ("show me the force majeure section") and the AI returns the content in the reply. | `message`, `session_id`, `document_html`, `model_tier`, `thinking_depth`, `approval_mode`, `response_mode`, `image_attachments` |
-| `chat_async` | Start a long-running or HITL-approved AI edit; returns a job_id to poll. Use for multi-step edits or `approval_mode='ask_every_time'`. **For large documents, set `response_mode='compact'`** so polled job results skip the full HTML and surface only per-section diffs. | `message`, `session_id`, `document_html`, `model_tier`, `approval_mode`, `response_mode` |
+| `chat` | Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting. Returns AI response and structural changes. Sessions can hold **multiple open documents** — pass `document_id` to target a specific one (omit it to work on the focused document), or just name the document in your message; the AI can also open a brand-new document on request ("put this summary in a new document"). **For large documents (>20 pages), set `response_mode='compact'`** to skip the full HTML in the response and get only per-section diffs (`chunk_diffs`) instead — saves thousands of tokens per turn. To read sections, just ask in natural language ("show me the force majeure section") and the AI returns the content in the reply. | `message`, `session_id`, `document_html`, `document_id`, `model_tier`, `thinking_depth`, `approval_mode`, `response_mode`, `image_attachments` |
+| `chat_async` | Start a long-running or HITL-approved AI edit; returns a job_id to poll. Use for multi-step edits or `approval_mode='ask_every_time'`. Accepts the same `document_id` targeting as `chat`. **For large documents, set `response_mode='compact'`** so polled job results skip the full HTML and surface only per-section diffs. | `message`, `session_id`, `document_html`, `document_id`, `model_tier`, `approval_mode`, `response_mode` |
 | `approve_change` | Approve or deny AI-proposed document changes one-by-one or in batch (HITL workflow). Supports per-change feedback for the AI to revise on. | `session_id`, `job_id`, `change_id`, `approved`, `feedback`, `changes` |
 
 ## Documents
@@ -33,6 +33,16 @@ When you connect to the SuperDocs MCP server, these 22 tools become available to
 | `get_session_history` | Restore the full conversation and document state for a previous session, including chunk IDs, attachments, and editor actions. | `session_id` |
 | `get_session_jobs` | List all async chat jobs for a specific session, most recent first. | `session_id`, `limit` |
 | `revert_session_to_message` | Rewind a chat session to before a specific user message — restores both the document and the conversation in one call. Returns the reverted message text so you can pre-fill a compose box for editing. The original branch is preserved server-side but hidden from active reads. | `session_id`, `turn_index` |
+
+## Session documents (multi-document)
+
+A session can hold several open documents at once — like tabs in an editor. One document is always the **focused** document (the default target for chat turns that don't specify `document_id`).
+
+| Tool | Description | Key parameters |
+|------|-------------|----------------|
+| `list_session_documents` | List every open document in a session — ids, content (HTML) + page geometry, and which one is focused. Document ids from this roster are what you pass as `document_id` on `chat`/`chat_async`. | `session_id` |
+| `focus_session_document` | Switch the session's focused document. Subsequent chat turns without an explicit `document_id` target the newly focused document. | `session_id`, `document_id` |
+| `close_session_document` | Close an open document in the session. Optionally pass `next_focus` to choose which remaining document takes focus. The session itself stays alive. | `session_id`, `document_id`, `next_focus` |
 
 ## Attachments
 

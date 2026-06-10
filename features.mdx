@@ -5,7 +5,7 @@ description: "Comprehensive capability reference for SuperDocs — every shipped
 
 # Features
 
-SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, plain text). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (22 tools + 4 user-invocable workflow prompts on a single endpoint).
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, plain text). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp` (25 tools + 4 user-invocable workflow prompts on a single endpoint).
 
 This page is exhaustive — it's a reference, not a marketing summary. Skip to the group that matches what you're trying to build.
 
@@ -167,6 +167,12 @@ Every attachment is semantically indexed when uploaded — the AI knows what's i
 
 ## Conversation & robustness
 
+### Multiple open documents in one session
+
+A session can hold several open documents at once — like editor tabs. The AI sees the full roster, edits whichever document your request targets (explicit `document_id`, named in the message, or the focused one by default), reads or searches across all of them, moves content between them, and can open a brand-new document on request ("put the summary in a new document"). Uploads choose their behavior via `open_mode` (`replace` / `new_focused` / `background`), and three endpoints manage the roster (list / focus / close) — also exposed as MCP tools. See the [Multi-Document Sessions guide](/guides/multi-document).
+
+**Best for:** invoice + rate card workflows, contract + amendment pairs, splitting AI output into a separate deliverable, any flow where one conversation spans several files.
+
 ### Persistent conversation context
 
 Every message in a session carries the full conversation history. Ask **"make that more formal"**, then **"add three paragraphs of detail to what you just wrote"**, then **"change the tone back to friendly"** — the AI remembers all prior context, edits, and stated preferences. History persists across server restarts and redeploys. Reload a session weeks later and the AI still has the full context (the document, the attachments, every turn of the conversation, every change made).
@@ -253,9 +259,9 @@ For a 100-page styled `.docx`, this saves the agent ~70K tokens per upload (vs b
 
 ## Developer & integration
 
-### MCP server — 22 tools, every major client
+### MCP server — 25 tools, every major client
 
-The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp` (Streamable HTTP transport). Compatible clients render the 22 tools natively:
+The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp` (Streamable HTTP transport). Compatible clients render the 25 tools natively:
 
 | Client | Status |
 |---|---|
@@ -278,7 +284,7 @@ The same MCP server also exposes 4 user-invocable workflow templates (surfaced a
 | User API key (`sk_…`) | Individual developers, MCP integrations, scripts |
 | Organization API key (`lce_…`) | B2B integrations with shared usage limits |
 
-All three reach the same 22 MCP tools and 24 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
+All three reach the same 25 MCP tools and 27 REST endpoints with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
 
 ### REST API works with any programming language
 
@@ -363,6 +369,7 @@ A live timeline of major capabilities and when they shipped. Older capabilities 
 
 | Date | Capability | Why it matters |
 |---|---|---|
+| 2026-06-11 | **Multi-document sessions** — a session now holds multiple open documents: `open_mode` on upload (`replace`/`new_focused`/`background`) with the document roster in the response, three new endpoints + MCP tools to list/focus/close session documents (MCP total: 25), optional `document_id` targeting on `/v1/chat` + `/v1/chat/async`, cross-document reads/search/edits in one turn, and AI-created new documents from chat. **SSE additions** — `documents_changed` (multi-doc auto-apply badge signal) and `model_fallback` (automatic Pro-tier failover notice) events; every event now carries `sequence` and reconnects can pass `last_sequence` to replay only newer events. **Thinking depth on every tier** — `thinking_depth` (`fast`/`balanced`/`deep`) is now honored on all four model tiers. **Page geometry** — document payloads include a nullable `page_setup` (size/orientation/margins detected from DOCX/PDF). **Billing clarity** — a multi-section edit in one request bills exactly one operation; denied review-mode changes are never billed. | One conversation can orchestrate several files the way a person with multiple tabs would; integrations get deterministic per-document targeting and review grouping; streams resume cleanly after disconnects; reasoning control is uniform across tiers; true-size page rendering becomes possible; operation counting matches intuition. |
 | 2026-05-27 | Export pipeline overhaul — multi-format export (`docx` default, `pdf`, `html`, `markdown`, `txt`) with per-request `options` (paper size, orientation, margins, filename, image embedding, PDF watermark + opacity), structured `X-Export-Warnings` header for non-fatal issues, three-tier flow for large documents (direct POST up to 20 MB → pre-signed upload for 20-100 MB via `upload_id` → email fallback for &gt;100 MB via `POST /v1/documents/export/email-request`), structured 413 detail body with `error_code` and `suggested_action`, and full round-trip of Word track-changes on `.docx` export. | Integrators get five output formats from one endpoint, predictable size handling without a 413 surprise, and clear error contracts. The default-format flip from `doc` to `docx` is a soft compatibility change — callers that omit `format` and switch on `Content-Type` now receive Open XML. |
 | 2026-05-26 | Batched HITL approvals — multi-change turns deliver every proposed change in a single `proposed_change_batch` SSE event instead of fanning out N individual `proposed_change` events. Single-change turns continue to use `proposed_change`. | Editors approving large changesets render one approval card instead of N. Wire load scales with turns, not changes. **Register both `proposed_change` and `proposed_change_batch` listeners** — clients that only listen to the original event will silently miss every batched turn. |
 | 2026-05-25 | 30-minute wall-clock cap on chat turns (up from 10 minutes), parallel-edit speedup, latency improvements for very large documents. | Hundred-section edits in a single turn now finish inside the cap instead of timing out. Same 504 contract; the failure copy points users to splitting the work across smaller turns. |

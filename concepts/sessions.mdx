@@ -35,6 +35,8 @@ curl -X POST https://api.superdocs.app/v1/chat \
 
 The AI remembers the full conversation. On the second request, it knows about the introduction it just wrote.
 
+A session can also hold **multiple open documents** at once — each with its own `document_id`, with one document focused at a time. Chat turns target the focused document unless you pass `document_id` (or name a document in the message). See the [Multi-Document Sessions guide](/guides/multi-document).
+
 ## Persistence
 
 Sessions persist across server restarts. You can close your browser, come back tomorrow, and resume with the same `session_id`.

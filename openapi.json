@@ -14,7 +14,7 @@
           "chat"
         ],
         "summary": "Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting.",
-        "description": "Synchronous AI chat that can rewrite specific paragraphs, add or remove table rows, restructure sections, generate new content from templates, or transform an entire document. Pass document_html to give the AI context. Returns AI response text plus structural document changes (HTML edits, additions, deletions) with chunk IDs. One billable operation per document-modifying turn. For long-running edits or human-in-the-loop approval, use chat_async. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' to skip the full HTML in the response (the AI returns only per-section diffs in chunk_diffs) and save thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' \u2014 the AI returns the content in the reply text. Always use natural language to describe what you want; the AI handles all internal section lookups.",
+        "description": "Synchronous AI chat that can rewrite specific paragraphs, add or remove table rows, restructure sections, generate new content from templates, or transform an entire document. Pass document_html to give the AI context. Returns AI response text plus structural document changes (HTML edits, additions, deletions) with chunk IDs. One billable operation per document-modifying turn. For long-running edits or human-in-the-loop approval, use chat_async. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' to skip the full HTML in the response (the AI returns only per-section diffs in chunk_diffs) and save thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' — the AI returns the content in the reply text. Always use natural language to describe what you want; the AI handles all internal section lookups.",
         "operationId": "chat",
         "security": [
           {
@@ -233,7 +233,7 @@
           "attachments"
         ],
         "summary": "Upload Attachment",
-        "description": "Upload a document attachment to a session for AI reference.\n\nThe file is processed asynchronously \u2014 text is extracted, converted, and indexed\nso the AI can search and reference it during chat. Use GET /v1/attachments/status/{session_id}\nto check processing progress.\n\nSupported file types: .pdf, .docx, .txt, .rtf, .md, .html, .htm (max 50 MB).\nReturns a job_id for tracking the processing status.",
+        "description": "Upload a document attachment to a session for AI reference.\n\nThe file is processed asynchronously — text is extracted, converted, and indexed\nso the AI can search and reference it during chat. Use GET /v1/attachments/status/{session_id}\nto check processing progress.\n\nSupported file types: .pdf, .docx, .txt, .rtf, .md, .html, .htm (max 50 MB).\nReturns a job_id for tracking the processing status.",
         "operationId": "upload_attachment",
         "security": [
           {
@@ -516,7 +516,7 @@
           "mcp"
         ],
         "summary": "Export the current document with full fidelity. Five output formats (`docx`, `pdf`, `html`, `markdown`, `txt`); per-request customisation for paper size, orientation, margins, filename, image embedding, and optional PDF watermarks.",
-        "description": "Render the current document in the requested format and return the file bytes as a streaming response. Three input modes:\n\n- **Mode A** \u2014 send HTML content inline via `html` (up to ~20 MB).\n- **Mode B** \u2014 send a `session_id` to export the session's current document.\n- **Mode C** \u2014 for documents above 20 MB of HTML, first POST to `/v1/uploads` (purpose `export-html`), PUT the HTML to the returned signed URL, then call this endpoint with `upload_id`.\n\nNon-fatal issues during render are returned in the `X-Export-Warnings` response header as base64-encoded JSON. Documents above 100 MB return 413 with `suggested_action: 'email_request'` \u2014 switch to `POST /v1/documents/export/email-request`.",
+        "description": "Render the current document in the requested format and return the file bytes as a streaming response. Three input modes:\n\n- **Mode A** — send HTML content inline via `html` (up to ~20 MB).\n- **Mode B** — send a `session_id` to export the session's current document.\n- **Mode C** — for documents above 20 MB of HTML, first POST to `/v1/uploads` (purpose `export-html`), PUT the HTML to the returned signed URL, then call this endpoint with `upload_id`.\n\nNon-fatal issues during render are returned in the `X-Export-Warnings` response header as base64-encoded JSON. Documents above 100 MB return 413 with `suggested_action: 'email_request'` — switch to `POST /v1/documents/export/email-request`.",
         "operationId": "export_document",
         "security": [
           {
@@ -585,7 +585,7 @@
             }
           },
           "413": {
-            "description": "Request entity too large. The `detail` field carries a structured body \u2014 see ExportSizeErrorDetail.",
+            "description": "Request entity too large. The `detail` field carries a structured body — see ExportSizeErrorDetail.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1100,7 +1100,7 @@
           "chat"
         ],
         "summary": "Start a long-running or HITL-approved AI edit; returns a job_id to poll for results.",
-        "description": "Use instead of chat when (a) the edit is large or multi-step, (b) you need human approval on each proposed change before it applies (set approval_mode='ask_every_time'), or (c) you can't afford to block on a synchronous response. Returns a job_id immediately. Poll get_job to track progress and retrieve the final document. Approve or deny pending changes via approve_change. Job state is durable and survives server restarts. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' so the job result skips the full HTML and surfaces only per-section diffs in chunk_diffs, saving thousands of tokens per poll. To read sections in compact mode, just send a natural-language chat request ('show me the pricing section') \u2014 the AI returns the content in the reply text. Always use natural language; the AI handles all internal section lookups. HITL workflow (approval_mode='ask_every_time'): 1) poll get_job until status=awaiting_approval, 2) read metadata.pending_changes for proposed edits, 3) call approve_change per change, 4) continue polling until status=completed.",
+        "description": "Use instead of chat when (a) the edit is large or multi-step, (b) you need human approval on each proposed change before it applies (set approval_mode='ask_every_time'), or (c) you can't afford to block on a synchronous response. Returns a job_id immediately. Poll get_job to track progress and retrieve the final document. Approve or deny pending changes via approve_change. Job state is durable and survives server restarts. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' so the job result skips the full HTML and surfaces only per-section diffs in chunk_diffs, saving thousands of tokens per poll. To read sections in compact mode, just send a natural-language chat request ('show me the pricing section') — the AI returns the content in the reply text. Always use natural language; the AI handles all internal section lookups. HITL workflow (approval_mode='ask_every_time'): 1) poll get_job until status=awaiting_approval, 2) read metadata.pending_changes for proposed edits, 3) call approve_change per change, 4) continue polling until status=completed.",
         "operationId": "chat_async",
         "security": [
           {
@@ -1177,6 +1177,19 @@
               "type": "string",
               "title": "Session Id"
             }
+          },
+          {
+            "name": "last_sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "SSE Last-Event-ID resume: only replay intermediate responses with sequence > this. Reconnects pass the highest sequence already processed so old events are NOT re-emitted; default 0 = full history.",
+              "default": 0,
+              "title": "Last Sequence"
+            },
+            "description": "SSE Last-Event-ID resume: only replay intermediate responses with sequence > this. Reconnects pass the highest sequence already processed so old events are NOT re-emitted; default 0 = full history."
           },
           {
             "name": "job_id",
@@ -1429,10 +1442,10 @@
                   "type": "null"
                 }
               ],
-              "description": "ISO 8601 timestamp \u2014 only return updates after this time",
+              "description": "ISO 8601 timestamp — only return updates after this time",
               "title": "Since"
             },
-            "description": "ISO 8601 timestamp \u2014 only return updates after this time"
+            "description": "ISO 8601 timestamp — only return updates after this time"
           },
           {
             "name": "timeout",
@@ -2154,7 +2167,7 @@
           "promo"
         ],
         "summary": "List My Promotions",
-        "description": "List the authenticated user's promotion redemptions, split into `active` (drawable now)\nand `history` (exhausted / expired / revoked).\n\nUsed by the Settings \u2192 Billing tab to render the Credits & Promotions section.",
+        "description": "List the authenticated user's promotion redemptions, split into `active` (drawable now)\nand `history` (exhausted / expired / revoked).\n\nUsed by the Settings → Billing tab to render the Credits & Promotions section.",
         "operationId": "list_my_promotions_v1_users_me_promotions_get",
         "security": [
           {
@@ -2211,7 +2224,7 @@
           "uploads"
         ],
         "summary": "Get a pre-signed URL to upload large files (.docx/PDF/HTML/MD/RTF) without bloating agent context.",
-        "description": "Returns a short-lived (5-minute) PUT URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to push the file directly to cloud storage \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the curl text when shell execution is genuinely unavailable.** Bytes never pass through the agent's context window either way. After upload completes, call process_uploaded_document with the upload_id to trigger parsing. For files <100KB where token cost is trivial, upload_document_base64 still works inline. Max file size: 100 MB. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm.",
+        "description": "Returns a short-lived (5-minute) PUT URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to push the file directly to cloud storage — do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the curl text when shell execution is genuinely unavailable.** Bytes never pass through the agent's context window either way. After upload completes, call process_uploaded_document with the upload_id to trigger parsing. For files <100KB where token cost is trivial, upload_document_base64 still works inline. Max file size: 100 MB. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm.",
         "operationId": "request_upload_url",
         "security": [
           {
@@ -2278,7 +2291,7 @@
           "uploads"
         ],
         "summary": "Parse an uploaded file into structured HTML with chunk IDs for targeted AI editing.",
-        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64. Returns structured HTML with unique chunk IDs on every paragraph, heading, table, row, and cell \u2014 enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. Counts as one billable operation. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as read-only AI-searchable reference.",
+        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64. Returns structured HTML with unique chunk IDs on every paragraph, heading, table, row, and cell — enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. Counts as one billable operation. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as read-only AI-searchable reference.",
         "operationId": "process_uploaded_document",
         "security": [
           {
@@ -2356,7 +2369,7 @@
           "downloads"
         ],
         "summary": "Get a pre-signed URL to download an exported document without proxying through the agent.",
-        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Internally this calls the same export pipeline as export_document, then stores the result in cloud storage and returns a signed URL. Specify format='pdf', 'docx', 'doc', or 'html'.",
+        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory — do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Internally this calls the same export pipeline as export_document, then stores the result in cloud storage and returns a signed URL. Specify format='pdf', 'docx', 'doc', or 'html'.",
         "operationId": "request_download_url",
         "security": [
           {
@@ -2619,8 +2632,8 @@
           "mcp",
           "sessions"
         ],
-        "summary": "Rewind a chat session to before a specific user message \u2014 restores both the document and the conversation in one call.",
-        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained in the database for audit. The original conversation branch is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature (no checkpoint marker).",
+        "summary": "Rewind a chat session to before a specific user message — restores both the document and the conversation in one call.",
+        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained in the database for audit. The original conversation branch is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval — wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature (no revert marker recorded).",
         "operationId": "revert_session_to_message",
         "security": [
           {
@@ -2728,6 +2741,232 @@
           },
           "401": {
             "description": "Authentication required."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "List the documents open in a multi-document session.",
+        "description": "Returns the editable documents open in this session (focused first), each with its id, title, chunk count, focused flag, and full HTML — everything a client needs to render document tabs and pick `document_id` values for chat targeting.",
+        "operationId": "list_session_documents",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/{document_id}/focus": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Switch which document is focused in a multi-document session.",
+        "description": "Switches the session's focused document. Subsequent chat turns that omit `document_id` target the newly focused document. Returns the updated document roster.",
+        "operationId": "focus_session_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/{document_id}": {
+      "delete": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Close (remove) a document from a multi-document session.",
+        "description": "Removes a document from the session's open documents (like closing an editor tab). If it was the focused document, focus moves to `next_focus` when provided and still open, otherwise to the next remaining document; closing the last document leaves the session empty. The close is durable across reconnects and session restores. Returns the updated roster plus the now-focused document's HTML. The session itself stays alive, and nothing is deleted from your storage.",
+        "operationId": "close_session_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "next_focus",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Focus"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -3015,7 +3254,7 @@
               }
             ],
             "title": "User Id",
-            "description": "User identifier. Automatically set from authentication \u2014 typically omit this."
+            "description": "User identifier. Automatically set from authentication — typically omit this."
           },
           "image_attachments": {
             "anyOf": [
@@ -3089,14 +3328,14 @@
               }
             ],
             "title": "Response Mode",
-            "description": "Response shape control. 'full' (default) puts the complete updated document HTML in the job result \u2014 required by web app editors and recommended for small documents. 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and stores only per-section diffs (chunk_diffs), saving thousands of tokens when polling get_job. To read sections in compact mode, send a natural-language request to chat ('show me the pricing section') \u2014 the AI returns the content in the reply text.",
+            "description": "Response shape control. 'full' (default) puts the complete updated document HTML in the job result — required by web app editors and recommended for small documents. 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and stores only per-section diffs (chunk_diffs), saving thousands of tokens when polling get_job. To read sections in compact mode, send a natural-language request to chat ('show me the pricing section') — the AI returns the content in the reply text.",
             "default": "full"
           },
           "cursor_context": {
             "anyOf": [
               {
-                "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -3104,6 +3343,18 @@
             ],
             "title": "Cursor Context",
             "description": "Editor cursor context at message time, used to default the insert location for new images, diagrams, or sections when the user's prompt doesn't name a position. Shape: {chunk_id: str, pos_in_chunk?: int, text_before?: str, text_after?: str}. Omit when the user typed in chat without focusing the editor first."
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Multi-document: target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default — unchanged single-document behaviour). When set, that document becomes the focus for this turn."
           }
         },
         "type": "object",
@@ -3219,6 +3470,19 @@
               }
             ],
             "title": "Session Id"
+          },
+          "open_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Mode",
+            "default": "replace",
+            "description": "How the uploaded file enters the session: 'replace' (default) replaces the focused document; 'new_focused' opens it as a new document and focuses it; 'background' opens it without changing focus."
           }
         },
         "type": "object",
@@ -3397,7 +3661,7 @@
           "key": {
             "type": "string",
             "title": "Key",
-            "description": "The full API key (sk_... format). Copy this now \u2014 it cannot be retrieved again."
+            "description": "The full API key (sk_... format). Copy this now — it cannot be retrieved again."
           },
           "key_prefix": {
             "type": "string",
@@ -3419,7 +3683,7 @@
           "created_at"
         ],
         "title": "CreateApiKeyResponse",
-        "description": "Newly created API key. The raw key is shown only once \u2014 save it immediately."
+        "description": "Newly created API key. The raw key is shown only once — save it immediately."
       },
       "DocumentChanges": {
         "properties": {
@@ -3582,6 +3846,19 @@
             ],
             "title": "Attachments",
             "description": "Session attachments. Each item has: id (string), filename (string), file_extension (string), processing_status ('ready', 'processing', or 'failed')."
+          },
+          "page_setup": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Setup",
+            "description": "Source page geometry of the focused document (width_in, height_in, margin_in{top,right,bottom,left}, orientation) when known, else null. The editor renders the page at this geometry on restore; null ⇒ US-Letter + 1in default."
           }
         },
         "type": "object",
@@ -3723,7 +4000,7 @@
             "type": "string",
             "maxLength": 200000000,
             "nullable": true,
-            "description": "HTML content to export inline (Mode A). For payloads above 20 MB use the upload-then-export pattern via `upload_id` instead \u2014 see /v1/uploads with `purpose='export-html'`."
+            "description": "HTML content to export inline (Mode A). For payloads above 20 MB use the upload-then-export pattern via `upload_id` instead — see /v1/uploads with `purpose='export-html'`."
           },
           "upload_id": {
             "type": "string",
@@ -4298,6 +4575,18 @@
           "parse_mode": {
             "type": "string",
             "title": "Parse Mode"
+          },
+          "page_setup": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Setup"
           }
         },
         "type": "object",
@@ -4542,7 +4831,7 @@
               }
             ],
             "title": "User Id",
-            "description": "User identifier. Automatically set from authentication \u2014 typically omit this."
+            "description": "User identifier. Automatically set from authentication — typically omit this."
           },
           "image_attachments": {
             "anyOf": [
@@ -4610,14 +4899,14 @@
               }
             ],
             "title": "Response Mode",
-            "description": "Response shape control. 'full' (default) returns the complete updated document HTML \u2014 required by web app editors and recommended for small documents (<20 pages). 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and returns only per-section diffs (chunk_diffs) for changed sections, saving thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' \u2014 the AI returns the content in the chat reply text.",
+            "description": "Response shape control. 'full' (default) returns the complete updated document HTML — required by web app editors and recommended for small documents (<20 pages). 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and returns only per-section diffs (chunk_diffs) for changed sections, saving thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' — the AI returns the content in the chat reply text.",
             "default": "full"
           },
           "cursor_context": {
             "anyOf": [
               {
-                "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -4625,6 +4914,18 @@
             ],
             "title": "Cursor Context",
             "description": "Editor cursor context at message time, used to default the insert location for new images, diagrams, or sections when the user's prompt doesn't name a position. Shape: {chunk_id: str, pos_in_chunk?: int, text_before?: str, text_after?: str}. Omit when the user typed in chat without focusing the editor first."
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Multi-document: target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default — unchanged single-document behaviour). When set, that document becomes the focus for this turn."
           }
         },
         "type": "object",

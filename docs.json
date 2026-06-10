@@ -64,6 +64,7 @@
               "guides/streaming",
               "guides/async-jobs",
               "guides/human-in-the-loop",
+              "guides/multi-document",
               "guides/editor-integration",
               "guides/agent-tool-integration",
               "guides/server-integration",
