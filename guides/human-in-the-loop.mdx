@@ -440,6 +440,14 @@ When the AI proposes multiple changes at once (common for sweeping edits across 
 
 Use the batched shape to render one "Accept all" / "Deny all" card without waiting on a fan-out of N events.
 
+### Grouping a batch by document
+
+In multi-document sessions, every change in the batch carries the `document_id` it belongs to. Group the review list per document (one sub-section per document, with its own accept-all control) — a flat list of 40 changes spanning three documents is hard to reason about, the same 40 grouped under three document headers is easy. Note that a turn can also **create** a new document even in review mode (creation applies immediately; you'll see it via the `documents_changed` event) — see [SSE Streaming](/guides/streaming#documents_changed).
+
+### Very large batches
+
+A whole-document instruction ("tighten every section") can propose hundreds of changes in one batch. Two practical rules from running this at scale: **virtualize the card list** (render only visible rows — hundreds of side-by-side HTML diffs in the DOM at once will lock the tab), and lead with the summary ("312 changes across 5 sections types — Accept all / Review one by one") rather than dropping the user straight into row 1 of 312.
+
 ## Alternative: SSE streaming workflow
 
 The polling workflow above works but requires repeated API calls. For a real-time UI, use SSE to receive proposed changes as they're generated:
@@ -510,6 +518,10 @@ es.addEventListener("error", (event) => {
 
 <Note>
 After calling `/approve`, the AI resumes processing. If approved changes were applied, the SSE connection will eventually emit a `final` event with the updated document. If you denied with feedback, you may receive new `proposed_change` or `proposed_change_batch` events as the AI tries again.
+
+<Warning>
+  **Apply changes once — either per-accept or from the final, never both.** If your UI applies each approved change to the editor as the user accepts it, do NOT also load the `final` event's full document — it contains those same changes again, and re-applying them duplicates inserted content (newly created sections are the classic symptom). Pick one: incremental apply (ignore the final document) or final-only apply (editor untouched during review).
+</Warning>
 </Note>
 
 <Warning>

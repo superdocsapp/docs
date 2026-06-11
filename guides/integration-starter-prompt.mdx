@@ -385,13 +385,14 @@ If your integration shape isn't listed in §E and the principles in §A don't ob
 
 All requests go through your API client (Phase 2). Paths are relative to `https://api.superdocs.app/`.
 
-- `POST v1/chat` — sync: body `{ message, session_id, document_html, approval_mode?: "approve_all" | "ask_every_time" }` → returns the full result inline. Best for batch / server-side / agent-tool integrations that don't need streaming.
+- `POST v1/chat` — sync: body `{ message, session_id, document_html, approval_mode?: "approve_all" | "ask_every_time", document_id? }` → returns the full result inline. Best for batch / server-side / agent-tool integrations that don't need streaming. `document_id` targets a specific open document in multi-document sessions (omit = focused document).
 - `POST v1/chat/async` — async: body same as above → returns `{ job_id }`. Use with the SSE stream or polling endpoint.
-- `GET v1/chat/{session_id}/stream?job_id=...&api_key=...` — SSE stream of seven event types (`document_sync`, `intermediate`, `proposed_change`, `final`, `usage`, `ui_pointer`, `error`). Browser-side requires the `api_key` query param because `EventSource` can't set custom headers.
+- `GET v1/chat/{session_id}/stream?job_id=...&api_key=...&last_sequence=...` — SSE stream of eleven event types (`document_sync`, `intermediate`, `proposed_change`, `proposed_change_batch`, `continue_prompt`, `documents_changed`, `model_fallback`, `final`, `usage`, `ui_pointer`, `error`). Browser-side requires the `api_key` query param because `EventSource` can't set custom headers; on reconnect pass `last_sequence` to replay only newer events.
 - `GET v1/jobs/{job_id}` — poll for async job status. Use as an alternative to SSE for non-browser consumers.
 - `POST v1/chat/{session_id}/approve` — body: `{ job_id, approved, changes?: [{ change_id, approved, feedback? }] }`. Resumes the AI on the already-open SSE stream.
+- `GET v1/sessions/{session_id}/documents` — list the session's open documents (multi-document sessions): ids, chunk counts, focused flag, HTML. `POST .../documents/{document_id}/focus` switches focus; `DELETE .../documents/{document_id}?next_focus=...` closes one.
 - `POST v1/sessions/{session_id}/revert` — body: `{ turn_index }` → returns `{ compose_text, reverted_to_turn, document_state, editor_action, archived_turn_count }`. Rewinds chat + document to the state before the user message at `turn_index`. Returns `409` if a chat job is in flight on the session, `422` if the target message predates the revert feature.
-- `POST v1/documents/export` — body: `{ html?, session_id?, format: "doc" | "docx", filename? }` → binary Word file.
+- `POST v1/documents/export` — body: `{ html?, session_id?, upload_id?, format: "docx" | "pdf" | "html" | "markdown" | "txt", options?, filename? }` → binary file (`docx` default). Non-fatal issues arrive in the `X-Export-Warnings` response header.
 
 SSE event `data:` shapes (all JSON):
 

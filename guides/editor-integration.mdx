@@ -30,7 +30,7 @@ Every editor integration follows the same three steps:
 
 1. **Parse** incoming HTML from SuperDocs into your editor's document model, preserving `data-chunk-id` on every block-level node.
 2. **Serialise** the editor model back to HTML, preserving the same `data-chunk-id` attributes.
-3. **Render** incoming `final.updated_html` and `document_sync.content` payloads by re-running step 1 against the new HTML.
+3. **Render** incoming updates. `document_sync.content` (which arrives before the AI starts) can safely replace the whole document. For the AI's *results*, prefer **section-level application** over whole-document replacement — see [Applying AI updates safely](#applying-ai-updates-safely-without-losing-user-edits) below for why and how.
 
 The snippets below implement these three steps for the six most common editors. Pick the one matching your stack, paste it in, and verify the round-trip with the test at the bottom of this page.
 
@@ -430,6 +430,34 @@ Then `editor.getData()` returns HTML with `data-chunk-id` preserved, and `editor
 
 </Tab>
 </Tabs>
+
+## Applying AI updates safely (without losing user edits)
+
+The naive pattern — replace the whole editor document with `final.updated_html` on every turn — works for a demo and fails in production in two specific ways. We hit both building the SuperDocs web app; they're worth designing out of your integration from day one.
+
+**Failure 1 — wiping concurrent user edits.** AI turns take seconds to minutes. If the user keeps typing while the AI works and you then `setContent` the AI's full document, everything they typed is silently gone. The fix is to apply changes **per section**: every result identifies exactly which chunks changed (`document_changes`, `chunk_diffs` in compact mode, or the per-change `old_html`/`new_html` in review mode), so you can replace only those `data-chunk-id` nodes and leave the rest of the document — including the user's in-progress typing — untouched. If the user edited the *same* section the AI changed, don't silently overwrite either version: keep the user's version and offer the AI's as a suggestion (or re-send the user's version on the next turn). The user's keystrokes should always win by default.
+
+**Failure 2 — double-applying in review mode.** In `ask_every_time` mode, if your UI applies each change to the editor when the user accepts it, remember the job still finishes with a `final` event carrying the complete updated document. Applying accepted changes incrementally **and** then loading the final document re-applies everything — newly created sections get inserted twice. Pick one strategy and stick to it: **either** apply per-change on accept and ignore the final document, **or** keep the editor untouched during review and load only the final. Never both.
+
+Whole-document replacement remains fine for read-only/display integrations, or if you lock the editor while an AI turn is running.
+
+## Rendering visual content (diagrams and equations)
+
+SuperDocs documents can contain diagrams (Mermaid), equations (LaTeX/KaTeX), drawings, and images. On the wire these arrive as HTML nodes that carry their **source in `data-` attributes** (e.g. the diagram's text spec, the equation's LaTeX) plus the node markup itself.
+
+- **Preserve the `data-` attributes on round-trip** — exactly the same rule (and the same silent failure mode) as `data-chunk-id`. Most editor schemas and HTML sanitizers strip unknown attributes and `<svg>` by default; allow them through, or diagrams will degrade to empty blocks after one edit cycle.
+- **Render client-side after mount.** Use the standard libraries (Mermaid for diagrams, KaTeX for equations) to render the source into SVG/HTML once the node is in the DOM. Poll-free pattern: render on insert + on change of the source attribute.
+- **Render into a container your UI framework doesn't manage.** If your framework (React, Vue, etc.) believes it owns the rendered markup, its next reconciliation pass can silently wipe the out-of-band SVG you just produced — this exact bug shipped in our own web app before we caught it. Mount the rendered output inside an element the framework treats as opaque (a ref'd container you never re-render declaratively), not via an HTML-binding prop.
+- **You never need to rasterize for export** — `POST /v1/documents/export` pre-renders diagrams and equations server-side in every format.
+
+## Multi-document sessions in your editor
+
+Sessions can hold several open documents (see the [Multi-Document guide](/guides/multi-document)). If your product surfaces this, the editor-side pattern is:
+
+- Render **tabs** from `GET /v1/sessions/{id}/documents` (stable insertion order; derive tab labels from each document's content — the roster returns the HTML).
+- Switch tabs with the focus endpoint; pass `document_id` on chat turns initiated from a specific tab.
+- Listen for `documents_changed` to **badge background tabs** the AI touched, and to **add a tab** when an entry carries `created: true` (this fires in either approval mode for created documents).
+- If a document payload includes `page_setup`, you can render true page geometry (size, orientation, margins) instead of a generic canvas.
 
 ## Other editors and custom implementations
 

@@ -331,6 +331,10 @@ The `data-chunk-id` attributes that SuperDocs adds to block-level elements **mus
 
 If you're piping the HTML through a rich-text editor at any point in your agent's UI, see the [Editor Integration guide](/guides/editor-integration) for editor-specific preservation patterns.
 
+## Multi-document sessions for agents
+
+A session can hold several open documents. Your agent targets one explicitly by passing `document_id` on `chat`/`chat_async` (ids come from the `list_session_documents` tool / `GET /v1/sessions/{id}/documents`), names it in the message ("update the invoice"), or omits both to hit the focused document. Agents that juggle related files (a contract + its amendment, a report + its data appendix) should keep them in ONE session and let the AI read across them, instead of copying content between sessions. See the [Multi-Document guide](/guides/multi-document).
+
 ## Letting your agent undo a step
 
 If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. SuperDocs returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original branch stays in the database for audit but is hidden from active reads.
