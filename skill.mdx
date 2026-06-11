@@ -291,7 +291,7 @@ STEP 3 — Continue with chat. The AI now has the attachment available for retri
 2. Initialize an empty session via `upload_document_base64` with `<html><body></body></html>`.
 3. Call `chat` with the full request: `"Draft a 1-page mutual NDA between {X} and {Y}, governed by {jurisdiction} law, with a {N}-year term. Include standard sections: definitions, obligations, exclusions, term, return/destruction, no license, governing law, signatures."`
 4. SuperDocs writes the complete document in one turn.
-5. Iterate via additional `chat` calls if needed (e.g., "Add an injunctive relief clause"). Each chat turn is one billable operation.
+5. Iterate via additional `chat` calls if needed (e.g., "Add an injunctive relief clause"). Each chat turn is one billable operation (very large edits: one operation per 25 sections edited).
 6. `export_document` as `.docx`.
 7. Add a brief disclaimer when delivering: "This is a starting draft. Have qualified counsel review before signing — this is not legal advice."
 
