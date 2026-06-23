@@ -1469,7 +1469,7 @@
           "sessions"
         ],
         "summary": "Undo a revert: restore the pre-revert state and the rolled-back turns.",
-        "description": "Revert is non-destructive: this restores the session FORWARD to the pre-revert state\n(returned by the revert as redo_checkpoint_id), restores the document to that state while still\nmerging any concurrent edits from other sessions (surfacing keep-both where they clash), and\nun-archives exactly the chat turns the revert hid. Intended for use immediately after a revert;\nonce a new message is sent the timeline diverges and the web app stops offering it.",
+        "description": "Revert is non-destructive: this restores the session FORWARD to the pre-revert state\n(returned by the revert as redo_checkpoint_id), restores the document to that state while still\nmerging any concurrent edits from other sessions (keeping both where they conflict), and\nun-archives exactly the chat turns the revert hid. Intended for use immediately after a revert;\nonce a new message is sent the timeline diverges and the web app stops offering it.",
         "operationId": "redo_revert",
         "security": [
           {
@@ -4400,7 +4400,7 @@
               }
             ],
             "title": "Window Id",
-            "description": "Internal: stable per-browser-window id (set by the web app) so two windows of one chat keep-both instead of clobber. Agents/API may omit."
+            "description": "Optional identifier for the client window (set by the web app) so concurrent edits from two windows of the same chat are merged rather than overwritten. Agents/API may omit."
           },
           "cross_session_memory": {
             "anyOf": [
@@ -4944,7 +4944,7 @@
               }
             ],
             "title": "Document Id",
-            "description": "Session-local id (slug) of the focused document. The editor binds its content-doc id AND its cross-session sync baseline to this on restore \u2014 without it a restored tab can't section-merge a later cross-session edit."
+            "description": "Session-local id (slug) of the focused document. Identifies the document on restore so a restored tab stays in sync with edits made to it in other sessions."
           },
           "version_id": {
             "anyOf": [
@@ -6280,7 +6280,7 @@
               }
             ],
             "title": "Revert Changes",
-            "description": "Per-document (slug -> change-set) surgical revert diff. The web app applies these via the section-patch path so the revert merges onto live edits (and a clashed chunk surfaces a keep-both card) instead of a whole-doc replace. On dry_run this is the preview; on a real revert it is what was committed."
+            "description": "Per-document (slug -> change-set) revert diff. Applying these merges the revert onto any concurrent live edits \u2014 a conflicting section is surfaced for you to resolve rather than replacing the whole document. On dry_run this is the preview; on a real revert it is what was committed."
           },
           "dry_run": {
             "type": "boolean",
@@ -6579,7 +6579,7 @@
               }
             ],
             "title": "Window Id",
-            "description": "Internal: stable per-browser-window id (set by the web app) so two windows of one chat keep-both instead of clobber. Agents/API may omit."
+            "description": "Optional identifier for the client window (set by the web app) so concurrent edits from two windows of the same chat are merged rather than overwritten. Agents/API may omit."
           },
           "cross_session_memory": {
             "anyOf": [
