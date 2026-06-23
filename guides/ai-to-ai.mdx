@@ -92,8 +92,8 @@ result = revert.json()
 # result["reverted_to_turn"]  → the turn the conversation now ends at
 ```
 
-The agent receives the document state from before that turn plus the original message text, rewrites the instruction more carefully, and re-sends. The original branch stays in the database for audit but is hidden from active reads. Returns `409` if a chat job is currently running on the same session — wait for it to settle first. See [Revert a session to a previous message](/concepts/sessions#revert-a-session-to-a-previous-message).
+The agent receives the document state from before that turn plus the original message text, rewrites the instruction more carefully, and re-sends. The original conversation is preserved for audit but hidden from active reads. Returns `409` if a chat job is currently running on the same session — wait for it to settle first. See [Revert a session to a previous message](/concepts/sessions#revert-a-session-to-a-previous-message).
 
 ## With MCP
 
-If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Integration](/mcp/setup) for setup. The AI agent gets native access to all 22 SuperDocs tools — including `revert_session_to_message` — without writing any API client code.
+If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Integration](/mcp/setup) for setup. The AI agent gets native access to all 33 SuperDocs tools — including `revert_session_to_message` — without writing any API client code.

@@ -341,7 +341,7 @@ A session can hold several open documents. Your agent targets one explicitly by 
 
 ## Letting your agent undo a step
 
-If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. SuperDocs returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original branch stays in the database for audit but is hidden from active reads.
+If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. SuperDocs returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original conversation is preserved for audit but hidden from active reads.
 
 Concrete shape — register revert as a second tool alongside `edit_document`:
 

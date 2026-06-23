@@ -720,7 +720,7 @@
           "sessions"
         ],
         "summary": "Persist a user-edited document (non-AI autosave).",
-        "description": "Persist a HUMAN-edited document \u2014 the editor's debounced autosave + save-on-blur \u2014 WITHOUT\nan AI turn. Re-indexes the html into the target document (preserving its durable identity so it\nUPDATES the same Files entry), then durably writes it through (optimistic-concurrency version\ncheck + cross-session re-base + change notification) so pure typing is saved AND other open\nsessions converge. The AI-edit flow is unaffected (autosave saves first; an AI result re-bases\nvia the same concurrency check). Non-billable, REST-only (a UI affordance, not an MCP tool).",
+        "description": "Persist a HUMAN-edited document \u2014 the editor's debounced autosave + save-on-blur \u2014 WITHOUT\nan AI turn. Re-indexes the html into the target document (preserving its durable identity so it\nUPDATES the same Files entry), then saves it so pure typing is preserved AND other sessions with\nthe same document open stay in sync. The AI-edit flow is unaffected (autosave saves first; a\nlater AI result is merged with your saved edits). Non-billable, REST-only (a UI affordance, not an MCP tool).",
         "operationId": "save_human_document",
         "security": [
           {
@@ -884,7 +884,7 @@
           "sessions"
         ],
         "summary": "Open a new blank document as a tab in the session.",
-        "description": "Open a fresh BLANK document as a new focused tab in the session (the tab-strip \"+\").\nNon-billable \u2014 no AI, no upload pipeline; it becomes durable on first edit via write-through.\nREST-only (a manual UI affordance, not an MCP tool \u2014 agents create documents through chat).",
+        "description": "Open a fresh BLANK document as a new focused tab in the session (the tab-strip \"+\").\nNon-billable \u2014 no AI, no upload pipeline; it is saved on first edit.\nREST-only (a manual UI affordance, not an MCP tool \u2014 agents create documents through chat).",
         "operationId": "new_blank_document",
         "security": [
           {
@@ -971,11 +971,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 the live mailbox toast covers ongoing changes. Computed before the roster's reconcile advances the session's base_version.",
+              "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 ongoing changes are surfaced through the normal change feed. Computed before the roster updates the version this session has seen.",
               "default": false,
               "title": "Report Changed"
             },
-            "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 the live mailbox toast covers ongoing changes. Computed before the roster's reconcile advances the session's base_version."
+            "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 ongoing changes are surfaced through the normal change feed. Computed before the roster updates the version this session has seen."
           },
           {
             "name": "include_html",
@@ -1209,7 +1209,7 @@
           "sessions"
         ],
         "summary": "Close (remove) a document from a multi-document session.",
-        "description": "Remove document_id from the session's open documents (the tab close button). If it's the\nfocused document, focus another open document \u2014 `next_focus` if it's still open (so the client\ncan pick the adjacent tab), else the next remaining one; closing the last document leaves the\nsession empty. Returns the updated document roster + the now-focused document's HTML.\n\nPersists to BOTH the live cache AND the durable session state: the cache write makes the close\ntake effect immediately, and the durable write stops a later session warm-up (after a restart /\ncache eviction, or right after closing the last document) from resurrecting the closed document\nfrom stale state. The durable write is best-effort \u2014 a failure is logged, not fatal (the close\nstill holds for the live session).",
+        "description": "Remove document_id from the session's open documents (the tab close button). If it's the\nfocused document, focus another open document \u2014 `next_focus` if it's still open (so the client\ncan pick the adjacent tab), else the next remaining one; closing the last document leaves the\nsession empty. Returns the updated document roster + the now-focused document's HTML.\n\nThe close takes effect immediately and is persisted, so a later reconnect or session restore\nwon't bring the closed document back. Persistence is best-effort \u2014 a failure is logged, not\nfatal (the close still holds for the active session).",
         "operationId": "close_session_document",
         "security": [
           {
@@ -1394,7 +1394,7 @@
           "sessions"
         ],
         "summary": "Rewind a chat session to before a specific user message \u2014 restores both the document and the conversation in one call.",
-        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained for audit. The original conversation is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature.",
+        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained for audit. The original conversation is preserved server-side; the restored conversation becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature.",
         "operationId": "revert_session_to_message",
         "security": [
           {
@@ -1468,8 +1468,8 @@
           "v1",
           "sessions"
         ],
-        "summary": "Undo a revert: fork forward to the pre-revert head and restore the rolled-back turns.",
-        "description": "Revert is non-destructive: this re-forks the session FORWARD to the pre-revert head state\n(returned by the revert as redo_checkpoint_id), restores the document to that state through the\nSAME surgical merge-aware path (so another session's concurrent edits still merge / surface\nkeep-both), and un-archives exactly the chat turns the revert hid. Intended for use immediately\nafter a revert; once a new message is sent the branch diverges and the web app stops offering it.",
+        "summary": "Undo a revert: restore the pre-revert state and the rolled-back turns.",
+        "description": "Revert is non-destructive: this restores the session FORWARD to the pre-revert state\n(returned by the revert as redo_checkpoint_id), restores the document to that state while still\nmerging any concurrent edits from other sessions (surfacing keep-both where they clash), and\nun-archives exactly the chat turns the revert hid. Intended for use immediately after a revert;\nonce a new message is sent the timeline diverges and the web app stops offering it.",
         "operationId": "redo_revert",
         "security": [
           {
@@ -6142,7 +6142,7 @@
           "redo_checkpoint_id": {
             "type": "string",
             "title": "Redo Checkpoint Id",
-            "description": "The pre-revert head checkpoint returned by the revert response."
+            "description": "The identifier of the pre-revert state, returned by the revert response."
           },
           "window_id": {
             "anyOf": [
@@ -6154,7 +6154,7 @@
               }
             ],
             "title": "Window Id",
-            "description": "Internal: the browser-window id (per-window concurrency guard)."
+            "description": "Optional identifier for the client window issuing the request, used to coordinate concurrent reverts from multiple browser tabs."
           }
         },
         "additionalProperties": true,
@@ -6164,7 +6164,7 @@
           "redo_checkpoint_id"
         ],
         "title": "RedoRequest",
-        "description": "Undo a revert \u2014 fork forward to the captured pre-revert head and restore the rolled-back\nconversation + document. Meant for use immediately after a revert (before sending a new message,\nwhich would diverge the branch); the web app gates it to that window."
+        "description": "Undo a revert \u2014 restore the captured pre-revert state and the rolled-back\nconversation + document. Meant for use immediately after a revert (before sending a new message,\nwhich would diverge the timeline); the web app gates it to that window."
       },
       "RenameDocumentRequest": {
         "properties": {
@@ -6213,7 +6213,7 @@
               }
             ],
             "title": "Window Id",
-            "description": "Internal: the browser-window id issuing the revert (per-window concurrency guard)."
+            "description": "Optional identifier for the client window issuing the revert, used to coordinate concurrent reverts from multiple browser tabs."
           }
         },
         "additionalProperties": true,
@@ -6298,7 +6298,7 @@
               }
             ],
             "title": "Redo Checkpoint Id",
-            "description": "The pre-revert head checkpoint. Revert is non-destructive \u2014 passing this back to POST /sessions/{id}/redo (with the same turn_index) forks forward to it and un-archives the rolled-back turns, undoing the revert. Null on a dry-run or a first-message reset."
+            "description": "The identifier of the pre-revert state. Revert is non-destructive \u2014 passing this back to POST /sessions/{id}/redo (with the same turn_index) restores it and un-archives the rolled-back turns, undoing the revert. Null on a dry-run or a first-message reset."
           }
         },
         "type": "object",
