@@ -38,7 +38,7 @@ Three SuperDocs endpoints can drive a server-side integration. Pick based on doc
 |---|---|
 | `POST /v1/chat` (sync) | Default. Documents under ~50 pages, single-call edits, batch processing. Simplest pattern: one HTTP call in, one HTTP response out. |
 | `POST /v1/chat/async` + `GET /v1/jobs/{job_id}` (polling) | Long-running edits where you want to fire-and-forget and check back. Documents over ~50 pages, complex multi-section rewrites, or workflows where you don't want to block on a single HTTP call. |
-| `POST /v1/chat/async` + SSE stream | Rare for server-side. Use only if you specifically want to react to intermediate progress events or `proposed_change` events one at a time. Most server integrations don't need this. |
+| `POST /v1/chat/async` + SSE stream | Rare for server-side. Use only if you specifically want to react to intermediate progress events or the turn's `proposed_change_batch` event. Most server integrations don't need this. |
 
 For 90% of server-side integrations, the sync `/v1/chat` endpoint is the right answer.
 

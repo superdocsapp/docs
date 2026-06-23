@@ -186,7 +186,7 @@ This fallback is for the genuinely-no-signal case only. Inference from any real 
 
 Whatever shape your integration takes, verify these five universal checks:
 
-1. **Document HTML round-trip preserves `data-chunk-id` attributes.** Send a real document HTML to SuperDocs, receive the response, send the response back unchanged on the next request, verify the `chunk_id` references in `proposed_change` events match elements that exist in your document.
+1. **Document HTML round-trip preserves `data-chunk-id` attributes.** Send a real document HTML to SuperDocs, receive the response, send the response back unchanged on the next request, verify the `chunk_id` references in `proposed_change_batch` events match elements that exist in your document.
 2. **API key is server-side only.** No browser network request should contain the `sk_` value. Verify in DevTools or your backend logs.
 3. **At least one full round-trip succeeds end-to-end.** A user (or your AI, or your batch worker) sends a message; SuperDocs returns proposed changes; those changes are surfaced (UI / agent / log) per your declared `APPROVAL_MODE`; approved changes apply to the document.
 4. **Failure modes are handled.** If the SuperDocs API returns 4xx/5xx, your code surfaces a useful error. If the SSE stream drops, your code reconnects or surfaces an error.
@@ -387,7 +387,7 @@ All requests go through your API client (Phase 2). Paths are relative to `https:
 
 - `POST v1/chat` — sync: body `{ message, session_id, document_html, approval_mode?: "approve_all" | "ask_every_time", document_id? }` → returns the full result inline. Best for batch / server-side / agent-tool integrations that don't need streaming. `document_id` targets a specific open document in multi-document sessions (omit = focused document).
 - `POST v1/chat/async` — async: body same as above → returns `{ job_id }`. Use with the SSE stream or polling endpoint.
-- `GET v1/chat/{session_id}/stream?job_id=...&api_key=...&last_sequence=...` — SSE stream of eleven event types (`document_sync`, `intermediate`, `proposed_change`, `proposed_change_batch`, `continue_prompt`, `documents_changed`, `model_fallback`, `final`, `usage`, `ui_pointer`, `error`). Browser-side requires the `api_key` query param because `EventSource` can't set custom headers; on reconnect pass `last_sequence` to replay only newer events.
+- `GET v1/chat/{session_id}/stream?job_id=...&api_key=...&last_sequence=...` — SSE stream of nine event types (`intermediate`, `proposed_change_batch`, `document_sync`, `continue_prompt`, `documents_changed`, `model_fallback`, `final`, `usage`, `error`). `proposed_change_batch` is the event that carries proposed changes for human review (its `changes[]` array holds the whole batch — single-change turns arrive as a one-element array). Browser-side requires the `api_key` query param because `EventSource` can't set custom headers; on reconnect pass `last_sequence` to replay only newer events.
 - `GET v1/jobs/{job_id}` — poll for async job status. Use as an alternative to SSE for non-browser consumers.
 - `POST v1/chat/{session_id}/approve` — body: `{ job_id, approved, changes?: [{ change_id, approved, feedback? }] }`. Resumes the AI on the already-open SSE stream.
 - `GET v1/sessions/{session_id}/documents` — list the session's open documents (multi-document sessions): ids, chunk counts, focused flag, HTML. `POST .../documents/{document_id}/focus` switches focus; `DELETE .../documents/{document_id}?next_focus=...` closes one.
@@ -397,22 +397,30 @@ All requests go through your API client (Phase 2). Paths are relative to `https:
 SSE event `data:` shapes (all JSON):
 
 ```
-document_sync   { type, content }                  // content: full HTML
-intermediate    { type, content, sequence, timestamp }
-proposed_change { type, content, sequence }        // content: JSON-stringified ProposedChange
-final           { content, result }                // result.response, result.document_changes.updated_html
-usage           { monthly_used, monthly_limit, monthly_remaining, was_billable, subscription_tier }
-error           { error }
+document_sync         { type, content }                  // content: full HTML
+intermediate          { type, content, sequence, timestamp }
+proposed_change_batch { type, content, sequence }        // content: JSON-stringified batch (changes[])
+final                 { content, result }                // result.response, result.document_changes.updated_html
+usage                 { monthly_used, monthly_limit, monthly_remaining, was_billable, subscription_tier }
+error                 { error }
 ```
 
-`proposed_change.content` is a JSON-stringified string — you must `JSON.parse` it twice to access the change details. See the warning callout in the [SSE Streaming guide](https://docs.superdocs.app/guides/streaming).
+`proposed_change_batch` is the event that carries proposed changes for human review. The whole turn arrives as **one** event whose `changes[]` array holds every proposed change — even a single-change turn arrives as a one-element array. (You may also register a `proposed_change` listener defensively for forward-compatibility, but it never fires today — `proposed_change_batch` is what's emitted, so build your approval loop on it.)
 
-Parsed `proposed_change.content` shape:
+`proposed_change_batch.content` is a JSON-stringified string — you must `JSON.parse` it twice to access the batch. See the warning callout in the [SSE Streaming guide](https://docs.superdocs.app/guides/streaming).
+
+Parsed `proposed_change_batch.content` shape:
 ```
-{ change_id, operation: "edit" | "create" | "delete",
-  chunk_id, old_html, new_html,
-  ai_explanation, batch_id, batch_total, insert_after_chunk_id }
+{ batch_id, batch_total,
+  changes: [
+    { change_id, operation: "edit" | "create" | "delete",
+      chunk_id, old_html, new_html,
+      ai_explanation, document_id, insert_after_chunk_id },
+    ...
+  ] }
 ```
+
+Iterate `changes[]` to render each proposed change; call `/approve` with the `change_id` of each.
 
 ---
 
@@ -423,12 +431,12 @@ Parsed `proposed_change.content` shape:
 | `Missing SUPERDOCS_API_KEY` | env file not read | Restart your server; env vars are read on boot. |
 | 401 from any endpoint | key wrong or includes `Bearer ` literal | Value is just `sk_...` with no quotes, no "Bearer" prefix. |
 | SSE connection opens then closes | proxy transforms or buffers headers | Pipe upstream body unchanged; set `Cache-Control: no-cache, no-transform`. Disable buffering at any reverse proxy (nginx, Caddy, CloudFront). |
-| `proposed_change` fires, approve POST returns 404 | wrong session_id in the URL | Path must include the session ID exactly as sent in the original `/v1/chat/async` request. |
+| `proposed_change_batch` fires, approve POST returns 404 | wrong session_id in the URL | Path must include the session ID exactly as sent in the original `/v1/chat/async` request. |
 | Revert returns 409 | A chat job is in flight on the session | Wait for the SSE `final` event (or poll `/v1/jobs/{job_id}` until status is `completed`/`failed`) before retrying revert. Optionally cancel the job via `POST /v1/jobs/{job_id}/cancel` first. |
 | Revert returns 422 | The target user message predates the revert feature | Per-message revert only works on chats started after the feature shipped. Older sessions stay readable but their messages don't carry the rewind marker. Start a new session for full revert support. |
 | Document loses `data-chunk-id` after first edit | editor schema/config missing a node type | Add the missing node to your chunk-id-preservation config (see [Editor Integration](https://docs.superdocs.app/guides/editor-integration)). |
 | Diff card has empty `old_html` | operation is `create`, not `edit` | Correct — creates have no `old_html`. Render them as "new section" cards. |
-| `proposed_change.content` fields all undefined | missed the JSON double-parse | `JSON.parse(JSON.parse(event.data).content)` to access the change object. |
+| `proposed_change_batch.content` fields all undefined | missed the JSON double-parse | `JSON.parse(JSON.parse(event.data).content)` to access the batch, then iterate its `changes[]`. |
 | Silent round-trip loss of attributes | HTML sanitizer strips unknown attributes | Add `data-chunk-id` to your sanitizer's allowlist. |
 | AI agent's tool call fails to parse the response | agent expects JSON but SuperDocs returned HTML in the `updated_html` field | The HTML is the value; pass it through to wherever your document lives. The agent should treat it as opaque content, not parse it. |
 
@@ -482,7 +490,7 @@ Good luck.
 - [Agent Tool Integration](/guides/agent-tool-integration) — register SuperDocs as a tool in your existing AI agent's tool registry (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, generic JSON-schema).
 - [Server Integration](/guides/server-integration) — backend service / batch worker / queue processor patterns in Node, Python, Go, Ruby, and .NET.
 - [Human-in-the-Loop](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor) — inline diff overlay patterns (Cursor-style) and side-by-side review cards.
-- [SSE Streaming](/guides/streaming) — seven event types, the `proposed_change.content` double-parse, and the `EventSource` + `api_key` query-param pattern.
+- [SSE Streaming](/guides/streaming) — nine event types, the `proposed_change_batch.content` double-parse, and the `EventSource` + `api_key` query-param pattern.
 - [Async Jobs](/guides/async-jobs) — long-running operations with polling instead of SSE.
 - [JavaScript Examples](/examples/javascript) — working HITL flow plus a framework-agnostic two-pane frontend skeleton.
 - [MCP Setup](/mcp/setup) — for Claude Desktop, Cursor, VS Code, Windsurf, and other MCP clients.

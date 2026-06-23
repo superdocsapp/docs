@@ -296,21 +296,27 @@ async function chatWithApprovalAndStreaming(message, sessionId, documentHtml, ca
       callbacks.onProgress?.(data.content);
     });
 
-    // Each proposed change appears as soon as the AI generates it
-    es.addEventListener("proposed_change", (event) => {
+    // The whole batch of proposed changes arrives in one event — even a
+    // single-change turn comes through here as a one-element changes[] array.
+    // (You may also register "proposed_change" defensively, but it never fires
+    // today — proposed_change_batch is the event that's emitted.)
+    es.addEventListener("proposed_change_batch", (event) => {
       const envelope = JSON.parse(event.data);
-      const change = JSON.parse(envelope.content);  // double-parse — required
-      callbacks.onProposedChange?.(change, async (decision) => {
-        // Send the user's approve/deny decision back. SSE stays open through the cycle.
-        await fetch(`${BASE}/v1/chat/${sessionId}/approve`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            job_id,
-            changes: [{ change_id: change.change_id, ...decision }],
-          }),
+      const batch = JSON.parse(envelope.content);  // double-parse — required
+      // Surface every change in the batch for review.
+      for (const change of batch.changes) {
+        callbacks.onProposedChange?.(change, async (decision) => {
+          // Send this change's approve/deny decision back. SSE stays open through the cycle.
+          await fetch(`${BASE}/v1/chat/${sessionId}/approve`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              job_id,
+              changes: [{ change_id: change.change_id, ...decision }],
+            }),
+          });
         });
-      });
+      }
     });
 
     es.addEventListener("final", (event) => {
@@ -354,7 +360,7 @@ chatWithApprovalAndStreaming(
 
 **When to use streaming vs polling.**
 
-- **Streaming** — interactive editor UIs, any flow where a user is watching. Users see progress text within 1–5 seconds and proposed changes appear inline the moment the AI generates them.
+- **Streaming** — interactive editor UIs, any flow where a user is watching. Users see progress text within 1–5 seconds, and the turn's proposed changes arrive together in one `proposed_change_batch` event ready to render as a review list.
 - **Polling** — background batch processing, server-to-server flows, queues where the user isn't waiting. Simpler to implement; perfectly fine when latency feedback isn't a UX requirement.
 
 See [Streaming → Rendering intermediate events](/guides/streaming#rendering-intermediate-events-in-your-ui) for the in-flight bubble pattern, and [Async jobs → Latency expectations](/guides/async-jobs#latency-expectations-and-timeout-strategy) for typical operation durations.

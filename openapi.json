@@ -281,10 +281,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Clear ONE end-customer's memory file (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default).",
+              "description": "Clear ONE end-customer's stored memory (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default).",
               "title": "Memory Key"
             },
-            "description": "Clear ONE end-customer's memory file (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default)."
+            "description": "Clear ONE end-customer's stored memory (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default)."
           },
           {
             "name": "authorization",
@@ -1394,7 +1394,7 @@
           "sessions"
         ],
         "summary": "Rewind a chat session to before a specific user message \u2014 restores both the document and the conversation in one call.",
-        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained in the database for audit. The original conversation branch is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature (no checkpoint marker).",
+        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained for audit. The original conversation is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature.",
         "operationId": "revert_session_to_message",
         "security": [
           {
@@ -1745,7 +1745,7 @@
           "documents"
         ],
         "summary": "Upload Document To Editor",
-        "description": "Upload a document file and load it into the editor.\n\nConverts the file to HTML with formatting preserved (tables, colors, images).\nImages are extracted to cloud storage and referenced by URL.\nReturns the HTML for the frontend editor to display.\n\nAI indexing happens automatically on the first chat message.\nFor API clients who want immediate indexing, pass ?index=true.",
+        "description": "Upload a document file and load it into the editor.\n\nConverts the file to HTML with formatting preserved (tables, colors, images).\nImages are extracted to cloud storage and referenced by URL.\nReturns the HTML for the editor to display.\n\nAI indexing happens automatically on the first chat message.\nFor API clients who want immediate indexing, pass ?index=true.",
         "operationId": "upload_document_to_editor",
         "security": [
           {
@@ -1826,8 +1826,8 @@
           "v1",
           "documents"
         ],
-        "summary": "Upload a PNG/JPEG/WebP image and get back a GCS URL the editor can drop into <img src>.",
-        "description": "Upload a single inline image (PNG/JPEG/WebP) and return its GCS URL.\n\nUsed by:\n  \u2022 the frontend Excalidraw modal \u2014 saves the canvas-exported PNG so the\n    document can reference it via <img src=\"...\">.\n  \u2022 any future inline-image insertion path that needs a stable GCS URL.\n\nBucket: superdocs-document-images (same as AI-generated images and\nparsed-from-docx images). Path: {session-or-entity-id}/{uuid}.{ext}.\nPublic-read; UUID paths are unguessable; 180-day lifecycle.\n\nLimits:\n  \u2022 10MB per upload (covers any reasonable drawing/screenshot)\n  \u2022 content_type must start with image/\n  \u2022 PNG/JPEG/WebP/GIF/SVG mime types accepted; SVG also OK for completeness",
+        "summary": "Upload an image and get back a stable URL the editor can drop into <img src>.",
+        "description": "Upload a single inline image and return a stable URL you can reference\nin the document via <img src=\"...\">.\n\nAccepts PNG/JPEG/WebP/GIF/SVG, up to 10 MB per upload. The returned URL is\npublic-read with an unguessable path. Useful for saving a drawing or\nscreenshot so a document can embed it.",
         "operationId": "upload_inline_image",
         "security": [
           {
@@ -1955,7 +1955,7 @@
           "documents"
         ],
         "summary": "Request Large Export Email",
-        "description": "Enqueue a large-export job \u2014 runs in the background, emails a GCS\nsigned URL when the export finishes. 24h SLA promised in the email.",
+        "description": "Enqueue a large-export job \u2014 runs in the background and emails a\nsecure, time-limited download link when the export finishes. 24h SLA\npromised in the email.",
         "operationId": "request_large_export_email",
         "security": [
           {
@@ -2020,7 +2020,7 @@
           "documents"
         ],
         "summary": "Upload .docx/PDF/HTML/MD/RTF as the active editable document with chunk-ID structural editing.",
-        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. For files >100KB, prefer request_upload_url (pre-signed URL flow, ships in Phase B) to avoid token bloat from base64 through the agent context. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
+        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. For files >100KB, prefer request_upload_url (pre-signed URL flow) to avoid token bloat from base64 through the agent context. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
         "operationId": "upload_document_base64",
         "security": [
           {
@@ -3780,7 +3780,7 @@
           "downloads"
         ],
         "summary": "Get a pre-signed URL to download an exported document without proxying through the agent.",
-        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Internally this calls the same export pipeline as export_document, then stores the result in cloud storage and returns a signed URL. Specify format as 'pdf', 'docx', 'html', 'markdown', or 'txt' (legacy 'doc' also accepted).",
+        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Generates the document in the requested format and returns a time-limited signed download URL. Specify format as 'pdf', 'docx', 'html', 'markdown', or 'txt' (legacy 'doc' also accepted).",
         "operationId": "request_download_url",
         "security": [
           {
@@ -5029,7 +5029,7 @@
               "doc"
             ],
             "title": "Format",
-            "description": "Export format. Canonical ExportFormat Literal from export.schemas.",
+            "description": "Export format (docx, pdf, html, markdown, txt).",
             "default": "docx"
           },
           "filename": {
@@ -5124,7 +5124,7 @@
           "editor_action": {
             "type": "string",
             "title": "Editor Action",
-            "description": "Frontend instruction: 'update' (load document_state HTML into editor), 'clear' (reset editor), or 'keep' (no change).",
+            "description": "Client instruction: 'update' (load document_state HTML into editor), 'clear' (reset editor), or 'keep' (no change).",
             "default": "keep"
           }
         },
@@ -5211,7 +5211,7 @@
           "embed_images": {
             "type": "boolean",
             "title": "Embed Images",
-            "description": "HTML export only. When True, images are base64-embedded for offline portability (raises size cap to 150 MB). When False, images stay as GCS URLs (smaller file, online-only).",
+            "description": "HTML export only. When True, images are base64-embedded for offline portability (raises size cap to 150 MB). When False, images are referenced by URL (smaller file, online-only).",
             "default": false
           },
           "watermark_text": {
@@ -5238,7 +5238,7 @@
         },
         "type": "object",
         "title": "ExportOptions",
-        "description": "User-facing export customisation. Persisted to frontend localStorage\nkeyed `superdocs.exportOptions.v1`; sent on every export request from the\nnew DownloadMenu."
+        "description": "User-facing export customisation (page size, orientation, margins,\nfilename, watermark). Sent on every export request."
       },
       "ExportRequest": {
         "properties": {
@@ -5253,7 +5253,7 @@
               }
             ],
             "title": "Session Id",
-            "description": "Session ID to export from (Mode B). Required if html is omitted."
+            "description": "Session ID to export from (the document is taken from the session). Required if html is omitted."
           },
           "html": {
             "anyOf": [
@@ -5266,7 +5266,7 @@
               }
             ],
             "title": "Html",
-            "description": "HTML content to export (Mode A). Used instead of session document if provided."
+            "description": "HTML content to export inline. Used instead of the session document if provided."
           },
           "format": {
             "type": "string",
@@ -5310,12 +5310,12 @@
               }
             ],
             "title": "Upload Id",
-            "description": "Mode C: ID returned by /v1/uploads (Phase B). When set, the route fetches the HTML body from GCS instead of using the html field."
+            "description": "ID returned by /v1/uploads (large-document upload flow, for payloads above ~25 MB). When set, the route fetches the HTML body from the uploaded payload instead of using the html field."
           }
         },
         "type": "object",
         "title": "ExportRequest",
-        "description": "Unified request body for POST /v1/documents/export.\n\nBackward-compat notes:\n- Top-level ``filename`` is retained for legacy clients (frontend\n  previously sent only ``{ html }`` and the route auto-extracted the\n  filename from <h1>). New clients should use ``options.filename`` \u2014\n  options.filename wins when both are set.\n- ``format`` default flipped from \"doc\" \u2192 \"docx\" (architecture\n  decision #1). Existing MCP callers passing format=\"doc\" explicitly\n  keep working for 7 days, then the legacy path is removed."
+        "description": "Unified request body for POST /v1/documents/export.\n\nBackward-compat notes:\n- Top-level ``filename`` is retained for legacy clients that sent only\n  ``{ html }`` and relied on the filename being auto-extracted from the\n  first <h1>. New clients should use ``options.filename`` \u2014\n  options.filename wins when both are set.\n- ``format`` defaults to \"docx\". Legacy callers passing format=\"doc\"\n  explicitly keep working during a short back-compat window."
       },
       "HTTPValidationError": {
         "properties": {
@@ -5811,7 +5811,7 @@
         },
         "type": "object",
         "title": "LargeExportEmailRequest",
-        "description": "Body for POST /v1/documents/export/email-request.\n\nUsed when a synchronous export hits the 100MB body cap. Frontend POSTs\nhere with the same payload it would have sent to /v1/documents/export\n(minus the html field \u2014 that comes from the session). Worker streams\nthe result to GCS and emails the signed URL within 24h."
+        "description": "Body for POST /v1/documents/export/email-request.\n\nUsed when a synchronous export exceeds the inline body cap. Send the same\npayload you would POST to /v1/documents/export (minus the html field \u2014\nthat comes from the session). The export is generated in the background\nand a secure download link is emailed within 24h."
       },
       "OpenDocumentsRequest": {
         "properties": {
@@ -6188,7 +6188,7 @@
             "type": "integer",
             "minimum": 0.0,
             "title": "Turn Index",
-            "description": "Turn index of the user message to revert. The text of that message is returned in compose_text so the caller can re-edit and resend it. Every chat row at this turn or later is soft-archived (kept in the database for analysis but hidden from active reads)."
+            "description": "Turn index of the user message to revert. The text of that message is returned in compose_text so the caller can re-edit and resend it. Every chat row at this turn or later is soft-archived (hidden from active reads but retained for audit)."
           },
           "dry_run": {
             "anyOf": [
@@ -6239,7 +6239,7 @@
           "compose_text": {
             "type": "string",
             "title": "Compose Text",
-            "description": "The text of the user message that was reverted. Frontends should pre-fill the compose box with this so the user can edit and resend."
+            "description": "The text of the user message that was reverted. Clients should pre-fill the compose box with this so the user can edit and resend."
           },
           "document_state": {
             "anyOf": [
@@ -6255,13 +6255,13 @@
           "editor_action": {
             "type": "string",
             "title": "Editor Action",
-            "description": "Frontend instruction: 'update' to load the restored document, or 'clear' to reset the editor to empty.",
+            "description": "Client instruction: 'update' to load the restored document, or 'clear' to reset the editor to empty.",
             "default": "update"
           },
           "archived_turn_count": {
             "type": "integer",
             "title": "Archived Turn Count",
-            "description": "Number of chat rows soft-archived by this revert (turns hidden from the UI but retained in the database)."
+            "description": "Number of chat rows soft-archived by this revert (turns hidden from the UI but retained for audit)."
           },
           "revert_changes": {
             "anyOf": [
@@ -6740,7 +6740,7 @@
               "export-html"
             ],
             "title": "Purpose",
-            "description": "What this file will be used for. 'document' = the active editable doc; 'attachment' = read-only AI-searchable reference; 'export-html' = HTML payload destined for /v1/documents/export Mode C (large export bypass for >25 MB).",
+            "description": "What this file will be used for. 'document' = the active editable doc; 'attachment' = read-only AI-searchable reference; 'export-html' = HTML payload destined for /v1/documents/export (large-export upload flow, for documents above ~25 MB).",
             "default": "document"
           }
         },

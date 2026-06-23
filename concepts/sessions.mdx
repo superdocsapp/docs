@@ -81,11 +81,11 @@ The response gives you:
 - `document_state` + `editor_action` — Same shape as the history endpoint. Apply them to your editor.
 - `archived_turn_count` — How many rows were soft-archived.
 
-What happens server-side:
-- The chat session is forked at the checkpoint stored on the previous AI reply. The original branch (the messages and document state from the reverted point onward) is kept in the database for audit but hidden from active reads.
-- Subsequent messages on this session continue from the fork point. There is no branch-switcher in the API today — the new branch becomes the only visible timeline.
+What happens:
+- The session is restored to the state at that point in the conversation — both the chat history and the document are rewound to the previous AI reply. Messages and document state from the reverted point onward are retained for audit but hidden from active reads.
+- Subsequent messages on this session continue from that restored point. There is no timeline-switcher in the API today — the restored timeline becomes the only visible one.
 - If the session has a chat job currently running (in progress or awaiting approval), the revert call returns `409`. Wait for the job to settle or cancel it first.
-- If the user message predates the revert feature (no checkpoint marker recorded), the call returns `422`. Older sessions can still be loaded; only their per-message revert is unavailable.
+- If the user message predates the revert feature (its `checkpoint_id` is `null`), the call returns `422`. Older sessions can still be loaded; only their per-message revert is unavailable.
 
 ## Session isolation
 

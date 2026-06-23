@@ -291,7 +291,7 @@ The simplest pattern. Pass `approval_mode: "approve_all"` and SuperDocs returns 
 
 ### `ask_every_time` — your agent reviews each proposed change
 
-Pass `approval_mode: "ask_every_time"` and SuperDocs returns proposed changes one at a time via SSE. Your agent reads each `proposed_change` event (parse `event.data` then `JSON.parse` the `content` field again — see the [SSE Streaming guide](/guides/streaming) for the double-parse warning), decides whether to approve based on its own reasoning, and POSTs to `/v1/chat/{session_id}/approve` to either accept or reject.
+Pass `approval_mode: "ask_every_time"` and SuperDocs returns the turn's proposed changes via SSE. The whole turn arrives as one `proposed_change_batch` event whose `changes[]` array holds every proposed change (a single-change turn arrives as a one-element array). Your agent reads that event (parse `event.data` then `JSON.parse` the `content` field again — see the [SSE Streaming guide](/guides/streaming) for the double-parse warning), loops over `changes[]` deciding whether to approve each based on its own reasoning, and POSTs to `/v1/chat/{session_id}/approve` to accept or reject. (You may also register a `proposed_change` listener defensively for forward-compatibility, but it never fires today — build your review loop on `proposed_change_batch`.)
 
 Use this when:
 
@@ -303,19 +303,23 @@ The decision flow inside the agent looks like:
 
 ```python
 # Pseudocode — adapt to your framework
-for proposed_change in stream_proposed_changes(job_id, session_id):
-    # The agent reasons about whether to approve
-    decision = await agent.reason(
-        f"SuperDocs proposed: {proposed_change['ai_explanation']}\n"
-        f"Old: {proposed_change['old_html']}\n"
-        f"New: {proposed_change['new_html']}\n"
-        "Approve or deny?"
-    )
+# Each batch is the whole turn: parse the proposed_change_batch event, then
+# loop over its changes[] array (one element for a single-change turn).
+for batch in stream_proposed_change_batches(job_id, session_id):
+    decisions = []
+    for change in batch["changes"]:
+        # The agent reasons about whether to approve each change
+        decision = await agent.reason(
+            f"SuperDocs proposed: {change['ai_explanation']}\n"
+            f"Old: {change['old_html']}\n"
+            f"New: {change['new_html']}\n"
+            "Approve or deny?"
+        )
+        decisions.append({"change_id": change["change_id"], "approved": decision == "approve"})
     httpx.post(
         f"https://api.superdocs.app/v1/chat/{session_id}/approve",
         headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"},
-        json={"job_id": job_id, "approved": decision == "approve",
-              "changes": [{"change_id": proposed_change["change_id"], "approved": decision == "approve"}]},
+        json={"job_id": job_id, "changes": decisions},
     )
 ```
 
@@ -374,6 +378,6 @@ If your agent framework isn't covered here or the tool-calling pattern doesn't m
 
 - [Server Integration](/guides/server-integration) — if your agent is one of several services in a backend, the same patterns apply more broadly.
 - [Human-in-the-Loop](/guides/human-in-the-loop) — if your agent surfaces proposed changes to a human via your UI, the rendering patterns there work for chat-thread cards too.
-- [SSE Streaming](/guides/streaming) — if you choose `ask_every_time` and need to consume proposed changes one at a time.
+- [SSE Streaming](/guides/streaming) — if you choose `ask_every_time` and need to consume the turn's `proposed_change_batch` event.
 - [Async Jobs](/guides/async-jobs) — if you want polling instead of SSE.
 - [Integration Starter Prompt](/guides/integration-starter-prompt) — paste this into your coding agent to wire all the above up automatically.
