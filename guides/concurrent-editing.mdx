@@ -19,6 +19,10 @@ SuperDocs gives you the pieces to keep those copies converged — a lightweight 
 - When any session commits a change to a document (an AI turn, or a human autosave), other sessions that hold the **same** document can learn about it by polling a change feed.
 - On a change, you re-fetch that one document and apply it **per section** onto your live editor — never a whole-document reload, which would wipe whatever the user is typing right now.
 
+<Note>
+  **`window_id` (optional) — disambiguate two windows of the *same* session.** `chat`, `chat_async`, `revert`, and `redo` accept an optional `window_id`. If you run two windows of the **same** `session_id` (rather than two separate sessions), set a stable per-window id so the server can tell concurrent writers apart and merge their edits instead of letting one overwrite the other. It's optional — the per-section apply discipline in this guide works without it, and most integrators using one session per place don't need it — but it's the precise lever for the same-session, multi-window case.
+</Note>
+
 This is soft, eventually-consistent collaboration — converge-on-poll, not a real-time cursor-sharing CRDT. It's deliberately simple: a REST poll on a 1–2 second cadence, no held connection per editor.
 
 ## Polling for other sessions' edits
@@ -158,7 +162,9 @@ If a `document_removed` event arrives for a document the user is mid-edit in, ar
 POST /v1/sessions/{session_id}/documents/{document_id}/unarchive
 ```
 
-Send the editor's current `html` (same body shape as `/save`). It un-archives the document, re-links it to this session, and saves the latest content — idempotent if another session already restored it. REST-only and non-billable.
+Send the editor's current `html` (same body shape as `/save`). It un-archives the document, re-links it to this session, and **saves the latest content** — idempotent if another session already restored it. This session-scoped, keep-editing form is non-billable and isn't an MCP tool — it's a UI affordance for the mid-edit case, because it persists the in-progress `html` as part of the restore.
+
+For a plain restore that doesn't carry editor content — restoring an archived document by its durable id from anywhere — use `POST /v1/documents/{document_id}/unarchive`, which is also the [`unarchive_document` MCP tool](/mcp/available-tools) (non-billable). An agent can restore a document with it; the session-scoped form above is the one to use only when you need to preserve a user's unsaved edits during the restore.
 
 ## Putting it together
 

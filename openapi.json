@@ -550,6 +550,69 @@
         }
       }
     },
+    "/v1/documents/{document_id}/unarchive": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Restore (un-archive) a previously archived document by its id.",
+        "description": "Restore (un-archive) a saved document by its id \u2014 the mirror of archive_document. The document\nre-enters your Files view and can be opened/edited again (open it into a chat with open_documents).\n`document_id` is the same id used by list_documents / archive_document. Idempotent: restoring an\nalready-active (or unknown) document is a no-op. Non-billable.",
+        "operationId": "unarchive_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/sessions/{session_id}/documents/open": {
       "post": {
         "tags": [
@@ -799,12 +862,11 @@
       "post": {
         "tags": [
           "v1",
-          "mcp",
           "sessions"
         ],
-        "summary": "Restore (un-archive) an archived document.",
+        "summary": "Restore a document another session archived, keeping your current edits (web app).",
         "description": "Restore (un-archive) a document that was archived, re-linking it to this session and bringing\nits content back. `document_id` is the session-local id (same as /save); the durable id is\nrecovered from the cached document. Idempotent: restoring an already-active (or never-archived)\ndocument is a no-op. Non-billable.\n\nTwo shapes: WITHOUT a body (e.g. an AI agent restoring a document by id) the archived content is\nrestored as-is; WITH a body carrying the current editor HTML (the web app's \"keep editing\n(restores it)\" choice after another session deleted the document) the document is restored AND the\nsupplied edits are saved on top, so it converges for everyone.",
-        "operationId": "unarchive_document",
+        "operationId": "restore_document_keep_editing",
         "security": [
           {
             "HTTPBearer": []
@@ -1402,7 +1464,7 @@
           "sessions"
         ],
         "summary": "Restore the full conversation and document state for a previous session.",
-        "description": "Returns complete message history (user and AI), final document HTML with chunk IDs preserved, attachment list, and editor actions (font, color, alignment changes). Use to continue editing a document you started in a prior session. The AI rehydrates with full context of all prior decisions, chunk IDs, and attachments.",
+        "description": "Returns complete message history (user and AI), final document HTML with chunk IDs preserved, attachment list, and editor actions (font, color, alignment changes). Use to continue editing a document you started in a prior session. The AI rehydrates with full context of all prior decisions, chunk IDs, and attachments. Pass include_document_html=false to skip the full document body when you only need the conversation.",
         "operationId": "get_session_history",
         "security": [
           {
@@ -1436,6 +1498,18 @@
               "title": "Focus Document Id"
             },
             "description": "Durable id of the document to focus on restore (e.g. the file the user clicked in the Files view). When set, that document is shown in the editor and marked focused in the roster; omit to use the session's own last-focused document."
+          },
+          {
+            "name": "include_document_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When false, omit the restored document's full HTML body (document_state.html_content) to keep your context small \u2014 agents that just need the conversation + metadata should set false. Default true (the web app needs the body to re-render the editor).",
+              "default": true,
+              "title": "Include Document Html"
+            },
+            "description": "When false, omit the restored document's full HTML body (document_state.html_content) to keep your context small \u2014 agents that just need the conversation + metadata should set false. Default true (the web app needs the body to re-render the editor)."
           },
           {
             "name": "authorization",
@@ -1984,7 +2058,7 @@
           "mcp"
         ],
         "summary": "Export the current document as a styled .docx (default), .pdf, .html, .md, or .txt file with full fidelity.",
-        "description": "Round-trips the document through the original docx renderer, preserving tables, borders, shading, alternating row colors, headers, footers, fonts, inline styling, and embedded images. Two modes: pass html directly to export ad-hoc content, OR pass session_id to export the session's current state. Format options: 'docx' (default, native Open XML via python-docx, best for programmatic processing or mail merge), 'pdf', 'html', 'markdown', or 'txt' ('doc' is a legacy Word-compatible HTML alias). Fidelity is the differentiator vs naive HTML to docx converters.",
+        "description": "Round-trips the document through the original docx renderer, preserving tables, borders, shading, alternating row colors, headers, footers, fonts, inline styling, and embedded images. Two modes: pass html directly to export ad-hoc content, OR pass session_id to export the session's current state. Format options: 'docx' (default, native Open XML, best for programmatic processing or mail merge), 'pdf', 'html', 'markdown', or 'txt' ('doc' is a legacy Word-compatible HTML alias). Fidelity is the differentiator vs naive HTML to docx converters.",
         "operationId": "export_document",
         "security": [
           {
@@ -2347,6 +2421,18 @@
             "description": "Maximum number of jobs to return"
           },
           {
+            "name": "compact",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs.",
+              "default": false,
+              "title": "Compact"
+            },
+            "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs."
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -2553,6 +2639,18 @@
               "title": "Limit"
             },
             "description": "Maximum number of jobs to return"
+          },
+          {
+            "name": "compact",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs.",
+              "default": false,
+              "title": "Compact"
+            },
+            "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs."
           },
           {
             "name": "authorization",
@@ -3694,7 +3792,7 @@
           "uploads"
         ],
         "summary": "Parse an uploaded file into structured HTML with chunk IDs for targeted AI editing.",
-        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64. Returns structured HTML with unique chunk IDs on every paragraph, heading, table, row, and cell \u2014 enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. Counts as one billable operation. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as read-only AI-searchable reference.",
+        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64: every paragraph, heading, table, row, and cell gets a unique chunk ID, enabling targeted structural edits via chat (\"remove row 3 of the pricing table\" works), with tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. By default the response is compact (metadata only, no document body) to keep your context small \u2014 the document is loaded into the session and you edit it via chat; pass return_html=true if you need the parsed HTML inline. Uploading and parsing is NOT itself a billable operation \u2014 you are charged only when the AI edits the document. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as a read-only AI-searchable reference.",
         "operationId": "process_uploaded_document",
         "security": [
           {
@@ -5208,7 +5306,7 @@
               "doc"
             ],
             "title": "Format",
-            "description": "Export format. Default flipped from 'doc' to 'docx' (2026-05-27).",
+            "description": "Export format. One of docx (default), pdf, html, markdown, txt.",
             "default": "docx"
           },
           "options": {
@@ -5947,8 +6045,14 @@
               "attachment"
             ],
             "title": "Parse Mode",
-            "description": "'document' = parse and load as the active editable doc (returns parsed HTML); 'attachment' = process asynchronously as AI-searchable reference (returns job_id to poll).",
+            "description": "'document' = parse and load as the active editable doc; 'attachment' = process asynchronously as AI-searchable reference (returns job_id to poll).",
             "default": "document"
+          },
+          "return_html": {
+            "type": "boolean",
+            "title": "Return Html",
+            "description": "When false (default), the response is compact \u2014 metadata only (chunks_count, version_id, page_setup), no document body \u2014 to keep your context small; the document is loaded into the session and you edit it via chat. Set true only if you actually need the parsed HTML returned inline.",
+            "default": false
           }
         },
         "type": "object",

@@ -104,7 +104,6 @@ This keeps each user's conversations and documents separate.
 
 ## Delete a session
 
-```bash
-curl -X DELETE https://api.superdocs.app/v1/users/me/sessions/project-proposal-v1 \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
+Session deletion lives at `/v1/users/me/sessions/{id}`, which is part of the web-app account surface — it accepts web-app session tokens only and **rejects `sk_` / `lce_` API keys with a `401`**. Delete sessions from the browser at [use.superdocs.app](https://use.superdocs.app) → Settings.
+
+From an API-key context you don't need to delete sessions: they persist server-side but are never billed unless used, so simply stop reusing a `session_id` to retire it. Each user's sessions stay isolated regardless.

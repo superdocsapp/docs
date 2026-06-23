@@ -17,12 +17,13 @@ All API errors return a JSON response with a `detail` field:
 
 | Code | Meaning | Common causes |
 |------|---------|---------------|
-| **400** | Bad Request | Empty message, unsupported file type, invalid parameters |
+| **400** | Bad Request | Empty message, invalid parameters, a legacy `.doc` upload (convert to `.docx`) |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
 | **403** | Forbidden | Accessing a resource you don't own |
 | **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired |
 | **409** | Conflict | Revert blocked because a chat job is currently running on the same session |
 | **413** | Request Entity Too Large | Request body or export payload above the size cap |
+| **415** | Unsupported Media Type | Upload file extension not supported (use `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`) |
 | **422** | Validation Error | Request body doesn't match expected schema; format value outside the allowed enum; revert target message predates the revert feature |
 | **429** | Too Many Requests | Monthly operation limit reached |
 | **500** | Internal Server Error | Unexpected server error |
@@ -56,15 +57,23 @@ All API errors return a JSON response with a `detail` field:
 {"detail": "Legacy .doc files are not supported. Please convert to .docx format and try again."}
 ```
 
-**Fix:** Use a supported format (`.pdf`, `.docx`, `.txt`, `.rtf`, `.md`). Convert `.doc` files to `.docx`.
+**Fix:** Convert `.doc` files to `.docx`. (Legacy binary `.doc` is rejected with a `400`; other unsupported extensions return a `415` — see below.)
+
+### Unsupported file type (415)
+
+```json
+{"detail": "Unsupported file type: .xyz. Supported types: .pdf, .docx, .txt, .rtf, .md, .html, .htm"}
+```
+
+**Fix:** Upload one of the supported formats — `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. RTF is supported as an upload **input** only; it is not an export target. Catch `415` (Unsupported Media Type) separately from `400` when handling upload-validation failures.
 
 ### Rate limit (429)
 
 ```json
-{"detail": "Monthly operation limit (500) reached. Upgrade your plan for more operations."}
+{"detail": "Your monthly operation quota (500) is exhausted. Upgrade to Pro for uninterrupted pay-as-you-go overage."}
 ```
 
-**Fix:** Upgrade your plan at Settings > Billing, or wait for your monthly reset. Check the `usage` object in chat responses to monitor remaining operations.
+**Fix:** Upgrade your plan at Settings > Billing, or wait for your monthly reset. Branch on the `429` status and the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers rather than the `detail` string (the wording may change). Check the `usage` object in chat responses to monitor remaining operations.
 
 ### Timeout (504)
 

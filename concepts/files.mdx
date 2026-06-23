@@ -75,7 +75,7 @@ The MCP tool is `init_session`.
 ## Rename a File
 
 ```bash
-curl -X POST https://api.superdocs.app/v1/documents/{document_id}/rename \
+curl -X PATCH https://api.superdocs.app/v1/documents/{document_id} \
   -H "Authorization: Bearer sk_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"title": "Q3 Vendor Agreement"}'
@@ -90,15 +90,31 @@ The MCP tool is `rename_document`.
 Archiving removes a File from your active list. It's a **soft-delete: recoverable**, not an immediate permanent erase. Archived Files stay restorable for roughly 30 days before they are purged, after which they're gone for good.
 
 ```bash
-curl -X POST https://api.superdocs.app/v1/documents/{document_id}/archive \
+curl -X DELETE https://api.superdocs.app/v1/documents/{document_id} \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
+
+Two optional query params control what happens when the File is currently open somewhere:
+
+- `?force=true` — archive even if the File is still open in a live session. Without it, archiving a File that another session is actively holding returns a `held_by_other` warning and leaves it untouched, so you don't pull a document out from under someone mid-edit.
+- `?from_session={session_id}` — also detach the File from that session as part of the archive.
 
 The MCP tool is `archive_document`.
 
 <Warning>
 **`archive_document` is destructive.** It's a soft-delete — the File is recoverable for about 30 days and then permanently purged. If you expose this to an AI agent, treat it like any other delete: confirm intent before calling it. There is no separate permanent-delete-by-default; archiving is the only removal path, and the ~30-day window is your safety net.
 </Warning>
+
+## Restore (un-archive) a File
+
+Bring an archived File back to your active list — the clean inverse of archive. It takes the same durable `document_id` you'd pass to archive, so you can round-trip archive ↔ restore by the same id (no session needed).
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/{document_id}/unarchive \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+Idempotent — restoring an already-active File is a no-op. The MCP tool is `unarchive_document`. (Both are non-billable.)
 
 ## Files vs sessions vs open documents
 

@@ -34,10 +34,10 @@ curl -X POST https://api.superdocs.app/v1/chat/async \
     "document_html": "..."
   }'
 
-# Response: { "job_id": "job_abc123", "session_id": "my-session", ... }
+# Response: { "job_id": "550e8400-e29b-41d4-a716-446655440000", "session_id": "my-session", ... }
 
 # 2. Stream progress (auth via query parameter)
-curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=job_abc123&api_key=sk_YOUR_API_KEY"
+curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=550e8400-e29b-41d4-a716-446655440000&api_key=sk_YOUR_API_KEY"
 ```
 
 <Note>
@@ -313,7 +313,7 @@ data: {"type": "model_fallback", "content": "{\"from_tier\": \"core\", \"to_tier
 Every event carries a monotonically increasing `sequence` number. If your EventSource connection drops mid-job, reconnect with the `last_sequence` query parameter set to the highest sequence you already processed — the stream replays **only newer events**, never the full history:
 
 ```bash
-curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=job_abc123&last_sequence=17&api_key=sk_YOUR_API_KEY"
+curl -N "https://api.superdocs.app/v1/chat/my-session/stream?job_id=550e8400-e29b-41d4-a716-446655440000&last_sequence=17&api_key=sk_YOUR_API_KEY"
 ```
 
 Omit `last_sequence` (or pass `0`) to receive the full event history for the job — useful when a fresh client attaches to an already-running job. This also makes reconnecting after `approve_change` safe: already-rendered `proposed_change_batch` / `document_sync` events are not re-delivered.

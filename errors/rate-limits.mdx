@@ -18,7 +18,7 @@ SuperDocs uses operation-based limits, not request-rate limits. Each AI action t
 
 ## Handling 429 responses
 
-When you hit the limit on the free plan, the API returns:
+When you hit the limit on the free plan, the API returns a `429` with three usage headers and a JSON `detail` explaining the quota is exhausted:
 
 ```
 HTTP/1.1 429 Too Many Requests
@@ -26,12 +26,14 @@ X-Usage-Limit: 500
 X-Usage-Used: 500
 X-Usage-Remaining: 0
 
-{"detail": "Monthly operation limit (500) reached. Upgrade your plan for more operations."}
+{"detail": "Your monthly operation quota (500) is exhausted. Upgrade to Pro for uninterrupted pay-as-you-go overage."}
 ```
 
+Branch your client on the `429` status and the `X-Usage-*` headers rather than string-matching the `detail` wording (the exact message may change).
+
 **Best practices:**
-- Check the `usage` object in chat responses to track remaining operations
-- Call `GET /v1/users/me/limits` before critical workflows
+- Check the `usage` object in chat responses to track remaining operations before you hit the limit
+- Read the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers on every response
 - Upgrade to a paid plan for uninterrupted access
 
 ## Check remaining operations
@@ -52,12 +54,9 @@ Every chat response includes usage data:
 }
 ```
 
-### Via dedicated endpoint
+### In the browser
 
-```bash
-curl https://api.superdocs.app/v1/users/me/limits \
-  -H "Authorization: Bearer sk_YOUR_API_KEY"
-```
+View your usage bar and tier limits at [use.superdocs.app](https://use.superdocs.app) → Settings. The `/v1/users/me/limits` and `/v1/users/me/usage` endpoints are web-app-only (they reject `sk_` / `lce_` keys with a `401`); from an API-key context, use the `usage` block in chat responses above.
 
 ## Monthly reset
 

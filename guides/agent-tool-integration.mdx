@@ -23,7 +23,7 @@ The integration is server-side, the SuperDocs `sk_` key lives next to your other
 
 ## The pattern, in 4 steps
 
-1. **Define the SuperDocs tool** in your agent's tool registry. The tool takes three parameters: `message` (the natural-language instruction for the AI), `session_id` (a string that ties multiple turns together), and `document_html` (the HTML the agent wants edited).
+1. **Define the SuperDocs tool** in your agent's tool registry. The two required parameters are `message` (the natural-language instruction for the AI) and `session_id` (a string that ties multiple turns together). `document_html` (the HTML the agent wants edited) is optional — send it on the first turn, then omit it: the server persists document state by `session_id` across turns, so resending the full HTML every turn just wastes tokens.
 2. **Implement the tool function.** Call `POST /v1/chat` with the three parameters plus your chosen `approval_mode`. Return the response back to the agent — either as the parsed proposed changes (for `ask_every_time`) or as the final updated HTML (for `approve_all`).
 3. **Decide approval shape.** Choose between `approve_all` (your agent's reasoning is the approval — fastest), `ask_every_time` (the agent reviews each proposed change individually before deciding), or surface to a human through your UI.
 4. **Persist the result.** The agent receives the updated HTML and writes it back to wherever your documents live.
@@ -51,7 +51,7 @@ Every framework that supports tool-calling accepts a JSON-schema tool definition
       },
       "document_html": {
         "type": "string",
-        "description": "The current HTML of the document to be edited. Must be a complete HTML string. The response will include `data-chunk-id` attributes — preserve them on the next call so SuperDocs can target previously-edited sections precisely."
+        "description": "The current HTML of the document to be edited, as a complete HTML string. OMIT this once the session already holds the document — the server persists document state across turns by `session_id`, so resending the full HTML every turn just burns tokens. Send it on the first turn (or when you're switching the session to a new document). The response includes `data-chunk-id` attributes — preserve them on the next call so SuperDocs can target previously-edited sections precisely."
       },
       "approval_mode": {
         "type": "string",
@@ -59,7 +59,7 @@ Every framework that supports tool-calling accepts a JSON-schema tool definition
         "description": "Whether to apply all proposed changes automatically (approve_all — best for autonomous agents) or pause for review on each change (ask_every_time — best when a human is in the loop)."
       }
     },
-    "required": ["message", "session_id", "document_html"]
+    "required": ["message", "session_id"]
   }
 }
 ```
@@ -84,10 +84,10 @@ edit_document_tool = {
             "properties": {
                 "message": {"type": "string", "description": "The instruction for what to do to the document."},
                 "session_id": {"type": "string", "description": "Ties multi-turn edits together."},
-                "document_html": {"type": "string", "description": "Current HTML to edit."},
+                "document_html": {"type": "string", "description": "Current HTML to edit. Omit once the session already holds the document — state persists by session_id."},
                 "approval_mode": {"type": "string", "enum": ["approve_all", "ask_every_time"]},
             },
-            "required": ["message", "session_id", "document_html"],
+            "required": ["message", "session_id"],
         },
     },
 }
@@ -148,10 +148,10 @@ edit_document_tool = {
         "properties": {
             "message": {"type": "string"},
             "session_id": {"type": "string"},
-            "document_html": {"type": "string"},
+            "document_html": {"type": "string", "description": "Omit once the session already holds the document — state persists by session_id."},
             "approval_mode": {"type": "string", "enum": ["approve_all", "ask_every_time"]},
         },
-        "required": ["message", "session_id", "document_html"],
+        "required": ["message", "session_id"],
     },
 }
 

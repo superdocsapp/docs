@@ -49,7 +49,7 @@ curl https://api.superdocs.app/v1/sessions \
 A `200` response with a JSON list of your sessions (possibly empty on a brand-new key) confirms the key is valid. A `401` with `{"detail": "Authentication required..."}` means the key is wrong, revoked, or the `Authorization` header didn't reach the server.
 
 <Warning>
-  **Do not use `/v1/users/me` (or any `/v1/users/*` endpoint) to verify your API key.** Those endpoints are for the web-app session surface — they accept Firebase ID tokens only and reject `sk_` keys with `401 "Wrong number of segments in token"`. The error makes it look like your key is bad; it isn't, you're just hitting an endpoint that doesn't accept API keys.
+  **Do not use `/v1/users/me` (or any `/v1/users/*` endpoint) to verify your API key.** Those endpoints are for the web-app session surface — they accept web-app session tokens only and reject `sk_` keys with a `401`. The error makes it look like your key is bad; it isn't, you're just hitting an endpoint that doesn't accept API keys.
 
   Endpoints that accept API keys: `/v1/chat`, `/v1/chat/async`, `/v1/sessions`, `/v1/sessions/{id}/history`, `/v1/sessions/{id}/jobs`, `/v1/jobs`, `/v1/attachments/*`, `/v1/templates`, `/v1/documents/*`, `/v1/chat/{sid}/approve`. Anything under `/v1/users/*` does not.
 </Warning>

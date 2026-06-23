@@ -39,17 +39,19 @@ Response:
 
 ```json
 {
-  "job_id": "job_abc123",
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
   "session_id": "my-session",
   "status": "pending",
   "message": "Chat request queued for processing"
 }
 ```
 
+The `job_id` is an opaque UUID — treat it as a string, don't parse it. Chat jobs and attachment-processing jobs share the same id space and the same `GET /v1/jobs/{job_id}` path.
+
 ### 2. Poll for status
 
 ```bash
-curl https://api.superdocs.app/v1/jobs/job_abc123 \
+curl https://api.superdocs.app/v1/jobs/550e8400-e29b-41d4-a716-446655440000 \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
@@ -59,7 +61,7 @@ When `status` is `"completed"`, the `result` field contains the AI response and 
 
 ```json
 {
-  "job_id": "job_abc123",
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "completed",
   "result": {
     "response": "I've restructured the document into 5 sections...",
@@ -122,7 +124,7 @@ Resume — or stop — by calling `/continue`:
 curl -X POST https://api.superdocs.app/v1/chat/{session_id}/continue \
   -H "Authorization: Bearer $SUPERDOCS_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"job_id": "job_abc123", "continue": true}'
+  -d '{"job_id": "550e8400-e29b-41d4-a716-446655440000", "continue": true}'
 ```
 
 - `continue: true` — resume; the job returns to `in_progress` and finishes the rest.
@@ -207,7 +209,7 @@ The `job_type` field on every job row tells you which lifecycle to expect.
 Only `pending` and `in_progress` jobs can be cancelled:
 
 ```bash
-curl -X POST https://api.superdocs.app/v1/jobs/job_abc123/cancel \
+curl -X POST https://api.superdocs.app/v1/jobs/550e8400-e29b-41d4-a716-446655440000/cancel \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 

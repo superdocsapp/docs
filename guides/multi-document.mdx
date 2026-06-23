@@ -27,6 +27,10 @@ Everything here works identically over the REST API and the MCP tools.
 
 (`new_tab` is also accepted as an alias of `new_focused`.)
 
+<Note>
+  **`open_mode` is on the multipart upload only.** `POST /v1/documents/upload` (multipart) is where you choose `new_focused` / `background`. The agent-facing upload tools — `upload_document_base64` and the pre-signed `process_uploaded_document` — don't take `open_mode`; they load the file as the focused document (replacing the current one). For an agent to open an additional document as a new tab, open an already-saved document with `open_documents` / `init_session`, or just ask the AI in chat to put the content in a new document. So this one upload detail is **not** identical across REST-multipart and the MCP upload tools.
+</Note>
+
 The upload response includes the session's full document roster (document ids, a ready `title` for each, section counts, and which one is focused), so you can render tabs immediately — use the `title` field for the tab label. The roster is token-light by default: it returns metadata only and the HTML body is omitted (`null`). Pass `include_html=true` when you actually need the body.
 
 The AI can also **create** a new document itself: ask in chat — "put the summary in a new document called Q3 Summary" — and the turn opens a fresh document with the generated content (this bills one operation like other content creation).
