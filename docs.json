@@ -53,6 +53,8 @@
             "pages": [
               "concepts/sessions",
               "concepts/documents",
+              "concepts/files",
+              "concepts/cross-session-context",
               "concepts/attachments",
               "concepts/templates"
             ]
@@ -65,6 +67,7 @@
               "guides/async-jobs",
               "guides/human-in-the-loop",
               "guides/multi-document",
+              "guides/concurrent-editing",
               "guides/editor-integration",
               "guides/agent-tool-integration",
               "guides/server-integration",

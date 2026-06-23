@@ -1,0 +1,116 @@
+---
+title: "Files (durable documents)"
+description: "Documents persist across sessions, so you can list, open, rename, and archive them — and reopen a saved document in any new session."
+---
+
+# Files (durable documents)
+
+Every document you create or upload is saved as a durable **File**. Files outlive the session they were made in: you can list them later, reopen them in a brand-new session, rename them, and archive ones you no longer need. A File is a reusable document, not a copy that disappears when a conversation ends.
+
+This is the layer above [sessions](/concepts/sessions). A session is a conversation thread; a File is the document itself. The same File can be opened into different sessions over time.
+
+Everything here works identically over the REST API and the MCP tools.
+
+## The mental model
+
+- **File** — a durable document with a stable id and a title. It persists across sessions until you archive it.
+- **Session** — a conversation thread. Opening a File into a session lets you edit it there; closing it from the session leaves the File untouched.
+- **Open** — attaching a saved File to a session so you can work on it. Open is **share-attach, not copy**: edits flow back to the one underlying File, so reopening it elsewhere shows your latest changes.
+
+## List your Files
+
+```bash
+curl https://api.superdocs.app/v1/documents \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+Returns your saved documents with their ids, titles, and timestamps. Use the title for display labels. The list is token-light by default — pass `include_html=true` only when you actually need the document body.
+
+The MCP tool is `list_documents`.
+
+## Get one File's detail
+
+```bash
+curl https://api.superdocs.app/v1/documents/{document_id} \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+Returns the File's metadata and title. Add `?include_html=true` to get the full document HTML back as well.
+
+The MCP tool is `get_document_detail`.
+
+## Open a saved File into a session
+
+To keep working on a File, open it into a session. You can open one or more Files at once, and choose which becomes the [focused document](/guides/multi-document).
+
+```bash
+curl -X POST https://api.superdocs.app/v1/sessions/my-session/documents/open \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_ids": ["doc_2f6c…", "doc_9a1b…"]
+  }'
+```
+
+The response returns the session's document roster (every open document's id + title + which is focused) so you can render tabs immediately. Because open is share-attach, edits you make in the session update the underlying File — there's no separate copy to reconcile.
+
+The MCP tool is `open_documents`.
+
+### Start a session and open Files in one call
+
+If you're beginning fresh, `init_session` creates a session and opens one or more saved Files into it in a single request — handy for "reopen my last contract and start editing."
+
+```bash
+curl -X POST https://api.superdocs.app/v1/sessions/init \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "contract-review",
+    "document_ids": ["doc_2f6c…"]
+  }'
+```
+
+The MCP tool is `init_session`.
+
+## Rename a File
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/{document_id}/rename \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Q3 Vendor Agreement"}'
+```
+
+The new title is what shows up in your File list and on tabs.
+
+The MCP tool is `rename_document`.
+
+## Archive a File
+
+Archiving removes a File from your active list. It's a **soft-delete: recoverable**, not an immediate permanent erase. Archived Files stay restorable for roughly 30 days before they are purged, after which they're gone for good.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/documents/{document_id}/archive \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+The MCP tool is `archive_document`.
+
+<Warning>
+**`archive_document` is destructive.** It's a soft-delete — the File is recoverable for about 30 days and then permanently purged. If you expose this to an AI agent, treat it like any other delete: confirm intent before calling it. There is no separate permanent-delete-by-default; archiving is the only removal path, and the ~30-day window is your safety net.
+</Warning>
+
+## Files vs sessions vs open documents
+
+| | File | Session | Open document |
+|---|---|---|---|
+| **What it is** | A durable, reusable document | A conversation thread | A File attached to a session for editing |
+| **Lifetime** | Persists until archived (then ~30-day purge) | Persists across restarts; you choose the id | Lasts while open in the session |
+| **Closing it** | n/a | Delete the session | Removes it from the session only — the File is untouched |
+| **Editing** | Edited via whatever session it's open in | Holds the chat history | Edits flow back to the underlying File (share-attach, not copy) |
+
+## Notes
+
+- Closing a document from a session (see [Multi-Document Sessions](/guides/multi-document)) does **not** archive or delete the File — it only detaches it from that session.
+- Because open is share-attach, the same File opened in two sessions reflects the same content; there is no fork-on-open. To rewind a specific session's edits, use [revert](/concepts/sessions#revert-a-session-to-a-previous-message).
+- Files are scoped to the API key owner — your saved documents are only visible to you (or your organization).

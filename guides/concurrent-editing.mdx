@@ -1,0 +1,140 @@
+---
+title: "Concurrent & Cross-Session Editing"
+description: "Keep a document in sync when more than one place edits it at once — two browser sessions, a UI tab plus a background job, or any writer-plus-poller pair. Poll for other sessions' edits, autosave human typing, and merge instead of clobbering."
+---
+
+# Concurrent & Cross-Session Editing
+
+A single document can be open in more than one place at the same time: two browser tabs, a user editing in your UI while a background job rewrites the same file, or any integration that both writes and reads a document on separate connections. Without coordination, the last writer silently wins and someone's work disappears.
+
+SuperDocs gives you the pieces to keep those copies converged — a lightweight **change feed** to learn when another session edited a document you hold, and a **human autosave** endpoint so pure typing is persisted and announced. This guide is the integrator pattern for wiring them together.
+
+<Note>
+  You only need this guide if the **same** document can be edited from two places concurrently. If each session owns its own documents, skip it — there's nothing to reconcile. For the per-section apply discipline this builds on, see [Applying AI updates safely](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).
+</Note>
+
+## The model
+
+- Every open document lives in a session and has a stable `document_id` and a committed version.
+- When any session commits a change to a document (an AI turn, or a human autosave), other sessions that hold the **same** document can learn about it by polling a change feed.
+- On a change, you re-fetch that one document and apply it **per section** onto your live editor — never a whole-document reload, which would wipe whatever the user is typing right now.
+
+This is soft, eventually-consistent collaboration — converge-on-poll, not a real-time cursor-sharing CRDT. It's deliberately simple: a REST poll on a 1–2 second cadence, no held connection per editor.
+
+## Polling for other sessions' edits
+
+```
+GET /v1/sessions/{session_id}/doc-events?after_id={cursor}
+```
+
+This returns the change events for documents **this session holds** that **other** sessions committed since `after_id`. Poll it roughly every 1–2 seconds while a document is open.
+
+- **`after_id`** is your cursor. Start at `0` (or omit it), then pass back the highest event `id` you've seen so each poll only returns what's new.
+- **`include_own`** — by default the feed **excludes this session's own writes** (you already have your own changes; no need to echo them back). A REST or MCP integrator that **writes on one connection and polls on another** — or just wants a complete feed for every document it holds — should pass `include_own=true`. Otherwise you'd never hear about edits your own background worker made on a different connection.
+
+<Note>
+  This feed is **REST-only by design**. It is intentionally not an MCP tool and not a held SSE connection — it's a cheap stateless poll, which keeps long-lived connections free. (The SSE stream still carries *your own* turn's events like `documents_changed`; the doc-events feed is specifically for changes that originate in **other** sessions.)
+</Note>
+
+```bash
+curl "https://api.superdocs.app/v1/sessions/my-session/doc-events?after_id=0" \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+### Event types
+
+Each event names a `document_id` and what happened to it:
+
+| Event | Meaning | What to do |
+|---|---|---|
+| `document_updated` | Another session committed content changes to this document. | Re-fetch the document and apply its changed sections (below). |
+| `document_removed` | Another session archived (soft-deleted) the document. | Drop the tab, or — if the user is mid-edit in it — offer a keep-editing choice (see [Restoring a removed document](#restoring-a-removed-document)). |
+| `document_restored` | A previously archived document was brought back. | Re-add the tab and load its current content. |
+| `document_renamed` | The document's title changed. | Update the tab label. No content fetch needed. |
+
+An event tells you *that* something changed, not the full new body — re-fetch the one document it names rather than trusting any content in the event itself.
+
+## Applying a received change
+
+When you get a `document_updated` event:
+
+1. **Re-fetch that one document.** Read it from the roster with the body included — `GET /v1/sessions/{session_id}/documents?include_html=true` — or from session history. Fetch only the document the event named, not the whole roster's bodies.
+2. **Apply per section — never whole-replace.** Replace only the `data-chunk-id` blocks that actually differ from what you currently render, and leave every other block — including the section the user is typing in *right now* — untouched. Reloading the entire editor would throw away unsaved local edits. This is the same section-level discipline used for AI results; see [Applying AI updates safely](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).
+3. **Advance your cursor** to the event's `id` so the next poll doesn't replay it.
+
+<Warning>
+  **Don't write back a change you just received.** Applying an incoming `document_updated` into your editor will fire your editor's own change handler. If that handler autosaves, you'll re-commit the change you were just told about — producing an echo loop and a spurious version bump for every other session. Suppress autosave while you apply a received change (a short "applying remote" flag around the transaction), or diff against what you already hold and save only genuinely local edits.
+</Warning>
+
+## Saving human edits (autosave)
+
+Pure typing — edits a human makes without an AI turn — is persisted through the autosave endpoint:
+
+```
+POST /v1/sessions/{session_id}/documents/{document_id}/save
+```
+
+Send the current editor HTML as `html`. Critically, also send **`base_html`** — the document HTML as it was *before* this round of edits (the last version you loaded or saved). The server diffs `html` against `base_html` to compute a precise per-chunk change-set, so other sessions converge on exactly what changed instead of a blunt whole-document overwrite. Omitting `base_html` still saves, but loses that precision.
+
+```bash
+curl -X POST \
+  https://api.superdocs.app/v1/sessions/my-session/documents/{document_id}/save \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<p data-chunk-id=\"…\">edited…</p>", "base_html": "<p data-chunk-id=\"…\">original…</p>"}'
+```
+
+Practical rules:
+
+- **Debounce and coalesce per document.** Don't fire a save on every keystroke. Debounce (and save on blur), and collapse rapid edits into one save per document so you're not racing yourself. After a successful save, the HTML you just sent becomes the new `base_html` for the next round.
+- **This endpoint is non-AI and REST-only.** It saves typing without running a chat turn, and it isn't an MCP tool — it's a UI affordance. The AI-edit flow is unaffected: an AI result re-bases over the latest saved content through the same concurrency check.
+- A successful save is itself a change other sessions will see on their next `doc-events` poll — which is why suppressing write-back on *received* changes (above) matters.
+
+## Resume awareness
+
+When a user (or a worker) comes back to a session after being away, you want to know whether anything changed while they were gone. The roster supports this on resume:
+
+```
+GET /v1/sessions/{session_id}/documents?report_changed=true
+```
+
+With `report_changed=true`, each document carries **`changed_since_seen`** — `true` when its committed version is newer than the version *this* session last saw. Use it to show a one-time "changed since you were last here" notice on resume or when switching back to a session. Set it **only** on resume / session-switch, not on the ongoing 1–2s poll — the live `doc-events` feed already covers changes that happen while you're watching.
+
+## Conflict resolution
+
+The hard case is when the **same section** is edited by both sides at once — the user typed in a paragraph while an AI turn (or another session) rewrote it. Don't silently pick a winner by reloading.
+
+- **Merge, keeping the user's in-progress edits.** Apply the incoming change to every section *except* the one the user is actively editing, and for the conflicted section keep the user's version while offering the other version as a suggestion (a keep-both choice). The user's keystrokes should win by default; they can accept the alternative explicitly. This is the same conflict posture as [applying AI results](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).
+- **When the same field gets two different values, keep the user's** — never concatenate the two into one blob.
+- **Never text-merge a non-text node.** Tables, diagrams (Mermaid), drawings, and equations (KaTeX/LaTeX) are structured nodes — splicing one side's text into the other corrupts them. Compare and resolve those **whole**: take one version or the other for the node, don't word-diff their markup. (This is the same rule as rendering and diffing them in an editor; see [Rendering visual content](/guides/editor-integration#rendering-visual-content-diagrams-and-equations).)
+
+## Restoring a removed document
+
+If a `document_removed` event arrives for a document the user is mid-edit in, archiving it out from under them would lose their unsaved work. Offer a keep-editing choice instead of dropping the tab silently. Choosing "keep editing" restores the document and persists the user's current content so the document converges for everyone:
+
+```
+POST /v1/sessions/{session_id}/documents/{document_id}/unarchive
+```
+
+Send the editor's current `html` (same body shape as `/save`). It un-archives the document, re-links it to this session, and saves the latest content — idempotent if another session already restored it. REST-only and non-billable.
+
+## Putting it together
+
+A robust concurrent-editing loop, per open document:
+
+1. **Poll** `GET .../doc-events?after_id={cursor}` every 1–2s (add `include_own=true` if you write on a separate connection). Advance the cursor.
+2. On `document_updated`, **re-fetch** that document and **apply changed sections** — with autosave suppressed during the apply.
+3. **Debounce + coalesce** human edits and **autosave** them with `html` + `base_html`.
+4. On a same-section clash, **merge and keep the user's edits**; resolve non-text nodes whole.
+5. On **resume**, read the roster with `report_changed=true` and surface a one-time "changed while away" notice.
+
+## Stuck?
+
+If your collaboration shape isn't covered here — a different conflict policy, presence indicators, true real-time sync — email [hello@superdocs.app](mailto:hello@superdocs.app) or book a 15-minute integration call at [cal.com/superdocs](https://cal.com/superdocs).
+
+## Related guides
+
+- [Editor Integration](/guides/editor-integration) — preserving `data-chunk-id` and applying updates per section.
+- [Multi-Document Sessions](/guides/multi-document) — several documents open in one session, and applying a revert per document.
+- [SSE Streaming](/guides/streaming) — your own turn's live events (`documents_changed`, `proposed_change_batch`).
+- [Server Integration](/guides/server-integration) — when one of the concurrent writers is a headless backend job.

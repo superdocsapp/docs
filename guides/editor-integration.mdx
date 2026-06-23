@@ -439,7 +439,13 @@ The naive pattern — replace the whole editor document with `final.updated_html
 
 **Failure 2 — double-applying in review mode.** In `ask_every_time` mode, if your UI applies each change to the editor when the user accepts it, remember the job still finishes with a `final` event carrying the complete updated document. Applying accepted changes incrementally **and** then loading the final document re-applies everything — newly created sections get inserted twice. Pick one strategy and stick to it: **either** apply per-change on accept and ignore the final document, **or** keep the editor untouched during review and load only the final. Never both.
 
+**Revert and redo flow through the same path.** When you rewind a session with `POST /v1/sessions/{id}/revert`, the response carries a per-document `revert_changes` change-set. Apply it section-by-section exactly like an AI result rather than reloading the whole document, so any in-progress typing survives and a clashed section can offer a keep-both choice. Redo (`POST /v1/sessions/{id}/redo`) returns the same shape. Dry-run revert (`"dry_run": true`) returns the change-set without committing, so you can preview it first. Full detail in [Reverting without a whole-document swap](/guides/multi-document#reverting-without-a-whole-document-swap).
+
 Whole-document replacement remains fine for read-only/display integrations, or if you lock the editor while an AI turn is running.
+
+<Note>
+  If two of your surfaces (e.g. an editor tab and a server job, or two browser sessions) can edit the **same** document, the same section-level discipline applies across connections — poll for other sessions' edits and re-apply them per section rather than reloading the whole document. See [Concurrent & Cross-Session Editing](/guides/concurrent-editing).
+</Note>
 
 ## Rendering visual content (diagrams and equations)
 
@@ -454,7 +460,7 @@ SuperDocs documents can contain diagrams (Mermaid), equations (LaTeX/KaTeX), dra
 
 Sessions can hold several open documents (see the [Multi-Document guide](/guides/multi-document)). If your product surfaces this, the editor-side pattern is:
 
-- Render **tabs** from `GET /v1/sessions/{id}/documents` (stable insertion order; derive tab labels from each document's content — the roster returns the HTML).
+- Render **tabs** from `GET /v1/sessions/{id}/documents` (stable insertion order; use the `title` field each roster entry returns for the tab label). The roster is token-light by default — it returns metadata only and omits each document's HTML body (`null`); pass `include_html=true` when you actually need the content.
 - Switch tabs with the focus endpoint; pass `document_id` on chat turns initiated from a specific tab.
 - Listen for `documents_changed` to **badge background tabs** the AI touched, and to **add a tab** when an entry carries `created: true` (this fires in either approval mode for created documents).
 - If a document payload includes `page_setup`, you can render true page geometry (size, orientation, margins) instead of a generic canvas.

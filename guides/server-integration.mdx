@@ -392,6 +392,10 @@ Where the result goes depends on your service's existing storage. Common pattern
 
 The `data-chunk-id` attributes that SuperDocs adds to block-level elements **must round-trip** if you plan to send the document back to SuperDocs again later (e.g., for further edits in the same session). Most string-based storage preserves them automatically; if you parse the HTML through a sanitizer or DOM library, ensure unknown attributes survive.
 
+<Note>
+  If a document your server edits can **also** be open in another session at the same time (a user editing in your app's UI while a background job rewrites the same file, or two workers on one document), don't let the two writers clobber each other. Poll for the other session's edits and apply them per section, and persist your own typing through the autosave endpoint so everyone converges. See [Concurrent & Cross-Session Editing](/guides/concurrent-editing).
+</Note>
+
 ## Error handling and retries
 
 SuperDocs returns standard HTTP status codes. Worth handling:
@@ -420,4 +424,5 @@ If your server stack isn't covered here or your workflow needs a pattern not des
 - [SSE Streaming](/guides/streaming) — when you want streaming progress events from a server-side consumer.
 - [Agent Tool Integration](/guides/agent-tool-integration) — when your service is wrapping an AI agent that needs SuperDocs as a tool.
 - [Human-in-the-Loop](/guides/human-in-the-loop) — when you need human approval, even out-of-band.
+- [Concurrent & Cross-Session Editing](/guides/concurrent-editing) — when the same document can be edited from more than one place at once.
 - [Integration Starter Prompt](/guides/integration-starter-prompt) — paste this into your coding agent to wire all the above up automatically.

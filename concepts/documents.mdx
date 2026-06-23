@@ -253,15 +253,17 @@ if (warningsHeader) {
 
 ### Large documents
 
-Direct POSTs to `/v1/documents/export` are capped at 25 MB on the hosted plan. For larger documents, use the **upload-then-export** pattern (Mode C) instead.
+There's one size story for export, driven by how big the document HTML is:
 
 **Three-tier flow:**
 
 | Document HTML size | Path |
 |-----|---|
-| Up to 20 MB | Direct POST to `/v1/documents/export` with inline `html`. |
-| 20 MB – 100 MB | Request a pre-signed upload URL via `POST /v1/uploads` (`purpose: "export-html"`), PUT the HTML to it, then call `/v1/documents/export` with `upload_id`. |
+| Up to 20 MB | Direct POST to `/v1/documents/export` with inline `html` (Mode A) or a `session_id` (Mode B). |
+| 20 MB – 100 MB | Request a pre-signed upload URL via `POST /v1/uploads` (`purpose: "export-html"`), PUT the HTML to it, then call `/v1/documents/export` with `upload_id` (Mode C). |
 | Over 100 MB | Use the [email-fallback endpoint](#email-fallback-for-very-large-documents). |
+
+Keep inline POSTs at or under 20 MB. Above that, the hosted transport layer rejects the request (a hard ~32 MB clamp sits in front of the renderer), so switch to the upload-then-export pattern (Mode C) rather than pushing a bigger body through directly.
 
 ```python
 # 1. Request a pre-signed PUT URL
@@ -334,7 +336,7 @@ Response:
 | `html` with `embed_images=true` | 150 MB |
 | `markdown`, `txt` | 50 MB |
 
-Direct POST requests above 25 MB return `413 Request Entity Too Large` from the hosted infrastructure before reaching the renderer; use Mode C instead. Requests above the format-specific cap return a structured 413 with a JSON body explaining the limit and pointing to the email-fallback endpoint — see [Error codes](/errors/error-codes#413-request-entity-too-large).
+Keep inline POSTs at or under 20 MB; the hosted transport layer enforces a hard ~32 MB clamp and returns `413 Request Entity Too Large` before reaching the renderer, so use Mode C for anything larger. Requests above the format-specific cap return a structured 413 with a JSON body explaining the limit and pointing to the email-fallback endpoint — see [Error codes](/errors/error-codes#413-request-entity-too-large).
 
 ## Supported formatting
 

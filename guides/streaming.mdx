@@ -46,7 +46,7 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits 11 event types:
+The stream emits nine event types: [`intermediate`](#intermediate), [`proposed_change_batch`](#proposed_change_batch), [`document_sync`](#document_sync), [`continue_prompt`](#continue_prompt), [`documents_changed`](#documents_changed), [`model_fallback`](#model_fallback), [`final`](#final), [`usage`](#usage), and [`error`](#error).
 
 ### `intermediate`
 
@@ -126,66 +126,20 @@ eventSource.addEventListener("final", () => {
 
 **Cadence expectations.** Intermediate events typically arrive every 1–5 seconds during active processing. A gap of 30+ seconds usually means the AI is in a deep reasoning phase — surface a "still processing" hint rather than a "failed" indicator. Use the `timestamp` field to detect stalls programmatically.
 
-### `proposed_change`
-
-In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes a document change for review. Single, isolated changes still arrive as one `proposed_change` event; multi-change turns are delivered via [`proposed_change_batch`](#proposed_change_batch) instead (a single event carrying every change in the batch).
-
-```
-event: proposed_change
-data: {"type": "proposed_change", "content": "{\"change_id\": \"ch_1\", ...}", "sequence": 2}
-```
-
-<Warning>
-  `proposed_change.content` is delivered as a **JSON-stringified string**, not a parsed object. The event data itself is JSON, and the `content` field inside it is a second layer of JSON that must be parsed again. In JavaScript:
-
-  ```javascript theme={null}
-  const data = JSON.parse(event.data);          // first parse — event envelope
-  const change = JSON.parse(data.content);      // second parse — change details
-  ```
-
-  This is inconsistent with `final.result`, which is already an object after a single parse. Until this normalises in a future API version, double-parse `proposed_change.content`. Missing the second parse is the single most common reason integrators see empty diff cards — the UI renders but every field reads as `undefined`.
-</Warning>
-
-The `content` field is a JSON string. Parse it to get the change details:
-
-```json
-{
-  "change_id": "ch_1",
-  "operation": "edit",
-  "chunk_id": "550e8400-e29b-41d4-a716-446655440000",
-  "old_html": "<p>Original section content...</p>",
-  "new_html": "<p>Updated content with GDPR compliance...</p>",
-  "ai_explanation": "Added GDPR data processing requirements",
-  "batch_id": "ch_1",
-  "batch_total": 3,
-  "insert_after_chunk_id": null
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `change_id` | string | Unique ID for this change. Use when calling `/approve`. |
-| `operation` | string | `"edit"`, `"create"`, or `"delete"`. |
-| `chunk_id` | string \| null | The document section being modified or deleted. Null for creates. |
-| `old_html` | string \| null | Current HTML content. Present for updates and deletes. Null for creates. |
-| `new_html` | string \| null | Proposed new HTML content. Present for updates and creates. Null for deletes. |
-| `ai_explanation` | string | Why the AI proposed this change. Show this to the user. |
-| `batch_id` | string \| null | Groups related changes. All changes in a batch share the same `batch_id`. |
-| `batch_total` | number \| null | How many changes are in this batch. Wait for this many events before showing the review UI. |
-| `insert_after_chunk_id` | string \| null | For `create`: where to insert the new section in the document. |
-
-See the [Human-in-the-Loop guide](/guides/human-in-the-loop) for the complete approval workflow.
-
 ### `proposed_change_batch`
 
-When the AI proposes multiple changes in a single turn (common for sweeping edits across many sections of a document), the entire batch arrives as **one** SSE event instead of a fan-out of N `proposed_change` events. This keeps the wire load proportional to turns, not changes, and lets HITL UIs render the whole approval card at once.
+In HITL mode (`approval_mode: "ask_every_time"`), the AI proposes document changes for review. **`proposed_change_batch` is the only event that carries proposed changes** — every HITL turn arrives through it, whether the AI proposes one change or hundreds. The whole turn comes as **one** SSE event carrying a `changes` array, so the wire load stays proportional to turns, not changes, and HITL UIs can render the entire approval card at once.
+
+<Note>
+  Older clients may still register a separate `proposed_change` listener. That's harmless — keep it for safety if you have it — but it never fires: single-change turns are delivered through `proposed_change_batch` too (with `type: "single_approval"`, a `changes` array of length 1). Don't build logic that waits for or branches on a standalone `proposed_change` event; it will never arrive.
+</Note>
 
 ```
 event: proposed_change_batch
 data: {"type": "proposed_change_batch", "content": "{\"batch_id\": \"ch_1\", \"batch_total\": 32, \"changes\": [...]}", "sequence": 2}
 ```
 
-Like `proposed_change.content`, the `content` field is a JSON-stringified string that must be parsed once more:
+The `content` field is a JSON-stringified string that must be parsed once more:
 
 ```javascript theme={null}
 eventSource.addEventListener("proposed_change_batch", (event) => {
@@ -195,7 +149,11 @@ eventSource.addEventListener("proposed_change_batch", (event) => {
 });
 ```
 
-In sessions with multiple open documents, every change in `changes[]` also carries the `document_id` it belongs to, so your UI can group the review list per document.
+<Warning>
+  `proposed_change_batch.content` is delivered as a **JSON-stringified string**, not a parsed object. The event data itself is JSON, and the `content` field inside it is a second layer of JSON that must be parsed again (see the double-parse above). This is inconsistent with `final.result`, which is already an object after a single parse. Missing the second parse is the single most common reason integrators see empty diff cards — the UI renders but every field reads as `undefined`.
+</Warning>
+
+In sessions with multiple open documents, every change in `changes[]` also carries the `document_id` it belongs to (see the field table below), so your UI can group the review list per document.
 
 The parsed payload:
 
@@ -227,16 +185,29 @@ The parsed payload:
 }
 ```
 
+**Top-level payload:**
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | string | `"batch_approval"` for multi-change turns, `"single_approval"` for one-change turns delivered through this event for uniformity. |
+| `type` | string | `"batch_approval"` for multi-change turns, `"single_approval"` for one-change turns. Both shapes arrive through this same event. |
 | `batch_id` | string | Shared identifier across the batch — equals the first change's `change_id`. |
 | `batch_total` | number | Number of entries in `changes`. |
-| `changes` | array | Per-change objects with the same fields as `proposed_change` (`change_id`, `operation`, `chunk_id`, `old_html`, `new_html`, `ai_explanation`, `insert_after_chunk_id`). |
+| `changes` | array | The proposed changes — one entry per change (see fields below). |
 
-<Warning>
-  **Register both listeners.** If your client only subscribes to `proposed_change`, you will silently miss every batched HITL turn (the common path for multi-section edits). The two events are mutually exclusive within a single turn — one or the other fires, not both — but you need both listeners registered to cover both cases.
-</Warning>
+**Each entry in `changes[]`:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `change_id` | string | Unique ID for this change. Use when calling `/approve`. |
+| `operation` | string | `"edit"`, `"create"`, or `"delete"`. |
+| `chunk_id` | string \| null | The document section being modified or deleted. Null for creates. |
+| `old_html` | string \| null | Current HTML content. Present for updates and deletes. Null for creates. |
+| `new_html` | string \| null | Proposed new HTML content. Present for updates and creates. Null for deletes. |
+| `ai_explanation` | string | Why the AI proposed this change. Show this to the user. |
+| `insert_after_chunk_id` | string \| null | For `create`: where to insert the new section in the document. |
+| `document_id` | string | In multi-document sessions, the open document this change belongs to — group the review list by it. |
+
+See the [Human-in-the-Loop guide](/guides/human-in-the-loop) for the complete approval workflow.
 
 ### `continue_prompt`
 
@@ -260,7 +231,7 @@ eventSource.addEventListener("continue_prompt", (event) => {
 });
 ```
 
-Send `continue: true` to keep going or `false` to stop and keep what's done. The job resumes and may emit another `continue_prompt` for the next segment — handle it in a loop, the same way you handle repeated `proposed_change` rounds.
+Send `continue: true` to keep going or `false` to stop and keep what's done. The job resumes and may emit another `continue_prompt` for the next segment — handle it in a loop, the same way you handle repeated HITL approval rounds.
 
 ### `document_sync`
 
@@ -268,12 +239,16 @@ Emitted before the AI begins processing, after the backend has prepared your doc
 
 ```
 event: document_sync
-data: {"type": "document_sync", "content": "<p data-chunk-id=\"...\">Section 1</p>..."}
+data: {"type": "document_sync", "content": "<p data-chunk-id=\"...\">Section 1</p>...", "focused_document_id": "d1"}
 ```
 
-**When it fires**: Only when you provide `document_html` in the request. The event arrives once at the start of the stream, before any `intermediate` or `proposed_change` events.
+**When it fires**: Only when you provide `document_html` in the request. The event arrives once at the start of the stream, before any `intermediate` or `proposed_change_batch` events.
 
-**What to do with it**: Apply the HTML to your editor immediately so the editor's section IDs match the IDs the AI will reference in subsequent `proposed_change` events. This is essential for HITL diff highlights to render correctly on freshly pasted or uploaded documents — without it, the editor and the AI may disagree on which section a change targets.
+**What to do with it**: Apply the HTML to your editor immediately so the editor's section IDs match the IDs the AI will reference in subsequent `proposed_change_batch` events. This is essential for HITL diff highlights to render correctly on freshly pasted or uploaded documents — without it, the editor and the AI may disagree on which section a change targets.
+
+<Note>
+  **Multi-document sessions.** When several documents are open, `document_sync` carries `focused_document_id` — the document this prepared HTML belongs to. Apply it only to the matching (focused) tab, not whichever document happens to be on screen. Single-document sessions can ignore the field.
+</Note>
 
 If you do not render diffs in an editor (e.g., you only display the final response), you can ignore this event.
 
@@ -312,42 +287,6 @@ Emitted after `final` with usage consumption data.
 event: usage
 data: {"monthly_used": 43, "monthly_limit": 500, "monthly_remaining": 457, "was_billable": true, "subscription_tier": "free"}
 ```
-
-### `ui_pointer`
-
-Side-channel hint that the user's last message expressed intent for a specific UI affordance — most commonly export / download / "open in Word". Use it to surface the relevant button in your UI (e.g., glow the Export button) instead of having the AI describe its location in prose. Fires alongside `final`, not before it.
-
-```
-event: ui_pointer
-data: {"type": "ui_pointer", "ui_pointer": {"target": "export_button", "reason": "User asked how to download the document"}}
-```
-
-**Payload shape**:
-
-- `target` — the affordance the user wants. Current values: `export_button`. Treat as forward-compatible — new targets may be added without changing the event-type contract; ignore values you don't recognise.
-- `reason` — short human-readable note describing the inferred intent. Surface in telemetry; never to end users.
-
-**When it fires**: only when the AI recognises a UI-affordance intent in the user's message. Skipped for content-edit turns and for ambiguous "where's my file" queries (those get handled in the `final` content). Multilingual — recognition is intent-based, not keyword-based.
-
-**Rendering pattern (recommended)**:
-
-```javascript theme={null}
-eventSource.addEventListener("ui_pointer", (event) => {
-  const data = JSON.parse(event.data);
-  const target = data.ui_pointer?.target;
-  if (target === "export_button") {
-    // Briefly highlight your Export button so the user can find it.
-    document.querySelector("#export-button")?.classList.add("glow");
-    setTimeout(() => {
-      document.querySelector("#export-button")?.classList.remove("glow");
-    }, 3000);
-  }
-  // Unknown targets: ignore silently. The `final` event's content
-  // already covers the affordance in prose as a safety net.
-});
-```
-
-**Don't show end users the raw `reason` text** — it's a trace string for your telemetry, not a user-facing message.
 
 ### `error`
 
@@ -389,7 +328,7 @@ const eventSource = new EventSource(
 eventSource.addEventListener("document_sync", (event) => {
   const data = JSON.parse(event.data);
   // Apply data.content to your editor so its section IDs match
-  // the IDs the AI will reference in proposed_change events.
+  // the IDs the AI will reference in proposed_change_batch events.
   editor.commands.setContent(data.content);
 });
 

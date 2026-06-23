@@ -49,10 +49,14 @@ Every chat response includes a `usage` object:
     "monthly_limit": 500,
     "monthly_remaining": 458,
     "was_billable": true,
+    "ops_charged": 1,
+    "quota_exhausted": false,
     "subscription_tier": "free"
   }
 }
 ```
+
+`ops_charged` is how many operations the request billed — a single request can bill more than one (one operation per 25 sections edited), so `monthly_used` can increase by more than 1 between responses. `quota_exhausted` becomes `true` when you have reached your plan's operation limit with no remaining balance; the current request still completes, but further billable requests pause until you upgrade or your billing cycle resets.
 
 ### Via API
 
@@ -65,6 +69,28 @@ curl https://api.superdocs.app/v1/users/me/usage \
 curl https://api.superdocs.app/v1/users/me/limits \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
+
+## Promo codes & credits
+
+If you have a promo code, redeem it for operation credits. Credits are drawn down **before** your plan's monthly allowance, so they stretch your included operations further.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/promo/redeem \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"code": "YOUR_CODE"}'
+```
+
+Redemption is for **personal accounts** — authenticate with a personal API key (`sk_`) or a logged-in session. Organization keys (`lce_`) can't redeem codes. Your account email must be verified, and each code can be redeemed **once per account**.
+
+Check your active credits:
+
+```bash
+curl https://api.superdocs.app/v1/users/me/promotions \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+This returns your active promotions and their remaining credit balance.
 
 ## Monthly reset
 

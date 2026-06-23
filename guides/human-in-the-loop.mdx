@@ -62,9 +62,14 @@ curl https://api.superdocs.app/v1/jobs/JOB_ID \
 
 When `status` is `"awaiting_approval"`, check `metadata.pending_changes`:
 
-<Note>
-  `awaiting_approval` is also used for the [large-edit continue prompt](/guides/async-jobs#continuing-a-large-edit). Tell them apart with `metadata.awaiting_kind`: when it is `"continue_prompt"` there are no `pending_changes` — resume that with `/continue`, not `/approve`.
-</Note>
+<Warning>
+  **`awaiting_approval` has two flavours — continue vs. approve.** The same status is also used for the [large-edit continue prompt](/guides/async-jobs#continuing-a-large-edit), where a big edit applies as much as it can, keeps that work, and pauses to ask whether to keep going. Tell them apart with `metadata.awaiting_kind`:
+
+  - `"continue_prompt"` → a large edit paused. There are **no** `pending_changes` (the SSE side sent a [`continue_prompt`](/guides/streaming#continue_prompt) event, not `proposed_change_batch`). Resume with `POST /v1/chat/{session_id}/continue` (the `continue_chat` tool over MCP), passing `{ "job_id": "...", "continue": true }` to keep going or `false` to stop and keep what's done.
+  - otherwise → a HITL change review. Read `metadata.pending_changes` and respond with `/approve`.
+
+  Calling `/approve` on a `continue_prompt` pause is rejected with `409` (and vice-versa) — always branch on `awaiting_kind` first.
+</Warning>
 
 ```json
 {
@@ -183,7 +188,7 @@ Render a card per pending change with `old_html` and `new_html` shown as two adj
 
 The proposed edit appears **directly inside the document** — the affected block gets a coloured outline, the word-level diff renders inside it (red strikethrough for removed, green highlight for added), and Approve / Deny buttons float in the top-right corner of the block. This is the most accurate visual representation of what the AI wants to change and is the pattern most developer-audience apps converge on.
 
-For ProseMirror-based editors (ProseMirror, TipTap, BlockNote, Remirror, Atlaskit), use the editor's native decoration system. The plugin below collects `proposed_change` events, builds a `DecorationSet` keyed by `data-chunk-id`, and dispatches `window`-level custom events when the user clicks Approve or Deny.
+For ProseMirror-based editors (ProseMirror, TipTap, BlockNote, Remirror, Atlaskit), use the editor's native decoration system. The plugin below takes individual change objects (the entries of a `proposed_change_batch` event's `changes` array), builds a `DecorationSet` keyed by `data-chunk-id`, and dispatches `window`-level custom events when the user clicks Approve or Deny.
 
 <Warning>
   **Schema prerequisite — read first.** The plugin below locates the target block by walking the editor doc and matching `node.attrs["data-chunk-id"]`. If your schema does not preserve `data-chunk-id` on every block node **and** does not register a wrapper Node for `<div data-chunk-id="…">…</div>` elements (used when a chunk spans multiple blocks), the plugin will compile, run, and silently render nothing — `findChunkRange` returns `null` and the decoration is skipped. This is the single most common reason an inline overlay implementation appears broken: the diff event arrives, `addProposedChange` fires, but the editor never lights up.
@@ -421,7 +426,7 @@ Supporting CSS:
 Wire the plugin into your editor and the chat panel:
 
 - Register `proposedChangeDecoration()` in the plugin array when you build `EditorState`.
-- On every `proposed_change` SSE event in the chat panel, call `addProposedChange(view, change)`.
+- On every `proposed_change_batch` SSE event in the chat panel, loop over the parsed `changes` array and call `addProposedChange(view, change)` for each one.
 - Subscribe to `window.addEventListener("diff-action", ...)` in the chat panel to catch Accept / Deny clicks. Post the decision to `/v1/chat/{session_id}/approve` and call `removeProposedChange(view, change_id)`.
 - On every `final` SSE event, call `clearProposedChanges(view)` before applying the new HTML — the editor is about to re-render anyway.
 
@@ -429,7 +434,7 @@ The pattern transfers to TipTap, BlockNote, Remirror, and Atlaskit with minor AP
 
 #### Pattern 3 — Native track-changes UI
 
-If your editor already supports track-changes (CKEditor 5 with the Track Changes feature, TinyMCE Premium, etc.), map each `proposed_change` to a tracked suggestion in the editor's native model. The user then approves or rejects via the editor's built-in UI. Consult your editor's track-changes API docs for the specific mapping — the SuperDocs side is identical to Pattern 1 or 2.
+If your editor already supports track-changes (CKEditor 5 with the Track Changes feature, TinyMCE Premium, etc.), map each proposed change (each entry of the `proposed_change_batch` event's `changes` array) to a tracked suggestion in the editor's native model. The user then approves or rejects via the editor's built-in UI. Consult your editor's track-changes API docs for the specific mapping — the SuperDocs side is identical to Pattern 1 or 2.
 
 ### Batch changes
 
@@ -452,6 +457,10 @@ A whole-document instruction ("tighten every section") can propose hundreds of c
 
 The polling workflow above works but requires repeated API calls. For a real-time UI, use SSE to receive proposed changes as they're generated:
 
+<Note>
+  **B2B / server-side integrators (organization `lce_` keys)** that can't hold an `EventSource` open — serverless functions, batch workers, agent runtimes — can long-poll instead of streaming. `GET /v1/poll/{session_id}?since=<ISO-8601>&timeout=<seconds>` (org keys only; `timeout` ≤ 1800s) holds the connection open until there's a job update on the session, then returns it, so you get near-real-time progress without an SSE socket. Pass the last `since` timestamp on each call to avoid duplicate updates. Plain `/v1/jobs/{job_id}` polling (shown above) also works and is the simplest option.
+</Note>
+
 ```javascript
 // 1. Start async request with approval mode
 const response = await fetch("https://api.superdocs.app/v1/chat/async", {
@@ -471,9 +480,9 @@ const es = new EventSource(
   `https://api.superdocs.app/v1/chat/contract-review/stream?job_id=${job_id}&api_key=sk_YOUR_API_KEY`
 );
 
-// 3. Collect proposed changes. Multi-change turns arrive as a single
-//    `proposed_change_batch` event; isolated single-change turns arrive
-//    as a `proposed_change` event. Register both listeners.
+// 3. Collect proposed changes. Every HITL turn — one change or hundreds —
+//    arrives as a single `proposed_change_batch` event carrying a
+//    `changes` array (a one-change turn has type "single_approval").
 let pendingChanges = [];
 
 const showReviewUi = (changes) => {
@@ -486,19 +495,16 @@ const showReviewUi = (changes) => {
   }
 };
 
-es.addEventListener("proposed_change", (event) => {
-  const data = JSON.parse(event.data);
-  const change = JSON.parse(data.content);  // content is JSON-stringified
-  pendingChanges = [change];
-  showReviewUi(pendingChanges);
-});
-
 es.addEventListener("proposed_change_batch", (event) => {
   const data = JSON.parse(event.data);
   const batch = JSON.parse(data.content);   // { type, batch_id, batch_total, changes }
   pendingChanges = batch.changes;
   showReviewUi(pendingChanges);
 });
+
+// Optional safety net for older clients: a standalone `proposed_change`
+// listener is harmless but never fires — single changes come through
+// `proposed_change_batch` too. You don't need this if starting fresh.
 
 es.addEventListener("final", (event) => {
   const data = JSON.parse(event.data);
@@ -517,7 +523,7 @@ es.addEventListener("error", (event) => {
 ```
 
 <Note>
-After calling `/approve`, the AI resumes processing. If approved changes were applied, the SSE connection will eventually emit a `final` event with the updated document. If you denied with feedback, you may receive new `proposed_change` or `proposed_change_batch` events as the AI tries again.
+After calling `/approve`, the AI resumes processing. If approved changes were applied, the SSE connection will eventually emit a `final` event with the updated document. If you denied with feedback, you may receive a new `proposed_change_batch` event as the AI tries again.
 
 <Warning>
   **Apply changes once — either per-accept or from the final, never both.** If your UI applies each approved change to the editor as the user accepts it, do NOT also load the `final` event's full document — it contains those same changes again, and re-applying them duplicates inserted content (newly created sections are the classic symptom). Pick one: incremental apply (ignore the final document) or final-only apply (editor untouched during review).
@@ -525,7 +531,7 @@ After calling `/approve`, the AI resumes processing. If approved changes were ap
 </Note>
 
 <Warning>
-  **Listen for both event names.** Multi-change turns are delivered as a single `proposed_change_batch` event; isolated single-change turns may still arrive as `proposed_change`. If you only subscribe to `proposed_change`, you will silently miss every batched HITL turn — the most common shape for edits across many sections.
+  **Subscribe to `proposed_change_batch`.** It is the only event that delivers proposed changes — one change or hundreds, it always arrives as a single `proposed_change_batch` event carrying a `changes` array (a one-change turn has `type: "single_approval"`). A standalone `proposed_change` listener never fires; keep one only as a harmless safety net for older clients, but don't make your review flow depend on it.
 </Warning>
 
 ## Complete Python example

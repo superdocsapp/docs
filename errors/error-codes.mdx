@@ -138,6 +138,12 @@ The 413 response covers two distinct cases — caller-too-large and document-too
 
 **Fix:** `format` is now a strict enum on `/v1/documents/export`. Use one of `"docx"`, `"pdf"`, `"html"`, `"markdown"`, `"txt"`. The value `"doc"` is accepted as a legacy alias and will be removed in a future release.
 
+```json
+{"detail": [{"type": "string_pattern_mismatch", "loc": ["body", "session_id"], "msg": "String should match the expected pattern"}]}
+```
+
+**Fix:** `session_id` may contain only letters, digits, and the characters `_`, `-`, and `.`, up to a maximum of 256 characters. Drop spaces, slashes, and other punctuation from the id you choose.
+
 ### Not found (404)
 
 ```json

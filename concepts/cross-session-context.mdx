@@ -1,0 +1,93 @@
+---
+title: "Cross-session memory & search"
+description: "Let the AI remember your preferences across chats and reuse your own prior documents — opt-in, off by default, and scoped to you."
+---
+
+# Cross-session memory & search
+
+By default, each [session](/concepts/sessions) is self-contained: the AI only knows about the conversation and documents in that session. Two **opt-in** capabilities let a session reach beyond itself:
+
+- **Cross-session memory** — the AI remembers your durable preferences and recurring instructions across chats (e.g. "always use British spelling", "our company name is Acme Ltd"), so you don't repeat them every time.
+- **Cross-session search** — the AI can find and reuse your own prior documents and chats ("pull the payment terms from last month's contract") instead of being limited to the current session.
+
+Both are **off by default**. You turn them on per request with the `cross_session_*` fields on `chat` / `chat_async` (REST and MCP). Both are **owner-scoped** — they never reach across the API key owner. One customer's data is never visible to another.
+
+## Turning it on
+
+Pass the flags on a chat request. Omit them (or set them to `false`) and behavior is exactly as it is today — single-session only.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Draft a follow-up using the same tone as my previous proposals",
+    "session_id": "new-proposal",
+    "cross_session_memory": true,
+    "cross_session_search": true
+  }'
+```
+
+| Field | Type | Default | What it does |
+|-------|------|---------|--------------|
+| `cross_session_memory` | boolean | `false` | The AI applies durable preferences it has learned from your past chats, and may note new ones for next time. |
+| `cross_session_search` | boolean | `false` | The AI can find and reuse content from your own prior documents and chats. |
+| `cross_session_memory_key` | string | — | Keeps a **separate** memory per end-customer (B2B2C — see below). |
+| `cross_session_scope` | list of session ids | — | Narrows cross-session search to a specific set of sessions instead of everything you own. |
+
+## What memory is (and isn't)
+
+Memory is about **how you like to work**, not a transcript of everything you've written. Think of it as the assistant remembering your standing instructions: preferred tone, spelling conventions, recurring names and facts, formatting habits. It's there so the AI carries your preferences from one chat to the next without you restating them.
+
+Memory is **not** a dump of your document content into every prompt. Cross-session search is the capability that pulls in actual prior content, and only when a request calls for it.
+
+## Owner scoping
+
+Everything stays inside the API key owner's data. With cross-session search on, the AI can reach your other sessions and documents — and only yours. There is no path for it to surface another account's or another organization's content. Memory follows the same boundary.
+
+## B2B2C: separate memory and scope per end-customer
+
+If you serve multiple end-users through a single API key, you don't want one user's preferences leaking into another user's chats. Two controls handle this:
+
+- **`cross_session_memory_key`** — pass a stable per-end-customer key (e.g. your own user id) and the AI keeps a **distinct memory** for each one. User A's preferences never affect User B's drafts.
+- **`cross_session_scope`** — pass the list of session ids that belong to that end-customer so cross-session search only looks at their work, not the whole account's.
+
+```bash
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Continue this in the usual style",
+    "session_id": "user_123_draft-7",
+    "cross_session_memory": true,
+    "cross_session_memory_key": "user_123",
+    "cross_session_search": true,
+    "cross_session_scope": ["user_123_draft-1", "user_123_draft-2"]
+  }'
+```
+
+Use `cross_session_memory_key` and `cross_session_scope` together to give each of your end-customers their own private memory and their own search boundary while still running under one API key.
+
+## Clearing memory
+
+To wipe the durable memory the AI has built up, clear it explicitly. This removes the stored preferences — it does not touch your documents or chat history.
+
+```bash
+curl -X DELETE https://api.superdocs.app/v1/users/me/cross-session-memory \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+For a B2B2C setup, pass the same `memory_key` you've been using so you clear only that end-customer's memory.
+
+The MCP tool is `clear_cross_session_memory`.
+
+<Warning>
+**`clear_cross_session_memory` is destructive.** It permanently erases the stored memory note (scoped to the `memory_key` you pass, or your account-wide memory if you pass none). The preferences are gone after this call. If you expose it to an AI agent, confirm intent before calling it.
+</Warning>
+
+## Notes
+
+- Both capabilities are strictly opt-in per request. A request that doesn't set the flags behaves exactly like a single-session chat.
+- Memory captures preferences over time; you may not see its effect on the very first chat after enabling it.
+- Memory and search are independent — you can enable one without the other.
+- See [Multi-Document Sessions](/guides/multi-document) for working with several documents inside a single session (a separate concept from reaching across sessions).
