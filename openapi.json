@@ -799,10 +799,11 @@
       "post": {
         "tags": [
           "v1",
+          "mcp",
           "sessions"
         ],
-        "summary": "Restore a document another session archived, keeping your edits.",
-        "description": "The \"keep editing (restores it)\" choice after another session deleted this document.\nUn-archives the document, re-links this session, then persists the current editor content (the\nuser's latest edits) so the document is fully restored and converges for everyone. `document_id`\nis the session-local id (same as /save); the durable id is recovered from the cached document.\nIdempotent: if the document was already restored by another session (or was never archived) the\nunarchive is a no-op and the content is simply re-saved. REST-only, non-billable.",
+        "summary": "Restore (un-archive) an archived document.",
+        "description": "Restore (un-archive) a document that was archived, re-linking it to this session and bringing\nits content back. `document_id` is the session-local id (same as /save); the durable id is\nrecovered from the cached document. Idempotent: restoring an already-active (or never-archived)\ndocument is a no-op. Non-billable.\n\nTwo shapes: WITHOUT a body (e.g. an AI agent restoring a document by id) the archived content is\nrestored as-is; WITH a body carrying the current editor HTML (the web app's \"keep editing\n(restores it)\" choice after another session deleted the document) the document is restored AND the\nsupplied edits are saved on top, so it converges for everyone.",
         "operationId": "unarchive_document",
         "security": [
           {
@@ -846,11 +847,18 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SaveDocumentRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SaveDocumentRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
           }
@@ -1302,6 +1310,90 @@
         }
       }
     },
+    "/v1/sessions/{session_id}/chunks/{chunk_id}/re-edit": {
+      "post": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Re-apply the AI's intended edit on top of the user's current version of one section.",
+        "description": "Resolve a concurrent-edit conflict on ONE section. When a user edited a section while the AI\nwas also changing it, this re-applies the AI's intended change on top of the user's current text\n(mode=\"redo\"), or blends the user's and AI's versions into one (mode=\"merge\"). Returns only the\nrewritten section HTML. Performs one AI edit and counts as one billable operation.",
+        "operationId": "re_edit_chunk_on_user_version",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "chunk_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Chunk Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReEditChunkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReEditChunkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/sessions/{session_id}/history": {
       "get": {
         "tags": [
@@ -1466,6 +1558,7 @@
       "post": {
         "tags": [
           "v1",
+          "mcp",
           "sessions"
         ],
         "summary": "Undo a revert: restore the pre-revert state and the rolled-back turns.",
@@ -3406,107 +3499,6 @@
         }
       }
     },
-    "/v1/billing/checkout": {
-      "post": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Create Checkout",
-        "description": "Create a checkout session to upgrade your subscription.\n\nReturns a URL to redirect the user to the hosted payment page.\nOnly allows upgrading to a higher tier than the current plan.",
-        "operationId": "create_checkout_v1_billing_checkout_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckoutRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckoutResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/billing/portal": {
-      "get": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Get Portal",
-        "description": "Get a URL to the customer billing portal.\n\nThe portal allows managing your subscription, viewing invoices,\nand updating your payment method.",
-        "operationId": "get_portal_v1_billing_portal_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortalResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/billing/cancel": {
-      "post": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Cancel Subscription Endpoint",
-        "description": "Cancel the current subscription at end of billing period.\n\nThe user retains full access to their current tier until the billing\nperiod ends, then transitions to the free tier automatically.",
-        "operationId": "cancel_subscription_endpoint_v1_billing_cancel_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CancelResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/v1/promo/redeem": {
       "post": {
         "tags": [
@@ -4617,39 +4609,6 @@
         ],
         "title": "Body_upload_user_template"
       },
-      "CancelResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "description": "Cancellation status: 'canceled'."
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Human-readable cancellation confirmation message."
-          },
-          "active_until": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Until",
-            "description": "ISO 8601 datetime until which the user retains access. Null if unknown."
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "message"
-        ],
-        "title": "CancelResponse",
-        "description": "Subscription cancellation result."
-      },
       "ChatResponse": {
         "properties": {
           "response": {
@@ -4710,36 +4669,6 @@
             }
           }
         ]
-      },
-      "CheckoutRequest": {
-        "properties": {
-          "tier": {
-            "type": "string",
-            "title": "Tier",
-            "description": "Target subscription tier: 'plus' ($20/mo, 2000 ops) or 'pro' ($99/mo, 10000 ops)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "tier"
-        ],
-        "title": "CheckoutRequest",
-        "description": "Initiate a subscription upgrade."
-      },
-      "CheckoutResponse": {
-        "properties": {
-          "checkout_url": {
-            "type": "string",
-            "title": "Checkout Url",
-            "description": "URL to redirect the user to for payment. Opens the hosted checkout page."
-          }
-        },
-        "type": "object",
-        "required": [
-          "checkout_url"
-        ],
-        "title": "CheckoutResponse",
-        "description": "Checkout session for subscription upgrade."
       },
       "ContinueRequest": {
         "properties": {
@@ -5912,21 +5841,6 @@
         "title": "PendingChange",
         "description": "A proposed document change awaiting user approval."
       },
-      "PortalResponse": {
-        "properties": {
-          "portal_url": {
-            "type": "string",
-            "title": "Portal Url",
-            "description": "URL to the billing portal for managing subscription, invoices, and payment method."
-          }
-        },
-        "type": "object",
-        "required": [
-          "portal_url"
-        ],
-        "title": "PortalResponse",
-        "description": "Customer billing portal access."
-      },
       "ProcessDocumentResponse": {
         "properties": {
           "html": {
@@ -6043,6 +5957,111 @@
           "filename"
         ],
         "title": "ProcessUploadRequest"
+      },
+      "ReEditChunkRequest": {
+        "properties": {
+          "user_current_html": {
+            "type": "string",
+            "title": "User Current Html"
+          },
+          "ai_original_old_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Original Old Html"
+          },
+          "ai_proposed_new_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Proposed New Html"
+          },
+          "ai_explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Explanation"
+          },
+          "model_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Tier"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode",
+            "default": "redo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_current_html"
+        ],
+        "title": "ReEditChunkRequest",
+        "description": "Re-apply the AI's intended change on the user's current section HTML, OR (mode='merge')\ncombine the user's version and the AI's version into one."
+      },
+      "ReEditChunkResponse": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "new_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Html"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id"
+        ],
+        "title": "ReEditChunkResponse"
       },
       "RedeemRequest": {
         "properties": {

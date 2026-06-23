@@ -108,6 +108,48 @@ The hard case is when the **same section** is edited by both sides at once — t
 - **When the same field gets two different values, keep the user's** — never concatenate the two into one blob.
 - **Never text-merge a non-text node.** Tables, diagrams (Mermaid), drawings, and equations (KaTeX/LaTeX) are structured nodes — splicing one side's text into the other corrupts them. Compare and resolve those **whole**: take one version or the other for the node, don't word-diff their markup. (This is the same rule as rendering and diffing them in an editor; see [Rendering visual content](/guides/editor-integration#rendering-visual-content-diagrams-and-equations).)
 
+### Explicit per-section conflict resolution
+
+If you run your own editor and want to resolve a single conflicted section deliberately — rather than relying on the automatic merge above — call:
+
+```
+POST /v1/sessions/{session_id}/chunks/{chunk_id}/re-edit
+```
+
+Use it when a user edited a section while the AI was also changing it. Pick one of two outcomes with `mode`:
+
+- **`"redo"`** (default) — re-apply the AI's intended change on top of the user's *current* text. The user's edits stay; the AI's change is layered back over them.
+- **`"merge"`** — blend the user's version and the AI's version into one combined section.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `user_current_html` | yes | The user's current version of the section. |
+| `ai_proposed_new_html` | — | The AI's proposed version of the section. |
+| `ai_original_old_html` | — | What the AI started from (its before-state). |
+| `ai_explanation` | — | The AI's stated intent for the change. |
+| `mode` | — | `"redo"` (default) or `"merge"`. |
+| `model_tier` | — | Optional model-tier override. |
+
+The response returns the rewritten section HTML only — apply it to that one `data-chunk-id` block the same way you apply any other section update.
+
+```bash
+curl -X POST \
+  https://api.superdocs.app/v1/sessions/my-session/chunks/{chunk_id}/re-edit \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_current_html": "<p data-chunk-id=\"…\">the user's current text…</p>",
+    "ai_proposed_new_html": "<p data-chunk-id=\"…\">the AI's version…</p>",
+    "ai_original_old_html": "<p data-chunk-id=\"…\">what the AI started from…</p>",
+    "ai_explanation": "Tighten the wording and fix the date.",
+    "mode": "redo"
+  }'
+```
+
+<Note>
+  **This is optional, and it's a billable AI edit.** It runs one AI edit and counts as **one billable operation**. The automatic merge described above already resolves most conflicts on its own — reach for `re-edit` only when you want explicit, deliberate control over one section. It is a REST endpoint, **not** an MCP/agent tool.
+</Note>
+
 ## Restoring a removed document
 
 If a `document_removed` event arrives for a document the user is mid-edit in, archiving it out from under them would lose their unsaved work. Offer a keep-editing choice instead of dropping the tab silently. Choosing "keep editing" restores the document and persists the user's current content so the document converges for everyone:

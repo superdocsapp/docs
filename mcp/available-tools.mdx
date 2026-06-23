@@ -1,11 +1,11 @@
 ---
 title: "Available Tools"
-description: "All 33 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 35 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 33 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
+When you connect to the SuperDocs MCP server, these 35 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
@@ -38,6 +38,7 @@ When you connect to the SuperDocs MCP server, these 33 tools become available to
 | `get_session_history` | Restore the full conversation and document state for a previous session, including chunk IDs, attachments, and editor actions. | `session_id` |
 | `get_session_jobs` | List all async chat jobs for a specific session, most recent first. | `session_id`, `limit` |
 | `revert_session_to_message` | Rewind a chat session to before a specific user message — restores both the document and the conversation in one call. Returns the reverted message text so you can pre-fill a compose box for editing. The original branch is preserved server-side but hidden from active reads. | `session_id`, `turn_index` |
+| `redo_revert` | Undo a revert. Restores the session forward to the pre-revert state (pass the `redo_checkpoint_id` returned by the revert) and brings back the rolled-back conversation and document. Meant for use immediately after a revert, before sending a new message. The mirror of `revert_session_to_message`. | `session_id`, `redo_checkpoint_id` |
 
 ## Session documents (multi-document)
 
@@ -63,6 +64,7 @@ Documents in SuperDocs are **durable** — they persist across sessions and surv
 | `get_document_detail` | Get one durable document by id — its `title` and metadata by default, or the full HTML body with `include_html=true`. | `document_id`, `include_html` |
 | `rename_document` | Rename a durable document. The new title is what shows up in `list_documents` and as the tab label when it's open. | `document_id`, `title` |
 | `archive_document` | **Destructive (soft delete).** Archive a durable document so it no longer appears in the active list. It's recoverable for about 30 days, then permanently purged. Use only when the user explicitly wants the document removed. | `document_id` |
+| `unarchive_document` | Restore (un-archive) a previously archived document, re-linking it to the session and bringing its content back. The mirror of `archive_document`. Idempotent — restoring an already-active document is a no-op. | `document_id` |
 | `open_documents` | Open one or more saved durable documents into a session — like opening files into tabs. Optionally choose which one takes focus. Returns the resulting roster (`title` + metadata; `include_html=true` for bodies). | `session_id`, `document_ids`, `focus_document_id`, `include_html` |
 | `init_session` | Create a new session and open saved durable documents into it in a single call — a shortcut for "start a fresh session with these files already loaded." | `session_id`, `document_ids`, `focus_document_id`, `include_html` |
 
