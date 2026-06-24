@@ -14,7 +14,7 @@
           "chat"
         ],
         "summary": "Edit, draft, or restructure a document using natural language. Preserves tables, styling, and formatting.",
-        "description": "Synchronous AI chat that can rewrite specific paragraphs, add or remove table rows, restructure sections, generate new content from templates, or transform an entire document. Pass document_html to give the AI context. Returns AI response text plus structural document changes (HTML edits, additions, deletions) with chunk IDs. One billable operation per document-modifying turn. For long-running edits or human-in-the-loop approval, use chat_async. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' to skip the full HTML in the response (the AI returns only per-section diffs in chunk_diffs) and save thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' \u2014 the AI returns the content in the reply text. Always use natural language to describe what you want; the AI handles all internal section lookups.",
+        "description": "Synchronous AI chat that can rewrite specific paragraphs, add or remove table rows, restructure sections, generate new content from templates, or transform an entire document. Pass document_html only to load or replace the document; once a session holds a document the server persists it across turns, so omit it on follow-up turns. Returns AI response text plus structural document changes (HTML edits, additions, deletions) with chunk IDs. One billable operation per document-modifying turn; very large multi-section edits bill one operation per 25 sections changed. For long-running edits or human-in-the-loop approval, use chat_async. Optional: model_tier (core/turbo/pro/max), thinking_depth (fast/balanced/deep), image_attachments for multimodal vision. RECOMMENDED for AI agents working with large documents (>20 pages): set response_mode='compact' to skip the full HTML in the response (the AI returns only per-section diffs in chunk_diffs) and save thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' \u2014 the AI returns the content in the reply text. Always use natural language to describe what you want; the AI handles all internal section lookups.",
         "operationId": "chat",
         "security": [
           {
@@ -160,6 +160,868 @@
         }
       }
     },
+    "/v1/documents": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "List your saved documents (the Files view).",
+        "description": "List the authenticated user/org's saved documents, most-recently-updated first\n(metadata only \u2014 no document content). Each carries a session_count (\"N chats\"). Documents\nbecome durable + reusable automatically as you create or edit them; on the FIRST call we also\none-time import the documents of pre-Files-view chats so prior work appears here too.",
+        "operationId": "list_documents",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Maximum number of documents to return.",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Maximum number of documents to return."
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Offset for pagination.",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Offset for pagination."
+          },
+          {
+            "name": "include_preview",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include a small preview_html (first chunks) per document for thumbnails. The web Files view sets this; agents leave it off to stay token-light.",
+              "default": false,
+              "title": "Include Preview"
+            },
+            "description": "Include a small preview_html (first chunks) per document for thumbnails. The web Files view sets this; agents leave it off to stay token-light."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me/cross-session-memory": {
+      "delete": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Clear your cross-session memory note.",
+        "description": "Delete the caller's cross-session memory note. Owner-scoped: a caller can only clear its OWN\nnote. With no key this clears the account-level note; with a memory_key it clears that one\nend-customer's note. Idempotent (removed=0 if it didn't exist).",
+        "operationId": "clear_cross_session_memory",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memory_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Clear ONE end-customer's stored memory (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default).",
+              "title": "Memory Key"
+            },
+            "description": "Clear ONE end-customer's stored memory (the cross_session_memory_key you send on chat). Omit to clear the account-level note (the B2C default)."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Get a saved document's detail and the chats that used it.",
+        "description": "One saved document's metadata plus the chat sessions that have it open\n(prior-chats-per-file). Owner-scoped \u2014 404 if the document isn't yours.\nToken-light by default; pass include_html=true to also get the full HTML body.",
+        "operationId": "get_document_detail",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, also returns the document's full reassembled HTML body (`html`), plus its `page_setup` and `version_id`. Default false returns metadata + prior-chats only, keeping the response token-light. This is the by-id way to read a saved document's body without opening it into a session.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "When true, also returns the document's full reassembled HTML body (`html`), plus its `page_setup` and `version_id`. Default false returns metadata + prior-chats only, keeping the response token-light. This is the by-id way to read a saved document's body without opening it into a session."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Rename a saved document.",
+        "description": "Rename one of your saved documents.",
+        "operationId": "rename_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Delete (archive) a saved document.",
+        "description": "Soft-archive a saved document \u2014 it leaves the Files view but is recoverable server-side.\nPresence-aware: if the document is currently open in ANOTHER session and `force` is not set,\nreturn an in-use warning \u2014 HTTP 200 (NOT archived) carrying `code:\"document_in_use\"` +\n`held_by_other:true` + `open_in_sessions:N` so an agent or UI can branch on it and confirm\n\"open in N other session(s) \u2014 delete anyway?\" then re-call with `force=true`. On `force=true`\nit archives, unlinks every session, and notifies the other sessions (which then prompt the user\nto keep editing or honor the deletion).",
+        "operationId": "archive_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Confirm deletion of a doc that is open in another session. Without it, deleting an in-use doc returns a held_by_other warning instead of tombstoning.",
+              "default": false,
+              "title": "Force"
+            },
+            "description": "Confirm deletion of a doc that is open in another session. Without it, deleting an in-use doc returns a held_by_other warning instead of tombstoning."
+          },
+          {
+            "name": "from_session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The caller's own session id (so it is excluded from the in-use check). Omit for a pure Files-view delete.",
+              "title": "From Session"
+            },
+            "description": "The caller's own session id (so it is excluded from the in-use check). Omit for a pure Files-view delete."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/documents/{document_id}/unarchive": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp"
+        ],
+        "summary": "Restore (un-archive) a previously archived document by its id.",
+        "description": "Restore (un-archive) a saved document by its id \u2014 the mirror of archive_document. The document\nre-enters your Files view and can be opened/edited again (open it into a chat with open_documents).\n`document_id` is the same id used by list_documents / archive_document. Idempotent: restoring an\nalready-active (or unknown) document is a no-op. Non-billable.",
+        "operationId": "unarchive_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/open": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Open saved documents into a chat session (shared, never copied).",
+        "description": "Load one or more SAVED documents into a session as editable tabs. The SAME durable\ndocument is attached (never copied), so edits flow back to the one shared row with\ncross-session soft-collaboration. The first listed document is focused. Returns the\nrefreshed document roster so the client can render tabs immediately.",
+        "operationId": "open_documents",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDocumentsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/init": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Start a new chat session and open documents into it in one call.",
+        "description": "Create a session AND open N saved documents into it in ONE call (the documents are SHARED,\nnever copied \u2014 the same cross-session behavior as /documents/open). The web UI passes its own\nsession_id so its session model stays consistent; an MCP/API integrator can omit it and the\nserver mints one \u2014 the one-call way to start a session with documents already open. With no\ndocument_ids it just returns a fresh, empty session. The open semantics (first document focused,\ndurable binding, returned roster) are identical to /documents/open.",
+        "operationId": "init_session",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/{document_id}/save": {
+      "post": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Persist a user-edited document (non-AI autosave).",
+        "description": "Persist a HUMAN-edited document \u2014 the editor's debounced autosave + save-on-blur \u2014 WITHOUT\nan AI turn. Re-indexes the html into the target document (preserving its durable identity so it\nUPDATES the same Files entry), then saves it so pure typing is preserved AND other sessions with\nthe same document open stay in sync. The AI-edit flow is unaffected (autosave saves first; a\nlater AI result is merged with your saved edits). Non-billable, REST-only (a UI affordance, not an MCP tool).",
+        "operationId": "save_human_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/{document_id}/unarchive": {
+      "post": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Restore a document another session archived, keeping your current edits (web app).",
+        "description": "Restore (un-archive) a document that was archived, re-linking it to this session and bringing\nits content back. `document_id` is the session-local id (same as /save); the durable id is\nrecovered from the cached document. Idempotent: restoring an already-active (or never-archived)\ndocument is a no-op. Non-billable.\n\nTwo shapes: WITHOUT a body (e.g. an AI agent restoring a document by id) the archived content is\nrestored as-is; WITH a body carrying the current editor HTML (the web app's \"keep editing\n(restores it)\" choice after another session deleted the document) the document is restored AND the\nsupplied edits are saved on top, so it converges for everyone.",
+        "operationId": "restore_document_keep_editing",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SaveDocumentRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/documents/blank": {
+      "post": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Open a new blank document as a tab in the session.",
+        "description": "Open a fresh BLANK document as a new focused tab in the session (the tab-strip \"+\").\nNon-billable \u2014 no AI, no upload pipeline; it is saved on first edit.\nREST-only (a manual UI affordance, not an MCP tool \u2014 agents create documents through chat).",
+        "operationId": "new_blank_document",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/sessions/{session_id}/documents": {
       "get": {
         "tags": [
@@ -168,7 +1030,7 @@
           "sessions"
         ],
         "summary": "List the documents open in a multi-document session.",
-        "description": "SUP-294 multi-document: returns the editable documents open in this session (focused first),\neach with its id, chunk count, focused flag, and reassembled HTML \u2014 so a client can render\ndocument tabs. Reads the live session cache.",
+        "description": "Returns the editable documents open in this session (focused first), each with its id, chunk\ncount, and focused flag \u2014 so a client can render document tabs. The response is token-light by\ndefault; pass include_html=true to also get each document's reassembled HTML.",
         "operationId": "list_session_documents",
         "security": [
           {
@@ -184,6 +1046,118 @@
               "type": "string",
               "title": "Session Id"
             }
+          },
+          {
+            "name": "report_changed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 ongoing changes are surfaced through the normal change feed. Computed before the roster updates the version this session has seen.",
+              "default": false,
+              "title": "Report Changed"
+            },
+            "description": "Resume awareness: when true, each doc carries `changed_since_seen` = its committed version is newer than the version THIS session last saw (changed by another session while away). The web UI sets this ONLY on resume / a chat switch (never on the ~2s poll) so it can show a one-time 'changed since you were last here' notice \u2014 ongoing changes are surfaced through the normal change feed. Computed before the roster updates the version this session has seen."
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/doc-events": {
+      "get": {
+        "tags": [
+          "v1",
+          "sessions"
+        ],
+        "summary": "Session Document Events",
+        "description": "Poll for cross-session document updates: returns `document_updated` events for documents\nTHIS session holds that OTHER sessions committed since `after_id`. The client polls this\n(~every 1-2s while a doc is open) and re-fetches the changed document's content so all open\nsessions converge without a refresh. Excludes this session's own writes by default (the web UI\nalready has its own changes); a REST/MCP integrator can pass `include_own=true` to receive its\nown events too. REST-only \u2014 a lightweight poll, deliberately NOT an MCP tool and NOT a held\nSSE connection (keeps the per-instance connection budget free).",
+        "operationId": "session_document_events_v1_sessions__session_id__doc_events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Return events with id greater than this (the poll cursor).",
+              "default": 0,
+              "title": "After Id"
+            },
+            "description": "Return events with id greater than this (the poll cursor)."
+          },
+          {
+            "name": "include_own",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Integrator opt-out: when true, ALSO return this session's own document_updated events (default false excludes them \u2014 the web UI never needs its own writes echoed). A REST/MCP integration that writes on one connection and polls on another, or wants a complete change feed for the docs it holds, sets this true.",
+              "default": false,
+              "title": "Include Own"
+            },
+            "description": "Integrator opt-out: when true, ALSO return this session's own document_updated events (default false excludes them \u2014 the web UI never needs its own writes echoed). A REST/MCP integration that writes on one connection and polls on another, or wants a complete change feed for the docs it holds, sets this true."
           },
           {
             "name": "authorization",
@@ -232,7 +1206,7 @@
           "sessions"
         ],
         "summary": "Switch which document is focused in a multi-document session.",
-        "description": "SUP-294 multi-document: make document_id the focused document (the editor's active doc and\nthe default edit target). Persists the outgoing focused doc into the session's document map and\nreturns the now-focused document's HTML.",
+        "description": "Make document_id the focused document (the editor's active document and the default edit\ntarget). Persists the outgoing focused document into the session's document map and returns the\nnow-focused document's HTML.",
         "operationId": "focus_session_document",
         "security": [
           {
@@ -257,6 +1231,18 @@
               "type": "string",
               "title": "Document Id"
             }
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content."
           },
           {
             "name": "authorization",
@@ -305,7 +1291,7 @@
           "sessions"
         ],
         "summary": "Close (remove) a document from a multi-document session.",
-        "description": "SUP-294 multi-document: remove document_id from the session's open documents (the\ntab \u00d7 button). If it's the focused document, focus another open doc \u2014 `next_focus` if it's\nstill open (so the client can pick the adjacent tab), else the next remaining one; closing\nthe last document leaves the session empty. Returns the updated document roster + the\nnow-focused document's HTML.\n\nPersists to BOTH the live cache AND the LangGraph checkpoint: the cache write makes the\nclose take effect immediately, and the checkpoint write stops a later session warm-up\n(after a restart / cache eviction, or right after closing the last doc) from resurrecting\nthe closed document from stale checkpoint state. The checkpoint write is best-effort \u2014 a\nfailure is logged, not fatal (the close still holds for the live session).",
+        "description": "Remove document_id from the session's open documents (the tab close button). If it's the\nfocused document, focus another open document \u2014 `next_focus` if it's still open (so the client\ncan pick the adjacent tab), else the next remaining one; closing the last document leaves the\nsession empty. Returns the updated document roster + the now-focused document's HTML.\n\nThe close takes effect immediately and is persisted, so a later reconnect or session restore\nwon't bring the closed document back. Persistence is best-effort \u2014 a failure is logged, not\nfatal (the close still holds for the active session).",
         "operationId": "close_session_document",
         "security": [
           {
@@ -346,6 +1332,18 @@
               ],
               "title": "Next Focus"
             }
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "Include each document's full reassembled HTML body. Default false (token-light \u2014 recommended for AI agents enumerating or switching tabs): returns only ids, title, section count, focused flag, and page setup, omitting the body which can be hundreds of KB per document. The web app passes true to render document content."
           },
           {
             "name": "authorization",
@@ -390,10 +1388,10 @@
       "post": {
         "tags": [
           "v1",
-          "v1"
+          "sessions"
         ],
         "summary": "Re-apply the AI's intended edit on top of the user's current version of one section.",
-        "description": "SUP-294: re-apply the AI's ORIGINAL intent onto the user's CURRENT text for one section,\npreserving the user's edits wherever they don't conflict with that intent. One LLM call via\nthe existing single-chunk worker; returns only the rewritten section HTML. Billed like an edit.",
+        "description": "Resolve a concurrent-edit conflict on ONE section. When a user edited a section while the AI\nwas also changing it, this re-applies the AI's intended change on top of the user's current text\n(mode=\"redo\"), or blends the user's and AI's versions into one (mode=\"merge\"). Returns only the\nrewritten section HTML. Performs one AI edit and counts as one billable operation.",
         "operationId": "re_edit_chunk_on_user_version",
         "security": [
           {
@@ -478,7 +1476,7 @@
           "sessions"
         ],
         "summary": "Restore the full conversation and document state for a previous session.",
-        "description": "Returns complete message history (user and AI), document state, attachment list, and editor actions for a previous session. Pass include_document_html=false to skip the full HTML body and receive only conversation + metadata \u2014 saves tokens when you only need to check history or re-focus a tab. Set include_document_html=true (default) when the web app needs to reload the document into the editor.",
+        "description": "Returns complete message history (user and AI), final document HTML with chunk IDs preserved, attachment list, and editor actions (font, color, alignment changes). Use to continue editing a document you started in a prior session. The AI rehydrates with full context of all prior decisions, chunk IDs, and attachments. Pass include_document_html=false to skip the full document body when you only need the conversation.",
         "operationId": "get_session_history",
         "security": [
           {
@@ -496,14 +1494,34 @@
             }
           },
           {
+            "name": "focus_document_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Durable id of the document to focus on restore (e.g. the file the user clicked in the Files view). When set, that document is shown in the editor and marked focused in the roster; omit to use the session's own last-focused document.",
+              "title": "Focus Document Id"
+            },
+            "description": "Durable id of the document to focus on restore (e.g. the file the user clicked in the Files view). When set, that document is shown in the editor and marked focused in the roster; omit to use the session's own last-focused document."
+          },
+          {
             "name": "include_document_html",
             "in": "query",
             "required": false,
             "schema": {
               "type": "boolean",
+              "description": "When false, omit the restored document's full HTML body (document_state.html_content) to keep your context small \u2014 agents that just need the conversation + metadata should set false. Default true (the web app needs the body to re-render the editor).",
               "default": true,
               "title": "Include Document Html"
-            }
+            },
+            "description": "When false, omit the restored document's full HTML body (document_state.html_content) to keep your context small \u2014 agents that just need the conversation + metadata should set false. Default true (the web app needs the body to re-render the editor)."
           },
           {
             "name": "authorization",
@@ -554,7 +1572,7 @@
           "sessions"
         ],
         "summary": "Rewind a chat session to before a specific user message \u2014 restores both the document and the conversation in one call.",
-        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained in the database for audit. The original conversation branch is preserved server-side; the new branch becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature (no checkpoint marker).",
+        "description": "Rewinds a chat session to the state immediately before a specific user message. The document, conversation history, and supporting context all snap back to that point. The text of the reverted message is returned (compose_text) so the caller can edit and resend it. Messages from the reverted turn forward are soft-archived: hidden from active reads but retained for audit. The original conversation is preserved server-side; the restored conversation becomes the active timeline. Rejects with 409 if the session has a chat job in progress or awaiting approval \u2014 wait for the job to settle before reverting. Returns 422 if the message predates the revertability feature.",
         "operationId": "revert_session_to_message",
         "security": [
           {
@@ -594,6 +1612,82 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RevertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevertResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/redo": {
+      "post": {
+        "tags": [
+          "v1",
+          "mcp",
+          "sessions"
+        ],
+        "summary": "Undo a revert: restore the pre-revert state and the rolled-back turns.",
+        "description": "Revert is non-destructive: this restores the session FORWARD to the pre-revert state\n(returned by the revert as redo_checkpoint_id), restores the document to that state while still\nmerging any concurrent edits from other sessions (keeping both where they conflict), and\nun-archives exactly the chat turns the revert hid. Intended for use immediately after a revert;\nonce a new message is sent the timeline diverges and the web app stops offering it.",
+        "operationId": "redo_revert",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedoRequest"
               }
             }
           }
@@ -830,7 +1924,7 @@
           "documents"
         ],
         "summary": "Upload Document To Editor",
-        "description": "Upload a document file and load it into the editor.\n\nConverts the file to HTML with formatting preserved (tables, colors, images).\nImages are extracted to cloud storage and referenced by URL.\nReturns the HTML for the frontend editor to display.\n\nAI indexing happens automatically on the first chat message.\nFor API clients who want immediate indexing, pass ?index=true.",
+        "description": "Upload a document file and load it into the editor.\n\nConverts the file to HTML with formatting preserved (tables, colors, images).\nImages are extracted to cloud storage and referenced by URL.\nReturns the HTML for the editor to display.\n\nAI indexing happens automatically on the first chat message.\nFor API clients who want immediate indexing, pass ?index=true.",
         "operationId": "upload_document_to_editor",
         "security": [
           {
@@ -905,14 +1999,78 @@
         }
       }
     },
+    "/v1/documents/images/upload": {
+      "post": {
+        "tags": [
+          "v1",
+          "documents"
+        ],
+        "summary": "Upload an image and get back a stable URL the editor can drop into <img src>.",
+        "description": "Upload a single inline image and return a stable URL you can reference\nin the document via <img src=\"...\">.\n\nAccepts PNG/JPEG/WebP/GIF/SVG, up to 10 MB per upload. The returned URL is\npublic-read with an unguessable path. Useful for saving a drawing or\nscreenshot so a document can embed it.",
+        "operationId": "upload_inline_image",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_inline_image"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/documents/export": {
       "post": {
         "tags": [
           "v1",
           "mcp"
         ],
-        "summary": "Export the current document as a styled .doc, .docx, .pdf, or .html file with full fidelity.",
-        "description": "Round-trips the document through the original docx renderer, preserving tables, borders, shading, alternating row colors, headers, footers, fonts, inline styling, and embedded images. Two modes: pass html directly to export ad-hoc content, OR pass session_id to export the session's current state. Format options: 'doc' (default, Word-compatible HTML, pixel-perfect fidelity, best for end users) or 'docx' (native Open XML via python-docx, best for programmatic processing or mail merge). Fidelity is the differentiator vs naive HTML to docx converters.",
+        "summary": "Export the current document as a styled .docx (default), .pdf, .html, .md, or .txt file with full fidelity.",
+        "description": "Round-trips the document through the original docx renderer, preserving tables, borders, shading, alternating row colors, headers, footers, fonts, inline styling, and embedded images. Two modes: pass html directly to export ad-hoc content, OR pass session_id to export the session's current state. Format options: 'docx' (default, native Open XML, best for programmatic processing or mail merge), 'pdf', 'html', 'markdown', or 'txt' ('doc' is a legacy Word-compatible HTML alias). Fidelity is the differentiator vs naive HTML to docx converters.",
         "operationId": "export_document",
         "security": [
           {
@@ -976,7 +2134,7 @@
           "documents"
         ],
         "summary": "Request Large Export Email",
-        "description": "Enqueue a large-export job \u2014 runs in the background, emails a GCS\nsigned URL when the export finishes. 24h SLA promised in the email.",
+        "description": "Enqueue a large-export job \u2014 runs in the background and emails a\nsecure, time-limited download link when the export finishes. 24h SLA\npromised in the email.",
         "operationId": "request_large_export_email",
         "security": [
           {
@@ -1041,7 +2199,7 @@
           "documents"
         ],
         "summary": "Upload .docx/PDF/HTML/MD/RTF as the active editable document with chunk-ID structural editing.",
-        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. For files >100KB, prefer request_upload_url to avoid token bloat from base64 through the agent context. By default the response is compact (metadata only \u2014 chunk count, session id, version id, page setup) to keep your context small; set return_html=true if you need the full parsed HTML returned inline. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
+        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. When you pass a session_id the response is compact by default (metadata only \u2014 pass return_html=true for the full parsed HTML); the document is loaded into the session and you edit it via chat. For files >100KB, prefer request_upload_url (pre-signed URL flow) to avoid token bloat from base64 through the agent context. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
         "operationId": "upload_document_base64",
         "security": [
           {
@@ -1171,7 +2329,7 @@
           "templates"
         ],
         "summary": "Save a document template (NDA, contract, SOP, letterhead) for reuse across sessions.",
-        "description": "Templates persist across sessions and can be referenced by the AI when drafting new documents (e.g., \"draft an NDA using my standard template\"). Stored at user or organization scope. Ideal for boilerplate, branded letterheads, recurring document structures, or compliance-required templates. Supports the same formats as document upload: .docx, .pdf, .txt, .rtf, .md. Max 50 MB.",
+        "description": "Templates persist across sessions and can be referenced by the AI when drafting new documents (e.g., \"draft an NDA using my standard template\"). Stored at user or organization scope. Ideal for boilerplate, branded letterheads, recurring document structures, or compliance-required templates. Supports the same formats as document upload: .docx, .pdf, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
         "operationId": "upload_template_base64",
         "security": [
           {
@@ -1275,6 +2433,18 @@
             "description": "Maximum number of jobs to return"
           },
           {
+            "name": "compact",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs.",
+              "default": false,
+              "title": "Compact"
+            },
+            "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs."
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1323,7 +2493,7 @@
           "jobs"
         ],
         "summary": "Get the status, partial results, and any pending changes for an async chat job.",
-        "description": "Returns the job's current state (pending, in_progress, awaiting_approval, completed, failed, or cancelled), intermediate AI responses streamed during execution, the final document HTML once complete, and any pending changes awaiting user approval (with chunk IDs and proposed HTML diffs in metadata.pending_changes). Poll this after chat_async to track progress and retrieve results. When status is awaiting_approval, call POST /v1/chat/{session_id}/approve to approve or deny each pending change.",
+        "description": "Returns the job's current state (pending, in_progress, awaiting_approval, completed, failed, or cancelled), intermediate AI responses streamed during execution, the final document HTML once complete, and any pending changes awaiting user approval (with chunk IDs and proposed HTML diffs in metadata.pending_changes). Poll this after chat_async to track progress and retrieve results. When status is awaiting_approval, call POST /v1/chat/{session_id}/approve to approve or deny each pending change. Headless/MCP clients get the same typed progress events the web SSE stream delivers via metadata.intermediate_responses (e.g. documents_changed, continue_prompt, model_fallback, proposed_change_batch); cross-session document updates from OTHER sessions are reported separately by polling GET /v1/sessions/{session_id}/doc-events.",
         "operationId": "get_job",
         "security": [
           {
@@ -1483,6 +2653,18 @@
             "description": "Maximum number of jobs to return"
           },
           {
+            "name": "compact",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs.",
+              "default": false,
+              "title": "Compact"
+            },
+            "description": "When true, omit each job's heavy result body + streamed intermediate events \u2014 returns just status/progress/ids/timestamps. Recommended for agents listing many jobs."
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1597,7 +2779,7 @@
           "chat"
         ],
         "summary": "Stream Chat Progress",
-        "description": "Stream real-time progress for a chat job using Server-Sent Events (SSE).\n\nOpens an SSE connection that streams events as the AI processes your request.\nUse this with the job_id returned from POST /v1/chat/async.\n\nEvent types:\n- 'intermediate': Progress updates during processing (content, sequence, timestamp).\n- 'proposed_change': A document change proposed for review (when approval_mode is 'ask_every_time').\n- 'final': Processing complete. Contains the full result with AI response and document changes.\n- 'usage': Billing data emitted after 'final' (monthly_used, monthly_limit, monthly_remaining).\n- 'error': An error occurred (job failed, cancelled, or not found).\n\nAuthentication: Pass a token or api_key as a query parameter (required for EventSource which cannot set headers).",
+        "description": "Stream real-time progress for a chat job using Server-Sent Events (SSE).\n\nOpens an SSE connection that streams events as the AI processes your request.\nUse this with the job_id returned from POST /v1/chat/async.\n\nEvent types:\n- 'intermediate': Progress updates during processing (content, sequence, timestamp).\n- 'proposed_change_batch': The batch of document changes proposed for review, delivered as one\n  event carrying changes[] (emitted when approval_mode is 'ask_every_time'). Changes are always\n  delivered as a batch via this event.\n- 'document_sync': Chunk-id sync emitted before the agent runs, so changes can reference stable ids.\n- 'continue_prompt': A pause on a large edit, asking whether to continue or stop.\n- 'documents_changed': Signals that one or more documents were auto-applied (with per-document\n  change counts and changed chunk ids).\n- 'model_fallback': Notice that the request automatically failed over to another model tier.\n- 'final': Processing complete. Contains the full result with AI response and document changes.\n- 'usage': Billing data emitted after 'final' (monthly_used, monthly_limit, monthly_remaining).\n- 'error': An error occurred (job failed, cancelled, or not found).\n\nAuthentication: Pass a token or api_key as a query parameter (required for EventSource which cannot set headers).",
         "operationId": "stream_chat_progress_v1_chat__session_id__stream_get",
         "parameters": [
           {
@@ -1772,9 +2954,10 @@
       "post": {
         "tags": [
           "v1",
+          "mcp",
           "chat"
         ],
-        "summary": "Resume or stop a chat turn paused by a large-edit continue prompt (SUP-362).",
+        "summary": "Resume or stop a chat turn paused by a large-edit continue prompt.",
         "description": "Used with chat_async when a large edit paused to ask whether to keep going.\nPoll get_job until status=awaiting_approval AND metadata.awaiting_kind='continue_prompt';\nthen POST here with continue=true to resume (the AI picks up where it left off with a\nfresh time/step budget) or continue=false to stop (everything applied so far is kept).\nThe job then resumes/finishes and reaches status=completed. This is NOT the change-\napproval endpoint (that is approve_change) \u2014 it can only act on a continue-prompt pause.",
         "operationId": "continue_chat",
         "security": [
@@ -1929,7 +3112,7 @@
           "templates"
         ],
         "summary": "Upload User Template",
-        "description": "Upload a document file as a personal/organization template.\n\nThe file is processed synchronously: text extraction, HTML conversion, and content indexing.\nSupported formats: .docx, .pdf, .txt, .rtf, .md\nTemplates are scoped to the uploading user or organization.",
+        "description": "Upload a document file as a personal/organization template.\n\nThe file is processed synchronously: text extraction, HTML conversion, and content indexing.\nSupported formats: .docx, .pdf, .txt, .rtf, .md, .html, .htm\nTemplates are scoped to the uploading user or organization.",
         "operationId": "upload_user_template",
         "security": [
           {
@@ -2426,199 +3609,6 @@
         }
       }
     },
-    "/v1/auth/send-verification": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Send a branded email-verification email via Resend (replaces Firebase default sender).",
-        "description": "Authenticated endpoint. The signed-in user (possibly with\nemail_verified=false) requests a verification email. We use Firebase\nAdmin SDK to generate the verification link, then send a branded email\nvia Resend with the link wrapped in a CTA button.\n\nReturns 200 silently on any error (network, template, Firebase API)\nto prevent timing-attacks. The frontend treats this as fire-and-forget\nand trusts the email will arrive.",
-        "operationId": "send_verification_email_v1_auth_send_verification_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/SendVerificationRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Payload"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/auth/send-password-reset": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Send a branded password-reset email via Resend (replaces Firebase default sender).",
-        "description": "UNauthenticated endpoint. Takes an email address. Always returns 200\nregardless of whether the email exists in Firebase \u2014 this prevents email\nenumeration attacks (and matches Firebase's default behaviour).\n\nGenerates a reset link via Firebase Admin SDK, then sends a branded\nemail through Resend.",
-        "operationId": "send_password_reset_email_v1_auth_send_password_reset_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PasswordResetRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/billing/checkout": {
-      "post": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Create Checkout",
-        "description": "Create a checkout session to upgrade your subscription.\n\nReturns a URL to redirect the user to the hosted payment page.\nOnly allows upgrading to a higher tier than the current plan.",
-        "operationId": "create_checkout_v1_billing_checkout_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckoutRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckoutResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/billing/portal": {
-      "get": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Get Portal",
-        "description": "Get a URL to the customer billing portal.\n\nThe portal allows managing your subscription, viewing invoices,\nand updating your payment method.",
-        "operationId": "get_portal_v1_billing_portal_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PortalResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/billing/cancel": {
-      "post": {
-        "tags": [
-          "billing"
-        ],
-        "summary": "Cancel Subscription Endpoint",
-        "description": "Cancel the current subscription at end of billing period.\n\nThe user retains full access to their current tier until the billing\nperiod ends, then transitions to the free tier automatically.",
-        "operationId": "cancel_subscription_endpoint_v1_billing_cancel_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CancelResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/v1/promo/redeem": {
       "post": {
         "tags": [
@@ -2814,7 +3804,7 @@
           "uploads"
         ],
         "summary": "Parse an uploaded file into structured HTML with chunk IDs for targeted AI editing.",
-        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64. Returns structured HTML with unique chunk IDs on every paragraph, heading, table, row, and cell \u2014 enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. Counts as one billable operation. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as read-only AI-searchable reference.",
+        "description": "Fetches the file uploaded via request_upload_url and runs the same parsing pipeline as upload_document_base64: every paragraph, heading, table, row, and cell gets a unique chunk ID, enabling targeted structural edits via chat (\"remove row 3 of the pricing table\" works), with tables, borders, shading, alternating row colors, fonts, and inline styling preserved on edit and export. By default the response is compact (metadata only, no document body) to keep your context small \u2014 the document is loaded into the session and you edit it via chat; pass return_html=true if you need the parsed HTML inline. Uploading and parsing is NOT itself a billable operation \u2014 you are charged only when the AI edits the document. Specify parse_mode='document' to load as the active editable document, or parse_mode='attachment' to load as a read-only AI-searchable reference.",
         "operationId": "process_uploaded_document",
         "security": [
           {
@@ -2892,7 +3882,7 @@
           "downloads"
         ],
         "summary": "Get a pre-signed URL to download an exported document without proxying through the agent.",
-        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Internally this calls the same export pipeline as export_document, then stores the result in cloud storage and returns a signed URL. Specify format='pdf', 'docx', 'doc', or 'html'.",
+        "description": "Returns a short-lived (15-minute) GET URL plus a curl example. **If you have shell access (Bash tool), execute the returned `curl_example` yourself to download the file to the user's working directory \u2014 do NOT paste the curl command back to the user expecting them to run it manually. Only fall back to returning the URL+command as text when shell execution is genuinely unavailable, OR when the user has explicitly asked for the URL only.** Bytes never pass through the agent's context window either way. Generates the document in the requested format and returns a time-limited signed download URL. Specify format as 'pdf', 'docx', 'html', 'markdown', or 'txt' (legacy 'doc' also accepted).",
         "operationId": "request_download_url",
         "security": [
           {
@@ -3387,7 +4377,7 @@
               }
             ],
             "title": "Document Html",
-            "description": "Current document HTML. Include data-chunk-id attributes on elements to enable targeted AI edits."
+            "description": "Current document HTML. OMIT this when the session already holds the document \u2014 the server persists it across turns, so you don't re-send it every turn; pass it only to load new content or replace the document wholesale. Include data-chunk-id attributes on elements to enable targeted AI edits."
           },
           "user_id": {
             "anyOf": [
@@ -3500,7 +4490,72 @@
               }
             ],
             "title": "Document Id",
-            "description": "SUP-294 multi-document: target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default \u2014 unchanged single-document behaviour). When set, that document becomes the focus for this turn."
+            "description": "Target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default \u2014 unchanged single-document behaviour). When set, that document becomes the focus for this turn."
+          },
+          "window_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Id",
+            "description": "Optional identifier for the client window (set by the web app) so concurrent edits from two windows of the same chat are merged rather than overwritten. Agents/API may omit."
+          },
+          "cross_session_memory": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Memory",
+            "description": "When true, the AI carries a private rolling memory of context across THIS account's chats (off by default). Per-request override of your saved Settings default."
+          },
+          "cross_session_search": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Search",
+            "description": "When true, the AI may search your PAST chats and documents on demand to reuse prior work and open a found document (off by default). Per-request override of your saved Settings default; never affects the always-on search of the open document."
+          },
+          "cross_session_memory_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Memory Key",
+            "description": "Optional per-request id of YOUR end-customer so the cross-session memory note is kept in a separate file per end-customer. Omit for one account-level note (the default / B2C)."
+          },
+          "cross_session_scope": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Scope",
+            "description": "Optional list of session ids to restrict cross-session SEARCH to (e.g. one end-customer's sessions). Omit to search all of this account's sessions. Only narrows within the API-key owner; ignored unless cross_session_search is on."
           }
         },
         "type": "object",
@@ -3574,7 +4629,7 @@
           "return_html": {
             "type": "boolean",
             "title": "Return Html",
-            "description": "When true, the response includes the full reassembled document HTML (the `html` field). Default false returns compact metadata only \u2014 chunk count, session id, version id, page setup \u2014 keeping your context window small. The document is already loaded into the session and editable via chat; you only need return_html=true if you need to inspect the parsed HTML inline.",
+            "description": "With a session_id: false (default) returns compact metadata only (chunks_count, version_id, page_setup) \u2014 the document is loaded into the session and you edit it via chat, keeping your context small; true returns the full parsed HTML inline. Ignored on the convert-only path (no session_id), which always returns the converted html.",
             "default": false
           }
         },
@@ -3642,6 +4697,20 @@
         ],
         "title": "Body_upload_document_to_editor"
       },
+      "Body_upload_inline_image": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_inline_image"
+      },
       "Body_upload_user_template": {
         "properties": {
           "file": {
@@ -3655,39 +4724,6 @@
           "file"
         ],
         "title": "Body_upload_user_template"
-      },
-      "CancelResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "description": "Cancellation status: 'canceled'."
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Human-readable cancellation confirmation message."
-          },
-          "active_until": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Active Until",
-            "description": "ISO 8601 datetime until which the user retains access. Null if unknown."
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "message"
-        ],
-        "title": "CancelResponse",
-        "description": "Subscription cancellation result."
       },
       "ChatResponse": {
         "properties": {
@@ -3750,36 +4786,6 @@
           }
         ]
       },
-      "CheckoutRequest": {
-        "properties": {
-          "tier": {
-            "type": "string",
-            "title": "Tier",
-            "description": "Target subscription tier: 'plus' ($20/mo, 2000 ops) or 'pro' ($99/mo, 10000 ops)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "tier"
-        ],
-        "title": "CheckoutRequest",
-        "description": "Initiate a subscription upgrade."
-      },
-      "CheckoutResponse": {
-        "properties": {
-          "checkout_url": {
-            "type": "string",
-            "title": "Checkout Url",
-            "description": "URL to redirect the user to for payment. Opens the hosted checkout page."
-          }
-        },
-        "type": "object",
-        "required": [
-          "checkout_url"
-        ],
-        "title": "CheckoutResponse",
-        "description": "Checkout session for subscription upgrade."
-      },
       "ContinueRequest": {
         "properties": {
           "job_id": {
@@ -3799,7 +4805,7 @@
           "continue"
         ],
         "title": "ContinueRequest",
-        "description": "Resume or stop a chat turn that paused to ask whether to continue (SUP-362)."
+        "description": "Resume or stop a chat turn that paused to ask whether to continue."
       },
       "CreateApiKeyRequest": {
         "properties": {
@@ -3973,6 +4979,18 @@
             "title": "Html Content",
             "description": "Full document HTML content with data-chunk-id attributes."
           },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Session-local id (slug) of the focused document. Identifies the document on restore so a restored tab stays in sync with edits made to it in other sessions."
+          },
           "version_id": {
             "anyOf": [
               {
@@ -4041,7 +5059,7 @@
         "properties": {
           "session_id": {
             "type": "string",
-            "maxLength": 200,
+            "maxLength": 256,
             "title": "Session Id",
             "description": "Session ID whose current document should be exported and packaged for download."
           },
@@ -4056,7 +5074,7 @@
               "doc"
             ],
             "title": "Format",
-            "description": "Export format. Canonical ExportFormat Literal from export.schemas.",
+            "description": "Export format (docx, pdf, html, markdown, txt).",
             "default": "docx"
           },
           "filename": {
@@ -4151,7 +5169,7 @@
           "editor_action": {
             "type": "string",
             "title": "Editor Action",
-            "description": "Frontend instruction: 'update' (load document_state HTML into editor), 'clear' (reset editor), or 'keep' (no change).",
+            "description": "Client instruction: 'update' (load document_state HTML into editor), 'clear' (reset editor), or 'keep' (no change).",
             "default": "keep"
           }
         },
@@ -4238,7 +5256,7 @@
           "embed_images": {
             "type": "boolean",
             "title": "Embed Images",
-            "description": "HTML export only. When True, images are base64-embedded for offline portability (raises size cap to 150 MB). When False, images stay as GCS URLs (smaller file, online-only).",
+            "description": "HTML export only. When True, images are base64-embedded for offline portability (raises size cap to 150 MB). When False, images are referenced by URL (smaller file, online-only).",
             "default": false
           },
           "watermark_text": {
@@ -4265,7 +5283,7 @@
         },
         "type": "object",
         "title": "ExportOptions",
-        "description": "User-facing export customisation. Persisted to frontend localStorage\nkeyed `superdocs.exportOptions.v1`; sent on every export request from the\nnew DownloadMenu."
+        "description": "User-facing export customisation (page size, orientation, margins,\nfilename, watermark). Sent on every export request."
       },
       "ExportRequest": {
         "properties": {
@@ -4280,7 +5298,7 @@
               }
             ],
             "title": "Session Id",
-            "description": "Session ID to export from (Mode B). Required if html is omitted."
+            "description": "Session ID to export from (the document is taken from the session). Required if html is omitted."
           },
           "html": {
             "anyOf": [
@@ -4293,7 +5311,7 @@
               }
             ],
             "title": "Html",
-            "description": "HTML content to export (Mode A). Used instead of session document if provided."
+            "description": "HTML content to export inline. Used instead of the session document if provided."
           },
           "format": {
             "type": "string",
@@ -4306,7 +5324,7 @@
               "doc"
             ],
             "title": "Format",
-            "description": "Export format. Default flipped from 'doc' to 'docx' (2026-05-27).",
+            "description": "Export format. One of docx (default), pdf, html, markdown, txt.",
             "default": "docx"
           },
           "options": {
@@ -4337,12 +5355,12 @@
               }
             ],
             "title": "Upload Id",
-            "description": "Mode C: ID returned by /v1/uploads (Phase B). When set, the route fetches the HTML body from GCS instead of using the html field."
+            "description": "ID returned by /v1/uploads (large-document upload flow, for payloads above ~25 MB). When set, the route fetches the HTML body from the uploaded payload instead of using the html field."
           }
         },
         "type": "object",
         "title": "ExportRequest",
-        "description": "Unified request body for POST /v1/documents/export.\n\nBackward-compat notes:\n- Top-level ``filename`` is retained for legacy clients (frontend\n  previously sent only ``{ html }`` and the route auto-extracted the\n  filename from <h1>). New clients should use ``options.filename`` \u2014\n  options.filename wins when both are set.\n- ``format`` default flipped from \"doc\" \u2192 \"docx\" (architecture\n  decision #1). Existing MCP callers passing format=\"doc\" explicitly\n  keep working for 7 days, then the legacy path is removed."
+        "description": "Unified request body for POST /v1/documents/export.\n\nBackward-compat notes:\n- Top-level ``filename`` is retained for legacy clients that sent only\n  ``{ html }`` and relied on the filename being auto-extracted from the\n  first <h1>. New clients should use ``options.filename`` \u2014\n  options.filename wins when both are set.\n- ``format`` defaults to \"docx\". Legacy callers passing format=\"doc\"\n  explicitly keep working during a short back-compat window."
       },
       "HTTPValidationError": {
         "properties": {
@@ -4451,6 +5469,39 @@
         ],
         "title": "ImageAttachmentData",
         "description": "Inline image attachment for vision-based analysis."
+      },
+      "InitSessionRequest": {
+        "properties": {
+          "document_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ids",
+            "description": "Durable document ids (from GET /v1/documents) to open into the brand-new session. Omit/empty to start an empty session."
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Optional client-chosen session id (the web UI passes its own so its session model stays consistent). Omit and the server mints one \u2014 the one-call way for an MCP/API integrator to start a session with documents already open."
+          }
+        },
+        "type": "object",
+        "title": "InitSessionRequest"
       },
       "JobListResponse": {
         "properties": {
@@ -4805,34 +5856,24 @@
         },
         "type": "object",
         "title": "LargeExportEmailRequest",
-        "description": "Body for POST /v1/documents/export/email-request.\n\nUsed when a synchronous export hits the 100MB body cap. Frontend POSTs\nhere with the same payload it would have sent to /v1/documents/export\n(minus the html field \u2014 that comes from the session). Worker streams\nthe result to GCS and emails the signed URL within 24h."
+        "description": "Body for POST /v1/documents/export/email-request.\n\nUsed when a synchronous export exceeds the inline body cap. Send the same\npayload you would POST to /v1/documents/export (minus the html field \u2014\nthat comes from the session). The export is generated in the background\nand a secure download link is emailed within 24h."
       },
-      "PasswordResetRequest": {
+      "OpenDocumentsRequest": {
         "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email",
-            "description": "Email address to send the reset link to"
-          },
-          "lang": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lang",
-            "description": "BCP-47 language tag for email rendering (e.g. 'he-IL', 'ar', 'en'). When set, drives RTL detection in the email template. Falls back to the request's Accept-Language header, then to 'en'."
+          "document_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Ids",
+            "description": "Durable document ids (from GET /v1/documents) to open into the session."
           }
         },
         "type": "object",
         "required": [
-          "email"
+          "document_ids"
         ],
-        "title": "PasswordResetRequest"
+        "title": "OpenDocumentsRequest"
       },
       "PendingChange": {
         "properties": {
@@ -4857,6 +5898,18 @@
             ],
             "title": "Chunk Id",
             "description": "Target document section ID being modified or deleted."
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "Identifier of the document (tab) this change applies to \u2014 lets multi-document integrators attribute each section diff to the right document."
           },
           "old_html": {
             "anyOf": [
@@ -4903,21 +5956,6 @@
         ],
         "title": "PendingChange",
         "description": "A proposed document change awaiting user approval."
-      },
-      "PortalResponse": {
-        "properties": {
-          "portal_url": {
-            "type": "string",
-            "title": "Portal Url",
-            "description": "URL to the billing portal for managing subscription, invoices, and payment method."
-          }
-        },
-        "type": "object",
-        "required": [
-          "portal_url"
-        ],
-        "title": "PortalResponse",
-        "description": "Customer billing portal access."
       },
       "ProcessDocumentResponse": {
         "properties": {
@@ -5007,9 +6045,10 @@
         "properties": {
           "session_id": {
             "type": "string",
-            "maxLength": 200,
+            "maxLength": 256,
+            "pattern": "^[a-zA-Z0-9_\\-\\.]+$",
             "title": "Session Id",
-            "description": "Session ID to load this document/attachment into."
+            "description": "Session ID to load this document/attachment into. Must match the chat/async session-id format \u2014 letters, digits, '_', '-', '.' only (no ':'); max 256 chars."
           },
           "filename": {
             "type": "string",
@@ -5024,8 +6063,14 @@
               "attachment"
             ],
             "title": "Parse Mode",
-            "description": "'document' = parse and load as the active editable doc (returns parsed HTML); 'attachment' = process asynchronously as AI-searchable reference (returns job_id to poll).",
+            "description": "'document' = parse and load as the active editable doc; 'attachment' = process asynchronously as AI-searchable reference (returns job_id to poll).",
             "default": "document"
+          },
+          "return_html": {
+            "type": "boolean",
+            "title": "Return Html",
+            "description": "When false (default), the response is compact \u2014 metadata only (chunks_count, version_id, page_setup), no document body \u2014 to keep your context small; the document is loaded into the session and you edit it via chat. Set true only if you actually need the parsed HTML returned inline.",
+            "default": false
           }
         },
         "type": "object",
@@ -5227,13 +6272,89 @@
         "title": "RedemptionOut",
         "description": "Summary of a successful redemption, returned from POST /v1/promo/redeem."
       },
+      "RedoRequest": {
+        "properties": {
+          "turn_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Turn Index",
+            "description": "The turn the revert rewound to (rows at/after this were archived); redo un-archives exactly those."
+          },
+          "redo_checkpoint_id": {
+            "type": "string",
+            "title": "Redo Checkpoint Id",
+            "description": "The identifier of the pre-revert state, returned by the revert response."
+          },
+          "window_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Id",
+            "description": "Optional identifier for the client window issuing the request, used to coordinate concurrent reverts from multiple browser tabs."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "turn_index",
+          "redo_checkpoint_id"
+        ],
+        "title": "RedoRequest",
+        "description": "Undo a revert \u2014 restore the captured pre-revert state and the rolled-back\nconversation + document. Meant for use immediately after a revert (before sending a new message,\nwhich would diverge the timeline); the web app gates it to that window."
+      },
+      "RenameDocumentRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "description": "New document title."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "RenameDocumentRequest"
+      },
       "RevertRequest": {
         "properties": {
           "turn_index": {
             "type": "integer",
             "minimum": 0.0,
             "title": "Turn Index",
-            "description": "Turn index of the user message to revert. The text of that message is returned in compose_text so the caller can re-edit and resend it. Every chat row at this turn or later is soft-archived (kept in the database for analysis but hidden from active reads)."
+            "description": "Turn index of the user message to revert. The text of that message is returned in compose_text so the caller can re-edit and resend it. Every chat row at this turn or later is soft-archived (hidden from active reads but retained for audit)."
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run",
+            "description": "When true, compute the per-document revert diff WITHOUT committing or archiving anything \u2014 used to render a preview before the user confirms.",
+            "default": false
+          },
+          "window_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Id",
+            "description": "Optional identifier for the client window issuing the revert, used to coordinate concurrent reverts from multiple browser tabs."
           }
         },
         "additionalProperties": true,
@@ -5259,7 +6380,7 @@
           "compose_text": {
             "type": "string",
             "title": "Compose Text",
-            "description": "The text of the user message that was reverted. Frontends should pre-fill the compose box with this so the user can edit and resend."
+            "description": "The text of the user message that was reverted. Clients should pre-fill the compose box with this so the user can edit and resend."
           },
           "document_state": {
             "anyOf": [
@@ -5275,13 +6396,50 @@
           "editor_action": {
             "type": "string",
             "title": "Editor Action",
-            "description": "Frontend instruction: 'update' to load the restored document, or 'clear' to reset the editor to empty.",
+            "description": "Client instruction: 'update' to load the restored document, or 'clear' to reset the editor to empty.",
             "default": "update"
           },
           "archived_turn_count": {
             "type": "integer",
             "title": "Archived Turn Count",
-            "description": "Number of chat rows soft-archived by this revert (turns hidden from the UI but retained in the database)."
+            "description": "Number of chat rows soft-archived by this revert (turns hidden from the UI but retained for audit)."
+          },
+          "revert_changes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revert Changes",
+            "description": "Per-document (slug -> change-set) revert diff. Applying these merges the revert onto any concurrent live edits \u2014 a conflicting section is surfaced for you to resolve rather than replacing the whole document. On dry_run this is the preview; on a real revert it is what was committed."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "Echoes the request's dry_run: when true nothing was committed/archived \u2014 this is a preview only.",
+            "default": false
+          },
+          "redo_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redo Checkpoint Id",
+            "description": "The identifier of the pre-revert state. Revert is non-destructive \u2014 passing this back to POST /sessions/{id}/redo (with the same turn_index) restores it and un-archives the rolled-back turns, undoing the revert. Null on a dry-run or a first-message reset."
           }
         },
         "type": "object",
@@ -5294,9 +6452,25 @@
         "title": "RevertResponse",
         "description": "Result of a session revert: restored document state and compose-box prefill."
       },
-      "SendVerificationRequest": {
+      "SaveDocumentRequest": {
         "properties": {
-          "lang": {
+          "html": {
+            "type": "string",
+            "title": "Html"
+          },
+          "page_setup": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Setup"
+          },
+          "window_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -5305,12 +6479,26 @@
                 "type": "null"
               }
             ],
-            "title": "Lang",
-            "description": "BCP-47 language tag for email rendering (e.g. 'he-IL', 'ar', 'en'). Optional \u2014 when omitted, the Accept-Language header is consulted."
+            "title": "Window Id"
+          },
+          "base_html": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Html"
           }
         },
         "type": "object",
-        "title": "SendVerificationRequest"
+        "required": [
+          "html"
+        ],
+        "title": "SaveDocumentRequest",
+        "description": "Body for the human-edit autosave."
       },
       "SessionInfo": {
         "properties": {
@@ -5413,7 +6601,7 @@
               }
             ],
             "title": "Document Html",
-            "description": "Current document HTML. Include data-chunk-id attributes on elements to enable targeted AI edits."
+            "description": "Current document HTML. OMIT this when the session already holds the document \u2014 the server persists it across turns, so you don't re-send it every turn; pass it only to load new content or replace the document wholesale. Include data-chunk-id attributes on elements to enable targeted AI edits."
           },
           "user_id": {
             "anyOf": [
@@ -5520,7 +6708,72 @@
               }
             ],
             "title": "Document Id",
-            "description": "SUP-294 multi-document: target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default \u2014 unchanged single-document behaviour). When set, that document becomes the focus for this turn."
+            "description": "Target a specific open document by id (ids come from /v1/sessions/{session_id}/documents). Omit to target the focused document (default \u2014 unchanged single-document behaviour). When set, that document becomes the focus for this turn."
+          },
+          "window_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Id",
+            "description": "Optional identifier for the client window (set by the web app) so concurrent edits from two windows of the same chat are merged rather than overwritten. Agents/API may omit."
+          },
+          "cross_session_memory": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Memory",
+            "description": "When true, the AI carries a private rolling memory of context across THIS account's chats (off by default). Per-request override of your saved Settings default."
+          },
+          "cross_session_search": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Search",
+            "description": "When true, the AI may search your PAST chats and documents on demand to reuse prior work and open a found document (off by default). Per-request override of your saved Settings default; never affects the always-on search of the open document."
+          },
+          "cross_session_memory_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Memory Key",
+            "description": "Optional per-request id of YOUR end-customer so the cross-session memory note is kept in a separate file per end-customer. Omit for one account-level note (the default / B2C)."
+          },
+          "cross_session_scope": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Session Scope",
+            "description": "Optional list of session ids to restrict cross-session SEARCH to (e.g. one end-customer's sessions). Omit to search all of this account's sessions. Only narrows within the API-key owner; ignored unless cross_session_search is on."
           }
         },
         "type": "object",
@@ -5628,7 +6881,7 @@
               "export-html"
             ],
             "title": "Purpose",
-            "description": "What this file will be used for. 'document' = the active editable doc; 'attachment' = read-only AI-searchable reference; 'export-html' = HTML payload destined for /v1/documents/export Mode C (large export bypass for >25 MB).",
+            "description": "What this file will be used for. 'document' = the active editable doc; 'attachment' = read-only AI-searchable reference; 'export-html' = HTML payload destined for /v1/documents/export (large-export upload flow, for documents above ~25 MB).",
             "default": "document"
           }
         },
@@ -5727,6 +6980,30 @@
             ],
             "title": "Was Billable",
             "description": "Whether this request counted as a billable operation."
+          },
+          "ops_charged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ops Charged",
+            "description": "How many operations this request billed. A large multi-section edit can bill more than one (one per 25 sections edited), so monthly_used can increase by more than 1 between responses."
+          },
+          "quota_exhausted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Exhausted",
+            "description": "True when you have reached your plan's operation limit with no remaining balance \u2014 the current request still completes, but further billable requests pause until you upgrade or your billing cycle resets."
           },
           "subscription_tier": {
             "anyOf": [
