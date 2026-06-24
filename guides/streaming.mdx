@@ -266,7 +266,7 @@ data: {"type": "documents_changed", "content": "{\"documents\": [{\"document_id\
 - `documents[]` — one entry per changed document: `document_id`, `title`, `change_count`, `changed_chunk_ids` (sections to flash on tab switch), and `created` (`true` when the AI opened this as a brand-new document this turn — add a tab for it; its `change_count` is `0`).
 - `focused_document_id` — the document currently in focus after the turn.
 
-**When it fires**: on auto-apply (`approval_mode: "approve_all"`) turns that changed 2+ documents, and on any turn — **either approval mode** — where the AI created a new document (creation applies immediately even in review mode). Single-document edit turns don't emit it. Ignore it if your integration only ever works with one document per session.
+**When it fires**: on auto-apply (`approval_mode: "approve_all"`) turns that changed 2+ documents, and on any turn — **either approval mode** — where the AI created a new document (creation applies immediately even in review mode). Standard single-document auto-apply edit turns don't emit it (the focused doc flashes inline); it may still fire for multi-document assistant/sub-agent turns. Ignore it if your integration only ever works with one document per session.
 
 ### `final`
 

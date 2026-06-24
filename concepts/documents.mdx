@@ -125,10 +125,10 @@ The AI generates structured, formatted HTML that you can then continue editing w
 
 Export the current document as a downloadable file.
 
-**Three input modes:**
-- **Mode A** — send HTML content inline (use when you have the document HTML in your app, up to 20 MB)
-- **Mode B** — send a session ID (the API retrieves the document from the session)
-- **Mode C** — upload the HTML to a pre-signed URL first, then send `upload_id` (use for documents between 20 MB and 100 MB — see [Large documents](#large-documents) below)
+**Three ways to supply the document:**
+- **Inline HTML** — send HTML content in `html` (use when you have the document HTML in your app, up to 20 MB)
+- **Export from a session** — send a `session_id` (the API retrieves the document from the session)
+- **Pre-signed upload then export** — upload the HTML to a pre-signed URL first, then send `upload_id` (use for documents between 20 MB and 100 MB — see [Large documents](#large-documents) below)
 
 **Five output formats:**
 - `docx` (default) — Microsoft Word (Open XML), preserves tables, formatting, embedded images
@@ -139,7 +139,7 @@ Export the current document as a downloadable file.
 
 A sixth value, `doc` (Word-compatible HTML wrapper), is accepted as a legacy alias and will be removed in a future release. New integrations should use `docx`.
 
-### Mode A: Export from HTML
+### Export from inline HTML
 
 ```bash
 curl -X POST https://api.superdocs.app/v1/documents/export \
@@ -153,7 +153,7 @@ curl -X POST https://api.superdocs.app/v1/documents/export \
   --output my-document.docx
 ```
 
-### Mode B: Export from session
+### Export from a session
 
 ```bash
 curl -X POST https://api.superdocs.app/v1/documents/export \
@@ -190,9 +190,9 @@ with open("final-contract.docx", "wb") as f:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `html` | string | One of `html` / `session_id` / `upload_id` required | HTML content to convert (Mode A) |
-| `session_id` | string | One of `html` / `session_id` / `upload_id` required | Session to export from (Mode B) |
-| `upload_id` | string | One of `html` / `session_id` / `upload_id` required | Pre-signed URL upload reference (Mode C) |
+| `html` | string | One of `html` / `session_id` / `upload_id` required | HTML content to convert (inline HTML) |
+| `session_id` | string | One of `html` / `session_id` / `upload_id` required | Session to export from |
+| `upload_id` | string | One of `html` / `session_id` / `upload_id` required | Pre-signed upload reference (for large documents) |
 | `format` | string | No | `"docx"` (default), `"pdf"`, `"html"`, `"markdown"`, or `"txt"`. `"doc"` accepted as a legacy alias. |
 | `options` | object | No | Customisation block — see [Export options](#export-options) below. |
 | `filename` | string | No | Legacy top-level filename. Prefer `options.filename`. |
@@ -259,11 +259,11 @@ There's one size story for export, driven by how big the document HTML is:
 
 | Document HTML size | Path |
 |-----|---|
-| Up to 20 MB | Direct POST to `/v1/documents/export` with inline `html` (Mode A) or a `session_id` (Mode B). |
-| 20 MB – 100 MB | Request a pre-signed upload URL via `POST /v1/uploads` (`purpose: "export-html"`), PUT the HTML to it, then call `/v1/documents/export` with `upload_id` (Mode C). |
+| Up to 20 MB | Direct POST to `/v1/documents/export` with inline `html` or a `session_id`. |
+| 20 MB – 100 MB | Request a pre-signed upload URL via `POST /v1/uploads` (`purpose: "export-html"`), PUT the HTML to it, then call `/v1/documents/export` with `upload_id`. |
 | Over 100 MB | Use the [email-fallback endpoint](#email-fallback-for-very-large-documents). |
 
-Keep inline POSTs at or under 20 MB. Above that, the hosted transport layer rejects the request (a hard ~32 MB clamp sits in front of the renderer), so switch to the upload-then-export pattern (Mode C) rather than pushing a bigger body through directly.
+Keep inline POSTs at or under 20 MB. Above that, the hosted transport layer rejects the request (a hard ~32 MB clamp sits in front of the renderer), so switch to the upload-then-export pattern (PUT the HTML to a pre-signed URL, then export by `upload_id`) rather than pushing a bigger body through directly.
 
 ```python
 # 1. Request a pre-signed PUT URL
@@ -336,7 +336,7 @@ Response:
 | `html` with `embed_images=true` | 150 MB |
 | `markdown`, `txt` | 50 MB |
 
-Keep inline POSTs at or under 20 MB; the hosted transport layer enforces a hard ~32 MB clamp and returns `413 Request Entity Too Large` before reaching the renderer, so use Mode C for anything larger. Requests above the format-specific cap return a structured 413 with a JSON body explaining the limit and pointing to the email-fallback endpoint — see [Error codes](/errors/error-codes#413-request-entity-too-large).
+Keep inline POSTs at or under 20 MB; the hosted transport layer enforces a hard ~32 MB clamp and returns `413 Request Entity Too Large` before reaching the renderer, so use the pre-signed upload-then-export pattern for anything larger. Requests above the format-specific cap return a structured 413 with a JSON body explaining the limit and pointing to the email-fallback endpoint — see [Error codes](/errors/error-codes#413-request-entity-too-large).
 
 ## Supported formatting
 

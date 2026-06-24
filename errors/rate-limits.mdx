@@ -33,7 +33,7 @@ Branch your client on the `429` status and the `X-Usage-*` headers rather than s
 
 **Best practices:**
 - Check the `usage` object in chat responses to track remaining operations before you hit the limit
-- Read the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers on every response
+- On a `429`, branch on the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers. On successful responses, read the `usage` block in the JSON body (and the SSE `usage` event) instead — those headers are only present on the `429`.
 - Upgrade to a paid plan for uninterrupted access
 
 ## Check remaining operations

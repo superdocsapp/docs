@@ -77,7 +77,15 @@ All API errors return a JSON response with a `detail` field:
 
 ### Timeout (504)
 
-The synchronous `/v1/chat` and async `/v1/chat/async` endpoints both apply a 30-minute wall-clock cap. When the cap is reached, the response carries a short summary and a suggestion to split the work across smaller turns:
+Both the synchronous `/v1/chat` and the async `/v1/chat/async` endpoints apply a 30-minute wall-clock cap, but they surface the timeout differently:
+
+**Synchronous `/v1/chat`** returns an HTTP `504` with a plain `detail` string:
+
+```json
+{"detail": "The AI agent took longer than 30 minutes to process your request. For long edits or multi-step tasks, use chat_async."}
+```
+
+**Async `/v1/chat/async`** does not return a `504` on the poll — the job completes and the friendly summary below is persisted as the job's AI response (read it from the job result):
 
 ```
 ⏱️ Your request ran past my 30-minute cap and I had to wrap up. For very large

@@ -77,7 +77,12 @@ curl -X DELETE https://api.superdocs.app/v1/users/me/cross-session-memory \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-For a B2B2C setup, pass the same `memory_key` you've been using so you clear only that end-customer's memory.
+For a B2B2C setup, pass the same value you've been sending as `cross_session_memory_key` as the `memory_key` **query parameter**, so you clear only that end-customer's memory (omitting it clears the account-level note):
+
+```bash
+curl -X DELETE 'https://api.superdocs.app/v1/users/me/cross-session-memory?memory_key=user_123' \
+  -H "Authorization: Bearer sk_YOUR_API_KEY"
+```
 
 The MCP tool is `clear_cross_session_memory`.
 

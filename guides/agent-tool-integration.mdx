@@ -319,7 +319,7 @@ for batch in stream_proposed_change_batches(job_id, session_id):
     httpx.post(
         f"https://api.superdocs.app/v1/chat/{session_id}/approve",
         headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"},
-        json={"job_id": job_id, "changes": decisions},
+        json={"job_id": job_id, "approved": True, "changes": decisions},
     )
 ```
 

@@ -24,7 +24,7 @@ curl https://api.superdocs.app/v1/documents \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-Returns your saved documents with their ids, titles, and timestamps. Use the title for display labels. The list is token-light by default — pass `include_html=true` only when you actually need the document body.
+Returns your saved documents with their ids, titles, and timestamps. Use the title for display labels. The list is token-light: it never returns a full document body. Pass `include_preview=true` to also get a small `preview_html` thumbnail (the first few sections) per document, and page through results with `limit` and `offset`. To read one document's full body, use `get_document_detail` with `include_html=true` (below) or open it into a session.
 
 The MCP tool is `list_documents`.
 
@@ -35,13 +35,13 @@ curl https://api.superdocs.app/v1/documents/{document_id} \
   -H "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-Returns the File's metadata and title. Add `?include_html=true` to get the full document HTML back as well.
+Returns the File's title, metadata, and the list of prior chats that used it. Add `?include_html=true` to also get the full document `html` body back, along with its `page_setup` and `version_id`. This is how you read a saved File's content by id without opening it into a session.
 
 The MCP tool is `get_document_detail`.
 
 ## Open a saved File into a session
 
-To keep working on a File, open it into a session. You can open one or more Files at once, and choose which becomes the [focused document](/guides/multi-document).
+To keep working on a File, open it into a session. You can open one or more Files at once; the first one you list becomes the [focused tab](/guides/multi-document).
 
 ```bash
 curl -X POST https://api.superdocs.app/v1/sessions/my-session/documents/open \

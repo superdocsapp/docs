@@ -332,7 +332,7 @@
           "mcp"
         ],
         "summary": "Get a saved document's detail and the chats that used it.",
-        "description": "One saved document's metadata plus the chat sessions that have it open\n(prior-chats-per-file). Owner-scoped \u2014 404 if the document isn't yours.",
+        "description": "One saved document's metadata plus the chat sessions that have it open\n(prior-chats-per-file). Owner-scoped \u2014 404 if the document isn't yours.\nToken-light by default; pass include_html=true to also get the full HTML body.",
         "operationId": "get_document_detail",
         "security": [
           {
@@ -348,6 +348,18 @@
               "type": "string",
               "title": "Document Id"
             }
+          },
+          {
+            "name": "include_html",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "When true, also returns the document's full reassembled HTML body (`html`), plus its `page_setup` and `version_id`. Default false returns metadata + prior-chats only, keeping the response token-light. This is the by-id way to read a saved document's body without opening it into a session.",
+              "default": false,
+              "title": "Include Html"
+            },
+            "description": "When true, also returns the document's full reassembled HTML body (`html`), plus its `page_setup` and `version_id`. Default false returns metadata + prior-chats only, keeping the response token-light. This is the by-id way to read a saved document's body without opening it into a session."
           },
           {
             "name": "authorization",
@@ -1018,7 +1030,7 @@
           "sessions"
         ],
         "summary": "List the documents open in a multi-document session.",
-        "description": "Returns the editable documents open in this session (focused first), each with its id, chunk\ncount, focused flag, and reassembled HTML \u2014 so a client can render document tabs.",
+        "description": "Returns the editable documents open in this session (focused first), each with its id, chunk\ncount, and focused flag \u2014 so a client can render document tabs. The response is token-light by\ndefault; pass include_html=true to also get each document's reassembled HTML.",
         "operationId": "list_session_documents",
         "security": [
           {
@@ -2187,7 +2199,7 @@
           "documents"
         ],
         "summary": "Upload .docx/PDF/HTML/MD/RTF as the active editable document with chunk-ID structural editing.",
-        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. For files >100KB, prefer request_upload_url (pre-signed URL flow) to avoid token bloat from base64 through the agent context. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
+        "description": "Parses the file into structured HTML where every paragraph, heading, table, row, and cell has a unique chunk ID, enabling the AI to make targeted structural edits via chat (\"remove row 3 of the pricing table\" works). Tables, borders, shading, alternating row colors, fonts, and inline styling are preserved on edit and export. Also works for AI-generated content: if you've drafted an outline or partial document in your context, upload it here as the working doc, then use chat to fill in the rest. When you pass a session_id the response is compact by default (metadata only \u2014 pass return_html=true for the full parsed HTML); the document is loaded into the session and you edit it via chat. For files >100KB, prefer request_upload_url (pre-signed URL flow) to avoid token bloat from base64 through the agent context. Supported formats: .pdf, .docx, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
         "operationId": "upload_document_base64",
         "security": [
           {
@@ -2317,7 +2329,7 @@
           "templates"
         ],
         "summary": "Save a document template (NDA, contract, SOP, letterhead) for reuse across sessions.",
-        "description": "Templates persist across sessions and can be referenced by the AI when drafting new documents (e.g., \"draft an NDA using my standard template\"). Stored at user or organization scope. Ideal for boilerplate, branded letterheads, recurring document structures, or compliance-required templates. Supports the same formats as document upload: .docx, .pdf, .txt, .rtf, .md. Max 50 MB.",
+        "description": "Templates persist across sessions and can be referenced by the AI when drafting new documents (e.g., \"draft an NDA using my standard template\"). Stored at user or organization scope. Ideal for boilerplate, branded letterheads, recurring document structures, or compliance-required templates. Supports the same formats as document upload: .docx, .pdf, .txt, .rtf, .md, .html, .htm. Max 50 MB.",
         "operationId": "upload_template_base64",
         "security": [
           {
@@ -3100,7 +3112,7 @@
           "templates"
         ],
         "summary": "Upload User Template",
-        "description": "Upload a document file as a personal/organization template.\n\nThe file is processed synchronously: text extraction, HTML conversion, and content indexing.\nSupported formats: .docx, .pdf, .txt, .rtf, .md\nTemplates are scoped to the uploading user or organization.",
+        "description": "Upload a document file as a personal/organization template.\n\nThe file is processed synchronously: text extraction, HTML conversion, and content indexing.\nSupported formats: .docx, .pdf, .txt, .rtf, .md, .html, .htm\nTemplates are scoped to the uploading user or organization.",
         "operationId": "upload_user_template",
         "security": [
           {
@@ -4613,6 +4625,12 @@
             ],
             "title": "Session Id",
             "description": "Session ID. Auto-generated if not provided."
+          },
+          "return_html": {
+            "type": "boolean",
+            "title": "Return Html",
+            "description": "With a session_id: false (default) returns compact metadata only (chunks_count, version_id, page_setup) \u2014 the document is loaded into the session and you edit it via chat, keeping your context small; true returns the full parsed HTML inline. Ignored on the convert-only path (no session_id), which always returns the converted html.",
+            "default": false
           }
         },
         "type": "object",
@@ -6962,6 +6980,30 @@
             ],
             "title": "Was Billable",
             "description": "Whether this request counted as a billable operation."
+          },
+          "ops_charged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ops Charged",
+            "description": "How many operations this request billed. A large multi-section edit can bill more than one (one per 25 sections edited), so monthly_used can increase by more than 1 between responses."
+          },
+          "quota_exhausted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Exhausted",
+            "description": "True when you have reached your plan's operation limit with no remaining balance \u2014 the current request still completes, but further billable requests pause until you upgrade or your billing cycle resets."
           },
           "subscription_tier": {
             "anyOf": [
