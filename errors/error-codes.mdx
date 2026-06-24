@@ -17,13 +17,13 @@ All API errors return a JSON response with a `detail` field:
 
 | Code | Meaning | Common causes |
 |------|---------|---------------|
-| **400** | Bad Request | Empty message, invalid parameters, a legacy `.doc` upload (convert to `.docx`) |
+| **400** | Bad Request | Empty message, invalid parameters |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
 | **403** | Forbidden | Accessing a resource you don't own |
 | **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired |
 | **409** | Conflict | Revert blocked because a chat job is currently running on the same session |
 | **413** | Request Entity Too Large | Request body or export payload above the size cap |
-| **415** | Unsupported Media Type | Upload file extension not supported (use `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`) |
+| **415** | Unsupported Media Type | Upload file extension not supported, including a legacy `.doc` upload (convert to `.docx`); use `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm` |
 | **422** | Validation Error | Request body doesn't match expected schema; format value outside the allowed enum; revert target message predates the revert feature |
 | **429** | Too Many Requests | Monthly operation limit reached |
 | **500** | Internal Server Error | Unexpected server error |
@@ -53,19 +53,19 @@ All API errors return a JSON response with a `detail` field:
 
 **Fix:** Include a non-empty `message` in your request body.
 
-```json
-{"detail": "Legacy .doc files are not supported. Please convert to .docx format and try again."}
-```
-
-**Fix:** Convert `.doc` files to `.docx`. (Legacy binary `.doc` is rejected with a `400`; other unsupported extensions return a `415` — see below.)
-
 ### Unsupported file type (415)
 
 ```json
 {"detail": "Unsupported file type: .xyz. Supported types: .pdf, .docx, .txt, .rtf, .md, .html, .htm"}
 ```
 
-**Fix:** Upload one of the supported formats — `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. RTF is supported as an upload **input** only; it is not an export target. Catch `415` (Unsupported Media Type) separately from `400` when handling upload-validation failures.
+A legacy binary `.doc` upload returns the same `415`:
+
+```json
+{"detail": "Unsupported file type: .doc. Supported types: .pdf, .docx, .txt, .rtf, .md, .html, .htm"}
+```
+
+**Fix:** Upload one of the supported formats — `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Convert legacy `.doc` files to `.docx` first. RTF is supported as an upload **input** only; it is not an export target. Catch `415` (Unsupported Media Type) separately from `400` when handling upload-validation failures.
 
 ### Rate limit (429)
 
@@ -106,14 +106,18 @@ The 413 response covers two distinct cases — caller-too-large and document-too
 {
   "detail": "Request body too large",
   "error_code": "request_too_large",
-  "message_user": "Your request is too large. The current limit is 32 MB.",
-  "request_size_mb": 47.2,
-  "max_size_mb": 32,
+  "message_user": "Your request is too large. The current limit is 100 MB.",
+  "request_size_mb": 142.3,
+  "max_size_mb": 100,
   "suggested_action": "split_request",
   "contact_email": "hello@superdocs.app",
   "support_event_id": "abc1234567890"
 }
 ```
+
+<Note>
+  A much smaller ~32 MiB platform limit sits in front of the application. A body over that ceiling is rejected at the gateway with a generic error page (HTML), **not** this structured JSON body — so don't try to parse it as JSON. Keep request bodies well under that limit; for large exports, switch to the upload-then-export pattern below.
+</Note>
 
 **Fix:** For exports, switch to the upload-then-export pattern — see [Large documents](/concepts/documents#large-documents). For other endpoints, split the work into smaller requests.
 

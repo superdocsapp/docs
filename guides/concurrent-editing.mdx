@@ -78,7 +78,7 @@ Pure typing — edits a human makes without an AI turn — is persisted through 
 POST /v1/sessions/{session_id}/documents/{document_id}/save
 ```
 
-Send the current editor HTML as `html`. Critically, also send **`base_html`** — the document HTML as it was *before* this round of edits (the last version you loaded or saved). The server diffs `html` against `base_html` to compute a precise per-chunk change-set, so other sessions converge on exactly what changed instead of a blunt whole-document overwrite. Omitting `base_html` still saves, but loses that precision.
+Send the current editor HTML as `html`. Critically, also send **`base_html`** — the document HTML as it was *before* this round of edits (the last version you loaded or saved) — so the change is recorded precisely (only what actually changed) instead of as a blunt whole-document overwrite. Omitting `base_html` still saves but loses that precision.
 
 ```bash
 curl -X POST \
@@ -91,7 +91,7 @@ curl -X POST \
 Practical rules:
 
 - **Debounce and coalesce per document.** Don't fire a save on every keystroke. Debounce (and save on blur), and collapse rapid edits into one save per document so you're not racing yourself. After a successful save, the HTML you just sent becomes the new `base_html` for the next round.
-- **This endpoint is non-AI and REST-only.** It saves typing without running a chat turn, and it isn't an MCP tool — it's a UI affordance. The AI-edit flow is unaffected: an AI result re-bases over the latest saved content through the same concurrency check.
+- **This endpoint is non-AI and REST-only.** It saves typing without running a chat turn, and it isn't an MCP tool — it's a UI affordance. The AI-edit flow is unaffected: an AI result is reconciled with the latest saved content, so a concurrent autosave is never silently overwritten.
 - A successful save is itself a change other sessions will see on their next `doc-events` poll — which is why suppressing write-back on *received* changes (above) matters.
 
 ## Resume awareness
@@ -108,7 +108,7 @@ With `report_changed=true`, each document carries **`changed_since_seen`** — `
 
 The hard case is when the **same section** is edited by both sides at once — the user typed in a paragraph while an AI turn (or another session) rewrote it. Don't silently pick a winner by reloading.
 
-- **Merge, keeping the user's in-progress edits.** Apply the incoming change to every section *except* the one the user is actively editing, and for the conflicted section keep the user's version while offering the other version as a suggestion (a keep-both choice). The user's keystrokes should win by default; they can accept the alternative explicitly. This is the same conflict posture as [applying AI results](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).
+- **Merge, keeping the user's in-progress edits.** Apply the incoming change to every section *except* the one the user is actively editing, and for the conflicted section keep the user's version and surface the other version as an accept-able suggestion. The user's keystrokes should win by default; they can accept the alternative explicitly. This is the same conflict posture as [applying AI results](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).
 - **When the same field gets two different values, keep the user's** — never concatenate the two into one blob.
 - **Never text-merge a non-text node.** Tables, diagrams (Mermaid), drawings, and equations (KaTeX/LaTeX) are structured nodes — splicing one side's text into the other corrupts them. Compare and resolve those **whole**: take one version or the other for the node, don't word-diff their markup. (This is the same rule as rendering and diffing them in an editor; see [Rendering visual content](/guides/editor-integration#rendering-visual-content-diagrams-and-equations).)
 
