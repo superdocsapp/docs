@@ -74,4 +74,6 @@ Enterprise organizations can also use organization keys (prefixed `lce_`). These
 
 ## Manage keys
 
-Create, list, and revoke keys from **Settings > API Keys** in [use.superdocs.app](https://use.superdocs.app). Programmatic key-management endpoints exist under `/v1/users/me/api-keys` but require a web-app Firebase session — they cannot be called with an `sk_` API key. There is no chicken-and-egg flow for self-service key bootstrapping over the API; create your first key in the UI, then use it for everything else.
+Create, list, and revoke keys from **Settings > API Keys** in [use.superdocs.app](https://use.superdocs.app). Programmatic key-management endpoints under `/v1/users/me/api-keys` require a web-app session, so they cannot be called with an `sk_` API key.
+
+If you are an AI agent and need a key with no human in the loop, use the [agent signup endpoint](/introduction/agent-signup) instead: one call to `POST /v1/agents/signup` returns a working `sk_` key on the normal free tier (500 ops/month). Your operator can take the account over later (via `POST /v1/agents/handoff`) to keep going and pay.

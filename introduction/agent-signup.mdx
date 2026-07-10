@@ -1,0 +1,97 @@
+---
+title: "For AI Agents"
+description: "Sign up and get a working SuperDocs API key in one call, with no human in the loop."
+---
+
+# For AI Agents
+
+SuperDocs is built to be used by AI agents, not just people. An agent can create an account and get a working API key in a single request, then use the REST API or the MCP server right away. No web sign-up form, no waiting on a human.
+
+<Note>
+If you are an agent acting on behalf of a user, confirm with them before you accept the terms and create an account.
+</Note>
+
+## 1. Sign up
+
+```bash curl
+curl -X POST https://api.superdocs.app/v1/agents/signup \
+  -H "Content-Type: application/json" \
+  -d '{"terms_accepted": true, "agent_name": "your-agent-name"}'
+```
+
+The response returns everything you need, including the API key (shown only once):
+
+```json
+{
+  "account_id": "…",
+  "slug": "your-agent-name-a1b2c3",
+  "email": "your-agent-name-a1b2c3@agents.superdocs.app",
+  "api_key": "sk_…",
+  "quota": { "tier": "free", "monthly_limit": 500, "used": 0, "remaining": 500 },
+  "endpoints": {
+    "mcp": "https://api.superdocs.app/mcp",
+    "chat": "https://api.superdocs.app/v1/chat",
+    "whoami": "https://api.superdocs.app/v1/agents/whoami",
+    "openapi": "https://api.superdocs.app/openapi.json"
+  },
+  "mcp_setup": {
+    "claude_code": "claude mcp add --transport http superdocs https://api.superdocs.app/mcp --header \"Authorization: Bearer sk_…\"",
+    "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp (Streamable HTTP) with header Authorization: Bearer <your key>",
+    "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
+    "docs": "https://docs.superdocs.app/account/mcp-setup"
+  },
+  "handoff": { "how": "When you near the 500-op cap, POST /v1/agents/handoff with your key and {email}; your human adopts the account and can pay to continue" }
+}
+```
+
+The `mcp_setup` block gives you copy-paste commands to connect right away.
+
+<Warning>
+Save `api_key` now. It is shown only once. Store the whole response at `~/.superdocs/agent_credentials.json` and call `GET /v1/agents/whoami` before signing up again so you reuse the same account instead of creating a new one.
+</Warning>
+
+Optional body fields: `agent_name` (a label), `operated_by_email` (your operator's email, used only if you hand off later), and `model_metadata` (free-form details about your model).
+
+## 2. Use your key
+
+Send the key as a Bearer token on every request, on the REST API or the MCP server.
+
+```bash REST
+curl -X POST https://api.superdocs.app/v1/chat \
+  -H "Authorization: Bearer sk_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Draft a one-page NDA", "session_id": "s1"}'
+```
+
+For MCP, point your client at `https://api.superdocs.app/mcp` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
+
+```bash Claude Code
+claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
+  --header "Authorization: Bearer sk_YOUR_KEY"
+```
+
+Other clients (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) take the same URL and header. See [MCP Setup](/account/mcp-setup). Call the `get_account_status` tool anytime to check your remaining operations.
+
+## 3. Quota and handing off to a human
+
+Your account is a normal free account: **500 operations per month**, the same as a human free account. When you near the cap and want to keep going, hand the account to your human so they can take it over and pay:
+
+```bash curl
+curl -X POST https://api.superdocs.app/v1/agents/handoff \
+  -H "Authorization: Bearer sk_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your-human@example.com"}'
+```
+
+We email a one-time link to that address. Your human opens it in a browser, signs in, and **takes the account over in place**, so you keep all your work, and your API key keeps working the whole time. They can then upgrade or pay from the app. (If they already have a SuperDocs account, they sign into that instead.)
+
+You can also just wait: your quota resets at the start of each month.
+
+<Note>
+Fully autonomous with no human who can upgrade for you? `POST https://api.superdocs.app/v1/agents/request-upgrade` with your key (optionally a short `note`). We don't offer agent-native card payment yet, but we're gauging demand and will follow up. A human handoff upgrades you immediately; this path is for when there truly is no human.
+</Note>
+
+## Rules and limits
+
+- Use **one account per agent or user**. Do not create multiple accounts to get around the free limit.
+- Check your status anytime with `GET /v1/agents/whoami` or the `get_account_status` MCP tool. It tells you how many operations remain so you can hand off before you hit the cap.

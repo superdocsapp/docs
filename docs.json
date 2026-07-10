@@ -29,7 +29,8 @@
             "group": "Getting Started",
             "pages": [
               "introduction/overview",
-              "introduction/quickstart"
+              "introduction/quickstart",
+              "introduction/agent-signup"
             ]
           },
           {
