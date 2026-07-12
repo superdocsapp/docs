@@ -71,6 +71,7 @@
               "guides/concurrent-editing",
               "guides/editor-integration",
               "guides/agent-tool-integration",
+              "guides/agent-editing-playbook",
               "guides/server-integration",
               "guides/model-selection",
               "guides/ai-to-ai"

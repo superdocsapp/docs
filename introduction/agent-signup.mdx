@@ -11,6 +11,10 @@ SuperDocs is built to be used by AI agents, not just people. An agent can create
 If you are an agent acting on behalf of a user, confirm with them before you accept the terms and create an account.
 </Note>
 
+## 0. Check for existing credentials first
+
+If `~/.superdocs/agent_credentials.json` exists on this machine, a previous agent already created an account. Call `GET https://api.superdocs.app/v1/agents/whoami` with that `api_key` and **reuse the account** — its documents and remaining quota carry over. Sign up fresh only when the project deliberately needs its own separate account.
+
 ## 1. Sign up
 
 ```bash curl
@@ -40,7 +44,7 @@ The response returns everything you need, including the API key (shown only once
     "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
     "docs": "https://docs.superdocs.app/account/mcp-setup"
   },
-  "handoff": { "how": "When you near the 500-op cap, POST /v1/agents/handoff with your key and {email}; your human adopts the account and can pay to continue" }
+  "handoff": { "how": "When you near the 500-op cap, POST /v1/agents/handoff with your key and {email}; you get back a short takeover code to give your human, who then adopts the account and can pay to continue" }
 }
 ```
 
@@ -72,6 +76,10 @@ claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
 
 Other clients (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) take the same URL and header. See [MCP Setup](/account/mcp-setup). Call the `get_account_status` tool anytime to check your remaining operations.
 
+### Long generations
+
+For document-scale generations (a whole handbook or long report in one turn), use `POST /v1/chat/async` — it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}`. Plain sync `/v1/chat` hits the platform gateway timeout (~300s) on very long turns. Editing patterns, placement, verification, and billing are covered in the [Agent editing playbook](/guides/agent-editing-playbook).
+
 ## 3. Quota and handing off to a human
 
 Your account is a normal free account: **500 operations per month**, the same as a human free account. When you near the cap and want to keep going, hand the account to your human so they can take it over and pay:
@@ -80,10 +88,14 @@ Your account is a normal free account: **500 operations per month**, the same as
 curl -X POST https://api.superdocs.app/v1/agents/handoff \
   -H "Authorization: Bearer sk_YOUR_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"email": "your-human@example.com"}'
+  -d '{"email": "your-human@example.com", "working_context": "the ~/Documents/acme project on your Mac"}'
 ```
 
-We email a one-time link to that address. Your human opens it in a browser, signs in, and **takes the account over in place**, so you keep all your work, and your API key keeps working the whole time. They can then upgrade or pay from the app. (If they already have a SuperDocs account, they sign into that instead.)
+Pass `working_context` (a short note on where you are running) so the email is recognizable and does not look like spam. The response includes a short **`takeover_code`** (like `ABCD-1234`).
+
+**Show that takeover code to your human**, and tell them where to find it if they ask (you can also save it to a file such as `~/.superdocs/takeover-code.txt`). We email a one-time link to the address you gave. Your human opens it, signs in, and enters the takeover code, then **takes the account over in place**, so you keep all your work and your API key keeps working the whole time. They can then upgrade or pay from the app.
+
+The takeover code is a security check: it proves the person adopting the account is really the one running you, so a link that reaches the wrong inbox cannot be used to take the account. Never email the code or post it anywhere public. (If your human already has a SuperDocs account, they sign into that instead.)
 
 You can also just wait: your quota resets at the start of each month.
 

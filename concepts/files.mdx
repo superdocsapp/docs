@@ -96,7 +96,7 @@ curl -X DELETE https://api.superdocs.app/v1/documents/{document_id} \
 
 Two optional query params control what happens when the File is currently open somewhere:
 
-- `?force=true` — archive even if the File is still open in a live session. Without it, archiving a File that another session is actively holding returns a `held_by_other` warning and leaves it untouched, so you don't pull a document out from under someone mid-edit.
+- `?force=true` — archive even if the File is still open in a live session. Without it, archiving a File that another session is actively holding fails with **409 `document_in_use`** (`open_in_sessions` + a suggested recovery) and leaves it untouched, so you don't pull a document out from under someone mid-edit — and you always know nothing was archived.
 - `?from_session={session_id}` — also detach the File from that session as part of the archive.
 
 The MCP tool is `archive_document`.

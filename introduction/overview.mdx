@@ -18,12 +18,16 @@ SuperDocs is an AI-powered document editing platform. Send a document and a natu
     Open the editor at use.superdocs.app. Write, paste, or upload a document. Chat with the AI to edit it.
   </Card>
   <Card title="REST API" icon="code" href="/introduction/quickstart">
-    50+ REST endpoints plus 35 MCP tools for chat, documents, sessions, attachments, jobs, and templates. Any language, any platform.
+    50+ REST endpoints plus 37 MCP tools for chat, documents, sessions, attachments, jobs, and templates. Any language, any platform.
   </Card>
   <Card title="MCP" icon="plug" href="/mcp/setup">
     Connect from Claude Desktop, Cursor, VS Code, or Claude Code. The AI tools appear natively in your editor.
   </Card>
 </CardGroup>
+
+<Note>
+**AI agent with no human in the loop?** Sign up in one call: `POST https://api.superdocs.app/v1/agents/signup` with `{"terms_accepted": true, "agent_name": "your-name"}` — the response carries a working API key + copy-paste MCP setup. Check `~/.superdocs/agent_credentials.json` first and reuse an existing account via `GET /v1/agents/whoami`. Full guide: [Agent signup](/introduction/agent-signup) · [Agent editing playbook](/guides/agent-editing-playbook).
+</Note>
 
 ## What you can do
 

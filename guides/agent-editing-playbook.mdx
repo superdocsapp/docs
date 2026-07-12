@@ -1,0 +1,79 @@
+---
+title: "Agent Editing Playbook"
+description: "How an AI agent edits documents reliably on SuperDocs: choosing the right operation, section rewrites, cheap verification, placement, page breaks, and budgeting operations."
+---
+
+# Agent Editing Playbook
+
+This is the field guide for AI agents (and the developers wiring them) doing document work over the REST API or MCP. Everything here applies to both surfaces — MCP tool names in parentheses.
+
+<Tip>
+**The one-sentence version:** say what you want changed the way you'd tell a colleague — "add a Benefits section after Compensation", "rewrite Section 6", "move the cover image to the top" — and verify with the free `structure` read. You don't need to micro-manage.
+</Tip>
+
+## Choosing the operation (say what you mean)
+
+The AI picks the operation from your message. Three intents cover editing:
+
+| Your intent | Say it like | What happens |
+|---|---|---|
+| **Add** new content | "Add an Appendix A with…", "Insert a section on X after Y" | A new section is inserted at the position you named. The rest of the document is untouched. |
+| **Change** existing content | "Rewrite Section 6 to…", "Fix the dates in the payment clause", "Translate the introduction" | The targeted content is edited in place. |
+| **Rebuild** the whole document | "Replace the whole document with…", "Regenerate this from scratch as…" | The entire document is replaced. Only happens when you explicitly ask for a full replacement. |
+
+Two behaviors worth knowing:
+
+- **Section rewrites are atomic.** "Rewrite Section 6" replaces the whole section — heading to next heading — as one unit. New content in, all old section content out. You will not get a half-merged section with stale paragraphs left behind.
+- **Find-and-modify is one request.** "Find the line that says X and replace it with Y" performs the edit. You don't need a separate search call first.
+
+## Verify for free (never export just to check)
+
+`GET /v1/documents/{id}` (`get_document_detail`) always includes a `structure` block — headings with levels and positions, `section_count`, `block_count`, and media counts — derived on read, **never billed**.
+
+```json
+"structure": {
+  "headings": [{"level": 1, "text": "Employee Handbook", "position": 0},
+               {"level": 2, "text": "Section 1 — Hours", "position": 2}],
+  "section_count": 18,
+  "block_count": 74,
+  "media": {"images": 3, "diagrams": 1}
+}
+```
+
+Check it after any edit you care about. Exports are for deliverables, not verification.
+
+## Placement (images, diagrams, new sections)
+
+Name the position and it is honored: "at the top", "in Section 2", "before the conclusion", "replace the [COVER] placeholder". If a named position can't be resolved, the operation fails honestly and the AI retries with the real location — content is never silently dumped at the end of the document when you named a spot.
+
+To reposition existing content, ask for a move: "move the org chart into Section 2", "move the banner to the top". Moves relocate the original — nothing is duplicated or regenerated.
+
+## Page breaks and tables of contents
+
+- **Page breaks:** "start each section on a new page" / "page break before the appendix" inserts real page-break markers. DOCX exports carry true Word page breaks; PDF exports break pages there.
+- **Table of contents:** "add a table of contents" inserts a live TOC that updates itself from your headings — in the editor and in every export. One request; the document structure is otherwise untouched.
+
+## Long generations: use async
+
+Synchronous `POST /v1/chat` is right for edits and normal-sized creations. For **document-scale generations** — a whole handbook, a long report — use `POST /v1/chat/async` (`chat_async`): it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}` (`get_job`). Sync requests that run very long can hit the platform gateway timeout (~300s) and return nothing. Long sync responses also carry an advisory `hint` telling you when to switch.
+
+## Operations and billing (what a request costs)
+
+- Most requests bill **1 operation**. Very large creations bill **1 per 25 sections** created (a 96-section handbook ≈ 4 operations).
+- **Failed operations bill 0.** If the AI couldn't complete your edit, the reply says so and you were not charged.
+- Reads are free or flat: `structure`, listing documents/sessions, job polling — none of it eats your document-edit budget. Searches within your documents bill 1.
+- Check remaining quota anytime: `get_account_status` / `GET /v1/agents/whoami`.
+
+## Session and Files ids
+
+`GET /v1/sessions/{id}/documents` (`list_session_documents`) returns both a session-local `document_id` and a permanent `durable_document_id` — the same id `list_documents` (Files), `get_document_detail`, `rename_document`, and `archive_document` use. **Everything that takes a session document id also accepts the durable UUID**, so you can drive a whole workflow with one id form.
+
+Two honesty guarantees while cleaning up:
+
+- Archiving a document that's open in another session fails with **409 `document_in_use`** (nothing archived) — re-call with `force=true` or close it there first.
+- Reverting to a turn that a previous revert already removed fails with **409 `turn_already_reverted`** and includes the current `active_turns` map so you can re-target immediately.
+
+## Credentials and handoff
+
+- **Before signing up, check `~/.superdocs/agent_credentials.json`.** If it exists, call `GET /v1/agents/whoami` with that key and reuse the account — its documents and quota carry over.
+- Nearing the cap: `POST /v1/agents/handoff` with your human's email. Pass `working_context` (what you're working on, where you run) so the email is recognizable, and relay the returned **takeover code** to your operator in chat — never by email. They open the link, enter the code, and adopt the account in place; you keep the same key and all your work.
