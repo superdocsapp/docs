@@ -5,7 +5,7 @@ description: "All 37 MCP tools available when connecting to the SuperDocs MCP se
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 35 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
+When you connect to the SuperDocs MCP server, these 37 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
@@ -111,7 +111,7 @@ SuperDocs can optionally carry a small durable memory note across an API key's s
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `health` | Verify the SuperDocs MCP server is reachable and serving traffic. No auth required. | — |
+| `health` | Verify the SuperDocs MCP server is reachable and serving traffic. Runs over your authenticated `/mcp/` connection like every MCP tool, so it also confirms your API key is wired up correctly (a `401` means a key problem, not downtime). The REST equivalent, `GET https://api.superdocs.app/health`, requires no authentication. | — |
 
 <Note>
   **Two upload paths — pick by file size.** For **files larger than 100KB**, use the pre-signed URL flow (`request_upload_url` → upload via curl → `process_uploaded_document`). Bytes stream directly to cloud storage and never pass through your agent's context window, saving thousands of tokens per upload. For **files smaller than 100KB** where token cost is trivial, `upload_document_base64` still works inline — encode to base64 and pass the original `filename` (used for file type detection). Supported file types: `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm`. Maximum file size: 100 MB.

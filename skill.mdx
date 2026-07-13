@@ -6,7 +6,7 @@ description: "Skill file for AI agents (Claude Code, Cursor, Claude Desktop, Win
 
 # SuperDocs Skill
 
-A skill for AI agents (Claude Code, Cursor, Claude Desktop, Windsurf, VS Code Copilot, etc.) connecting to the SuperDocs MCP server at `https://api.superdocs.app/mcp`.
+A skill for AI agents (Claude Code, Cursor, Claude Desktop, Windsurf, VS Code Copilot, etc.) connecting to the SuperDocs MCP server at `https://api.superdocs.app/mcp/`.
 
 This skill encodes the workflows that work well with SuperDocs and the pitfalls to avoid. Read the section that matches what the user is asking for; you don't need the whole file.
 
@@ -23,7 +23,8 @@ This skill encodes the workflows that work well with SuperDocs and the pitfalls 
 | Tool | Command |
 |---|---|
 | **Claude Code** | `claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ --header "Authorization: Bearer sk_YOUR_KEY"` (or just install the plugin which bundles MCP + skill + 4 prompts: `claude plugin marketplace add superdocsapp/superdocs-plugin && claude plugin install superdocs@superdocs-plugin`) |
-| **Cursor / VS Code** | Add to `.cursor/mcp.json` (or workspace `.vscode/mcp.json`): `{"mcpServers":{"superdocs":{"url":"https://api.superdocs.app/mcp/","headers":{"Authorization":"Bearer sk_YOUR_KEY"}}}}` |
+| **Cursor** | Add to `.cursor/mcp.json`: `{"mcpServers":{"superdocs":{"url":"https://api.superdocs.app/mcp/","headers":{"Authorization":"Bearer sk_YOUR_KEY"}}}}` |
+| **VS Code** | Add to workspace `.vscode/mcp.json` (or the user-level `mcp.json` via **MCP: Open User Configuration**): `{"servers":{"superdocs":{"type":"http","url":"https://api.superdocs.app/mcp/","headers":{"Authorization":"Bearer sk_YOUR_KEY"}}}}` |
 | **Cline / Continue / Goose / Gemini CLI / others** | See client-specific docs at https://docs.superdocs.app/mcp/setup — config file format varies. |
 
 Get a free API key at https://use.superdocs.app → Settings → API Keys → Create. Free plan = 500 ops/month.
@@ -56,7 +57,7 @@ Skip SuperDocs (use plain text generation or a different tool) when:
 
 ---
 
-## Quick start (3 install patterns)
+## Quick start (4 install patterns)
 
 The user installs the SuperDocs MCP server in their AI tool's config. They need an API key from `https://use.superdocs.app` (Settings → API Keys → Create). Keys look like `sk_a1b2c3d4...`.
 
@@ -69,24 +70,40 @@ The user installs the SuperDocs MCP server in their AI tool's config. They need 
   "mcpServers": {
     "superdocs": {
       "type": "http",
-      "url": "https://api.superdocs.app/mcp",
+      "url": "https://api.superdocs.app/mcp/",
       "headers": { "Authorization": "Bearer sk_YOUR_API_KEY" }
     }
   }
 }
 ```
 
-Restart Claude Code. The 35 SuperDocs tools become available; this skill auto-loads when document work is requested.
+Restart Claude Code. The 37 SuperDocs tools become available; this skill auto-loads when document work is requested.
 
-### Cursor / VS Code
+### Cursor
 
-`mcp.json` in the project or workspace:
+`.cursor/mcp.json` in the project root (or global Cursor config):
 
 ```json
 {
   "mcpServers": {
     "superdocs": {
-      "url": "https://api.superdocs.app/mcp",
+      "url": "https://api.superdocs.app/mcp/",
+      "headers": { "Authorization": "Bearer sk_YOUR_API_KEY" }
+    }
+  }
+}
+```
+
+### VS Code
+
+Workspace `.vscode/mcp.json` (or the user-level `mcp.json`, opened with the **MCP: Open User Configuration** command). Note VS Code uses a `servers` key and a `type` field:
+
+```json
+{
+  "servers": {
+    "superdocs": {
+      "type": "http",
+      "url": "https://api.superdocs.app/mcp/",
       "headers": { "Authorization": "Bearer sk_YOUR_API_KEY" }
     }
   }
@@ -102,7 +119,7 @@ Restart Claude Code. The 35 SuperDocs tools become available; this skill auto-lo
   "mcpServers": {
     "superdocs": {
       "command": "npx",
-      "args": ["mcp-remote", "https://api.superdocs.app/mcp", "--header", "Authorization: Bearer sk_YOUR_API_KEY"]
+      "args": ["mcp-remote", "https://api.superdocs.app/mcp/", "--header", "Authorization: Bearer sk_YOUR_API_KEY"]
     }
   }
 }
@@ -356,7 +373,7 @@ STEP 3 — Continue with chat. The AI now has the attachment available for retri
 
 ---
 
-## Tool reference (35 tools — full descriptions in `available-tools.mdx`)
+## Tool reference (37 tools — full descriptions in `available-tools.mdx`)
 
 **Chat & editing:** `chat`, `chat_async`, `approve_change`, `continue_chat`, `revert_session_to_message`, `redo_revert`
 **Document upload/parse:** `upload_document_base64`, `request_upload_url`, `process_uploaded_document`
@@ -366,8 +383,10 @@ STEP 3 — Continue with chat. The AI now has the attachment available for retri
 **Files (durable documents):** `list_documents`, `get_document_detail`, `rename_document`, `archive_document` (soft delete, recoverable ~30 days), `unarchive_document` (restore an archived document), `open_documents`, `init_session` — documents persist across sessions; reopen, rename, archive, or restore them
 **Cross-session memory:** `clear_cross_session_memory` (wipes the opt-in memory note)
 **Attachments (reference files):** `upload_attachment_base64`, `delete_attachment`, `get_attachment_status`
+**Images:** `upload_image_base64` (upload an image as base64, get back a hosted URL to reference in chat: "insert my logo at the top")
 **Async jobs:** `list_jobs`, `get_job`, `cancel_job`
 **Templates:** `upload_template_base64`, `list_user_templates`, `delete_user_template`
+**Account:** `get_account_status` (tier, operations used/remaining this month, reset date; non-billable)
 **Health:** `health`
 
 For full schemas and parameter descriptions, see the [SuperDocs MCP tools reference](https://docs.superdocs.app/mcp/available-tools).

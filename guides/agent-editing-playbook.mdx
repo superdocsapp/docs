@@ -42,6 +42,10 @@ Two behaviors worth knowing:
 
 Check it after any edit you care about. Exports are for deliverables, not verification.
 
+## Keep your token footprint small
+
+For large documents, don't pull the full document body into your agent's context to work on it. The document lives server-side; targeted natural-language requests ("rewrite Section 6") edit it there, and the `structure` block above verifies the result without fetching a single body byte. Set `response_mode='compact'` on `chat`/`chat_async` so responses carry per-section diffs instead of the full HTML, and move file bytes with the pre-signed upload/download URL flows so they never enter your context either. A 100-page document can go through a full multi-turn editing session while your agent's context holds only a few thousand tokens.
+
 ## Placement (images, diagrams, new sections)
 
 Name the position and it is honored: "at the top", "in Section 2", "before the conclusion", "replace the [COVER] placeholder". If a named position can't be resolved, the operation fails honestly and the AI retries with the real location — content is never silently dumped at the end of the document when you named a spot.

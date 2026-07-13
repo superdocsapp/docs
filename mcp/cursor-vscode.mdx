@@ -17,7 +17,7 @@ Create `.cursor/mcp.json` in your project root (or global config):
 {
   "mcpServers": {
     "superdocs": {
-      "url": "https://api.superdocs.app/mcp",
+      "url": "https://api.superdocs.app/mcp/",
       "transport": "streamable-http",
       "headers": {
         "Authorization": "Bearer sk_YOUR_API_KEY"
@@ -33,16 +33,16 @@ The SuperDocs tools will appear in Cursor's AI capabilities. Tools load at start
 
 ## VS Code
 
-### 1. Open MCP settings
+### 1. Create the config file
 
-Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for "MCP: Add Server" or edit your `settings.json`:
+VS Code reads MCP servers from a dedicated `mcp.json` file, not `settings.json`. Create `.vscode/mcp.json` in your workspace, or open the user-level file (shared across all workspaces) from the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) with **MCP: Open User Configuration**. You can also run **MCP: Add Server** and pick HTTP.
 
-```json settings.json
+```json .vscode/mcp.json
 {
-  "mcp.servers": {
+  "servers": {
     "superdocs": {
-      "url": "https://api.superdocs.app/mcp",
-      "transport": "streamable-http",
+      "type": "http",
+      "url": "https://api.superdocs.app/mcp/",
       "headers": {
         "Authorization": "Bearer sk_YOUR_API_KEY"
       }
@@ -51,19 +51,21 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for "MCP: A
 }
 ```
 
-### 2. Restart VS Code
+Note the shape: VS Code uses a top-level `servers` key and a `type` field (`"http"` for SuperDocs), unlike Cursor's `mcpServers` + `transport`.
 
-Tools load at startup; if the MCP panel doesn't show SuperDocs after restart, check the MCP server status in the Output panel.
+### 2. Start the server
+
+Save the file, then start the server from the inline hint VS Code shows in `mcp.json` (or run **MCP: List Servers** and start it there). The tools appear in Copilot's agent mode. If SuperDocs doesn't show up, check the MCP server status in the Output panel, or restart VS Code.
 
 ## Windsurf
 
-Add the same configuration to Windsurf's MCP settings:
+Add the same configuration as Cursor to Windsurf's MCP settings:
 
 ```json
 {
   "mcpServers": {
     "superdocs": {
-      "url": "https://api.superdocs.app/mcp",
+      "url": "https://api.superdocs.app/mcp/",
       "transport": "streamable-http",
       "headers": {
         "Authorization": "Bearer sk_YOUR_API_KEY"

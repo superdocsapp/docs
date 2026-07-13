@@ -19,7 +19,7 @@ Upload files to provide the AI with reference material. The AI can search and re
 | Markdown | `.md` |
 | Images | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` |
 
-Maximum file size: **50 MB**.
+Maximum file size: **50 MB** for direct (inline and multipart) uploads. Files sent through the pre-signed upload flow (`request_upload_url` → PUT → process) can be up to **100 MB**. Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
 
 <Note>
 Legacy `.doc` files are not supported. Convert to `.docx` first.

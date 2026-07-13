@@ -197,7 +197,7 @@ with open("final-contract.docx", "wb") as f:
 | `upload_id` | string | One of `html` / `session_id` / `upload_id` required | Pre-signed upload reference (for large documents) |
 | `format` | string | No | `"docx"` (default), `"pdf"`, `"html"`, `"markdown"`, or `"txt"`. `"doc"` accepted as a legacy alias. |
 | `options` | object | No | Customisation block — see [Export options](#export-options) below. |
-| `filename` | string | No | Legacy top-level filename. Prefer `options.filename`. |
+| `filename` | string | No | Legacy top-level filename. Prefer `options.filename`, which wins when both are set. |
 
 ### Export options
 
@@ -209,7 +209,7 @@ Pass an `options` object to customise the rendered output. Defaults are sensible
 | `orientation` | string | `"portrait"` | `"portrait"` or `"landscape"`. Applies to DOCX/PDF. |
 | `margins` | string | `"normal"` | `"narrow"` (0.5 in), `"normal"` (1 in), `"wide"` (1.5 in), or `"custom"`. |
 | `custom_margins_inches` | object | — | Required when `margins="custom"`. Object with `top`, `right`, `bottom`, `left` floats between 0.25 and 3.0. |
-| `filename` | string | — | File name without extension. Auto-detected from the first heading if unset. |
+| `filename` | string | — | Name for the downloaded file. Precedence: `options.filename`, then the legacy top-level `filename`, then a name derived from the document's first heading. Pass it with or without an extension: a supplied extension matching the export format is kept as-is (never doubled), and an extension-less name gets the format's extension appended. |
 | `embed_images` | boolean | `false` | HTML export only. When `true`, images are base64-embedded for offline portability. Raises the size cap from 100 MB to 150 MB. |
 | `watermark_text` | string | — | PDF only. Optional text watermark overlaid on every page (max 64 chars). |
 | `watermark_opacity` | number | `0.3` | PDF watermark opacity, between 0.05 and 1.0. |

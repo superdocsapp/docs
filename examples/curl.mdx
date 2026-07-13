@@ -265,3 +265,5 @@ A `200` with a JSON list of sessions (possibly empty) confirms the key. A `401` 
 ```bash
 curl https://api.superdocs.app/health
 ```
+
+REST `GET /health` requires no authentication. The MCP `health` tool is different: it runs over the authenticated `/mcp/` connection like every MCP tool, so a `401` there signals an API-key problem rather than downtime.

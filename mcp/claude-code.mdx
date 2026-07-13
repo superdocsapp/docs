@@ -5,7 +5,7 @@ description: "Connect SuperDocs to Claude Code (CLI) with a single command."
 
 # Claude Code
 
-The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (35 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
+The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (37 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
 
 ## Install via plugin (recommended)
 
@@ -34,9 +34,9 @@ claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
   --header "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
-Note the trailing slash on `/mcp/` — clients without slash get a 307 redirect.
+Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical spelling.
 
-That installs only the MCP server (35 tools). To get the 4 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
+That installs only the MCP server (37 tools). To get the 4 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
 
 ## Verify the connection
 
@@ -47,7 +47,7 @@ claude mcp list
 You should see:
 
 ```
-superdocs: https://api.superdocs.app/mcp (HTTP) - ✓
+superdocs: https://api.superdocs.app/mcp/ (HTTP) - ✓
 ```
 
 If you see `✗ Failed to connect`, restart Claude Code (`Ctrl+C` then `claude` in a new shell). MCP servers load at session startup, so a fresh session is required after `claude mcp add`.

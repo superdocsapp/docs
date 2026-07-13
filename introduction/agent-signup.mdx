@@ -33,14 +33,14 @@ The response returns everything you need, including the API key (shown only once
   "api_key": "sk_…",
   "quota": { "tier": "free", "monthly_limit": 500, "used": 0, "remaining": 500 },
   "endpoints": {
-    "mcp": "https://api.superdocs.app/mcp",
+    "mcp": "https://api.superdocs.app/mcp/",
     "chat": "https://api.superdocs.app/v1/chat",
     "whoami": "https://api.superdocs.app/v1/agents/whoami",
     "openapi": "https://api.superdocs.app/openapi.json"
   },
   "mcp_setup": {
-    "claude_code": "claude mcp add --transport http superdocs https://api.superdocs.app/mcp --header \"Authorization: Bearer sk_…\"",
-    "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp (Streamable HTTP) with header Authorization: Bearer <your key>",
+    "claude_code": "claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ --header \"Authorization: Bearer sk_…\"",
+    "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp/ (Streamable HTTP) with header Authorization: Bearer <your key>",
     "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
     "docs": "https://docs.superdocs.app/account/mcp-setup"
   },
@@ -67,10 +67,10 @@ curl -X POST https://api.superdocs.app/v1/chat \
   -d '{"message": "Draft a one-page NDA", "session_id": "s1"}'
 ```
 
-For MCP, point your client at `https://api.superdocs.app/mcp` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
+For MCP, point your client at `https://api.superdocs.app/mcp/` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
 
 ```bash Claude Code
-claude mcp add --transport http superdocs https://api.superdocs.app/mcp \
+claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
   --header "Authorization: Bearer sk_YOUR_KEY"
 ```
 
@@ -96,6 +96,10 @@ Pass `working_context` (a short note on where you are running) so the email is r
 **Show that takeover code to your human**, and tell them where to find it if they ask (you can also save it to a file such as `~/.superdocs/takeover-code.txt`). We email a one-time link to the address you gave. Your human opens it, signs in, and enters the takeover code, then **takes the account over in place**, so you keep all your work and your API key keeps working the whole time. They can then upgrade or pay from the app.
 
 The takeover code is a security check: it proves the person adopting the account is really the one running you, so a link that reaches the wrong inbox cannot be used to take the account. Never email the code or post it anywhere public. (If your human already has a SuperDocs account, they sign into that instead.)
+
+<Note>
+**Adopt-link errors:** a wrong takeover code returns `403` with the number of attempts remaining in `detail`. After too many wrong codes the link is permanently disabled and returns `410 Gone`; that old link can never work again, so send a new `POST /v1/agents/handoff` to get a fresh one. An expired or unknown link returns `404` (links expire after about 24 hours).
+</Note>
 
 You can also just wait: your quota resets at the start of each month.
 

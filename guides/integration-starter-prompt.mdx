@@ -294,7 +294,7 @@ That's the whole loop. Every integration shape — editor + chat, AI-agent tool,
 - An editor + chat UI wraps the call in a frontend that sends the editor's HTML, streams progress via SSE, and applies the result back to the editor via a `setHtml()` bridge.
 - An AI agent wraps the call in a tool function that the agent invokes when it decides a document edit is needed.
 - A server-side worker iterates a queue, calling this loop synchronously per document, persisting the result to storage.
-- An MCP client connects to `https://api.superdocs.app/mcp` and lets a meta-agent (Claude Desktop, Cursor) trigger the same call.
+- An MCP client connects to `https://api.superdocs.app/mcp/` and lets a meta-agent (Claude Desktop, Cursor) trigger the same call.
 
 The SSE variant adds streaming progress and human-in-the-loop review. The polling variant adds the ability to fire-and-forget for long jobs. But the principle is unchanged: HTML in, HTML out, with optional approval in the middle.
 
@@ -333,7 +333,7 @@ Build the "send HTML → receive proposed changes" loop in your customer's idiom
 - If the customer's product has a rich-text editor: wire the editor to `getHtml()` / `setHtml()` bridges, send via the API client from Phase 2, render proposed changes via the approval mechanism in Phase 4.
 - If the customer's product has an AI agent: register SuperDocs as a tool the agent can invoke, with the tool function calling the API client from Phase 2 and returning structured proposed-change data the agent can reason about.
 - If the customer's product is a server-side worker: pull documents from your queue / storage, call the API client from Phase 2 with `approval_mode: "approve_all"`, persist the returned HTML back to storage.
-- If the customer's product is an MCP client: configure the client to connect to `https://api.superdocs.app/mcp`. There is no code to write — it's a configuration step.
+- If the customer's product is an MCP client: configure the client to connect to `https://api.superdocs.app/mcp/`. There is no code to write — it's a configuration step.
 
 → For editor integrations (preserving `data-chunk-id` round-trip in ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, or contenteditable): **https://docs.superdocs.app/guides/editor-integration**.
 

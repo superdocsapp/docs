@@ -18,10 +18,13 @@ SuperDocs uses operation-based limits, not request-rate limits. Each AI action t
 
 ## Handling 429 responses
 
-When you hit the limit on the free plan, the API returns a `429` with three usage headers and a JSON `detail` explaining the quota is exhausted:
+There are two kinds of `429`, and they need different handling.
+
+**1. Application 429 (quota or cooldown).** Returned as JSON with a `detail` field, and always carries a `Retry-After` header giving the number of seconds to wait before the request can succeed. When the cause is quota exhaustion (hitting the limit on the free plan), the response also carries the three `X-Usage-*` headers:
 
 ```
 HTTP/1.1 429 Too Many Requests
+Retry-After: 1209600
 X-Usage-Limit: 500
 X-Usage-Used: 500
 X-Usage-Remaining: 0
@@ -29,11 +32,14 @@ X-Usage-Remaining: 0
 {"detail": "Your monthly operation quota (500) is exhausted. Upgrade to Pro for uninterrupted pay-as-you-go overage."}
 ```
 
-Branch your client on the `429` status and the `X-Usage-*` headers rather than string-matching the `detail` wording (the exact message may change).
+Honor `Retry-After`: wait at least that many seconds before retrying. For a monthly quota it is the time until your billing cycle resets, so upgrading is usually the better path than waiting. Branch your client on the `429` status and the headers rather than string-matching the `detail` wording (the exact message may change).
+
+**2. Infrastructure 429 (traffic surge).** Under heavy platform load, requests can be throttled before they reach the application. These responses are plain text (for example `Rate exceeded`), not JSON, and carry no `Retry-After` header. Treat any non-JSON `429` as transient: retry with exponential backoff plus jitter.
 
 **Best practices:**
 - Check the `usage` object in chat responses to track remaining operations before you hit the limit
-- On a `429`, branch on the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers. On successful responses, read the `usage` block in the JSON body (and the SSE `usage` event) instead — those headers are only present on the `429`.
+- On an application `429`, honor `Retry-After` and branch on the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers. On successful responses, read the `usage` block in the JSON body (and the SSE `usage` event) instead; those headers are only present on the `429`.
+- On a plain-text `429` with no `Retry-After`, back off exponentially with jitter and retry
 - Upgrade to a paid plan for uninterrupted access
 
 ## Check remaining operations

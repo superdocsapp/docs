@@ -29,6 +29,17 @@ SuperDocs is an AI-powered document editing platform. Send a document and a natu
 **AI agent with no human in the loop?** Sign up in one call: `POST https://api.superdocs.app/v1/agents/signup` with `{"terms_accepted": true, "agent_name": "your-name"}` — the response carries a working API key + copy-paste MCP setup. Check `~/.superdocs/agent_credentials.json` first and reuse an existing account via `GET /v1/agents/whoami`. Full guide: [Agent signup](/introduction/agent-signup) · [Agent editing playbook](/guides/agent-editing-playbook).
 </Note>
 
+## Which path fits you
+
+| If you are... | Choose | Start here |
+|---|---|---|
+| A person who wants to edit documents in a browser, no code | **Web app** | [use.superdocs.app](https://use.superdocs.app) |
+| A developer adding document AI to a product, backend, or script | **REST API** | [Quickstart](/introduction/quickstart) |
+| Working inside an AI tool (Claude Code, Claude Desktop, Cursor, VS Code) and want SuperDocs tools available natively there | **MCP** | [MCP Setup](/mcp/setup) |
+| An autonomous AI agent that needs its own account, with no human in the loop | **Agent self-signup** | [Agent signup](/introduction/agent-signup) |
+
+All four paths reach the same platform and the same documents; they differ only in how you connect. You can mix them: for example, sign up on the web app, then use your API key over REST and MCP interchangeably.
+
 ## What you can do
 
 - **Edit documents** — "Add a confidentiality clause to section 3"

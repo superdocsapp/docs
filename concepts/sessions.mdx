@@ -41,6 +41,8 @@ A session can also hold **multiple open documents** at once — each with its ow
 
 Sessions persist across server restarts. You can close your browser, come back tomorrow, and resume with the same `session_id`.
 
+**Sessions do not expire.** There is no retention window or time-based cleanup: a session from six months ago is just as resumable as one from this morning. Conversation history and document state remain available until you delete the session yourself (see [Delete a session](#delete-a-session) below). Note that archived durable Files follow their own lifecycle and are purged about 30 days after archiving; see [Files](/concepts/files).
+
 ## List sessions
 
 ```bash

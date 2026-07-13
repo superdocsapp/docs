@@ -19,13 +19,14 @@ All API errors return a JSON response with a `detail` field:
 |------|---------|---------------|
 | **400** | Bad Request | Empty message, invalid parameters |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
-| **403** | Forbidden | Accessing a resource you don't own |
-| **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired |
+| **403** | Forbidden | Accessing a resource you don't own; wrong agent-takeover code (the `detail` says how many attempts remain) |
+| **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired; expired or unknown agent-takeover link |
 | **409** | Conflict | Revert blocked because a chat job is currently running on the same session |
+| **410** | Gone | Agent-takeover link permanently disabled after too many incorrect codes. Terminal: the old link can never work again; the agent must send a fresh handoff link |
 | **413** | Request Entity Too Large | Request body or export payload above the size cap |
 | **415** | Unsupported Media Type | Upload file extension not supported, including a legacy `.doc` upload (convert to `.docx`); use `.pdf`, `.docx`, `.txt`, `.rtf`, `.md`, `.html`, `.htm` |
 | **422** | Validation Error | Request body doesn't match expected schema; format value outside the allowed enum; revert target message predates the revert feature |
-| **429** | Too Many Requests | Monthly operation limit reached |
+| **429** | Too Many Requests | Monthly operation limit reached, or an endpoint-specific cooldown. Application 429s are JSON and always carry a `Retry-After` header (seconds); see [Rate Limits](/errors/rate-limits) |
 | **500** | Internal Server Error | Unexpected server error |
 | **504** | Gateway Timeout | AI processing exceeded 30 minutes |
 
@@ -73,7 +74,7 @@ A legacy binary `.doc` upload returns the same `415`:
 {"detail": "Your monthly operation quota (500) is exhausted. Upgrade to Pro for uninterrupted pay-as-you-go overage."}
 ```
 
-**Fix:** Upgrade your plan at Settings > Billing, or wait for your monthly reset. Branch on the `429` status and the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers rather than the `detail` string (the wording may change). Check the `usage` object in chat responses to monitor remaining operations.
+**Fix:** Upgrade your plan at Settings > Billing, or wait for your monthly reset. Honor the `Retry-After` header (seconds until the request can succeed) and branch on the `429` status and the `X-Usage-Limit` / `X-Usage-Used` / `X-Usage-Remaining` headers rather than the `detail` string (the wording may change). Check the `usage` object in chat responses to monitor remaining operations. A plain-text `429` with no `Retry-After` is an infrastructure surge response, not an application error; back off with jitter and retry (see [Rate Limits](/errors/rate-limits)).
 
 ### Timeout (504)
 
