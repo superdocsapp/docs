@@ -22,7 +22,7 @@ This skill encodes the workflows that work well with SuperDocs and the pitfalls 
 
 | Tool | Command |
 |---|---|
-| **Claude Code** | `claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ --header "Authorization: Bearer sk_YOUR_KEY"` (or just install the plugin which bundles MCP + skill + 4 prompts: `claude plugin marketplace add superdocsapp/superdocs-plugin && claude plugin install superdocs@superdocs-plugin`) |
+| **Claude Code** | `claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ --header "Authorization: Bearer sk_YOUR_KEY"` (or just install the plugin which bundles MCP + skill + 4 prompts: `claude plugin marketplace add superdocsapp/superdocs-plugin && claude plugin install superdocs@superdocs-plugin`) |
 | **Cursor** | Add to `.cursor/mcp.json`: `{"mcpServers":{"superdocs":{"url":"https://api.superdocs.app/mcp/","headers":{"Authorization":"Bearer sk_YOUR_KEY"}}}}` |
 | **VS Code** | Add to workspace `.vscode/mcp.json` (or the user-level `mcp.json` via **MCP: Open User Configuration**): `{"servers":{"superdocs":{"type":"http","url":"https://api.superdocs.app/mcp/","headers":{"Authorization":"Bearer sk_YOUR_KEY"}}}}` |
 | **Cline / Continue / Goose / Gemini CLI / others** | See client-specific docs at https://docs.superdocs.app/mcp/setup — config file format varies. |

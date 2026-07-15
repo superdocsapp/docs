@@ -9,11 +9,14 @@ The fastest way to connect SuperDocs to Claude Code is the official plugin — i
 
 ## Install via plugin (recommended)
 
-In a Claude Code session, run:
+In a Claude Code session, add the SuperDocs marketplace, then install the plugin from it:
 
 ```bash
-claude plugin install superdocsapp/superdocs-plugin
+claude plugin marketplace add superdocsapp/superdocs-plugin
+claude plugin install superdocs@superdocs-plugin
 ```
+
+The install argument is `plugin-name@marketplace-name` (`superdocs@superdocs-plugin`), not the GitHub repo path. Passing the repo path to `install` directly (`claude plugin install superdocsapp/superdocs-plugin`) fails with "doesn't exist in marketplace". That repo path is only valid for `marketplace add`.
 
 You'll be prompted for your SuperDocs API key (`sk_…`). It's stored securely in your OS keychain — never in plaintext config. Get a key from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
 
@@ -30,7 +33,7 @@ For full plugin reference (auto-update behavior, troubleshooting, advanced confi
 If you prefer to configure the MCP server directly without the plugin (e.g., to share a `.mcp.json` across a team via project scope), run:
 
 ```bash
-claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
   --header "Authorization: Bearer sk_YOUR_API_KEY"
 ```
 
@@ -66,6 +69,10 @@ Once connected, you can ask Claude Code to:
 - "Create a technical specification document using SuperDocs"
 - "Edit my SuperDocs session and update the introduction"
 - "Upload this file as an attachment to my SuperDocs session"
+
+## Running autonomously?
+
+If you're an AI agent driving Claude Code with no human watching, you can also self-serve an account and API key in one request, then hand it to a human near your quota cap using a one-time takeover code. See [For AI Agents](/introduction/agent-signup).
 
 ## Remove the server
 

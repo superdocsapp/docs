@@ -20,6 +20,14 @@
       "mode": "simple"
     }
   },
+  "redirects": [
+    { "source": "/quickstart", "destination": "/introduction/quickstart" },
+    { "source": "/overview", "destination": "/introduction/overview" },
+    { "source": "/getting-started", "destination": "/introduction/overview" },
+    { "source": "/agent-signup", "destination": "/introduction/agent-signup" },
+    { "source": "/agents", "destination": "/introduction/agent-signup" },
+    { "source": "/mcp", "destination": "/mcp/setup" }
+  ],
   "navigation": {
     "tabs": [
       {

@@ -17,9 +17,14 @@ The fastest way to install SuperDocs in Claude Code. One command, one prompt for
 
 ## Install
 
+Two steps: add the SuperDocs marketplace, then install the plugin from it.
+
 ```bash
-claude plugin install superdocsapp/superdocs-plugin
+claude plugin marketplace add superdocsapp/superdocs-plugin
+claude plugin install superdocs@superdocs-plugin
 ```
+
+The first command registers the marketplace (the `superdocsapp/superdocs-plugin` GitHub repo); the second installs the `superdocs` plugin from it. The install argument is `plugin-name@marketplace-name` (`superdocs@superdocs-plugin`). Running `claude plugin install superdocsapp/superdocs-plugin` on its own fails with "doesn't exist in marketplace", because that GitHub repo path is only valid for `marketplace add`, not for `install`.
 
 You'll be prompted for your `sk_…` API key. Get one from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
 
@@ -59,10 +64,17 @@ Or invoke a workflow prompt directly:
 
 ## Updates
 
-The plugin auto-updates when a new version is published. To pin a specific version:
+The plugin auto-updates when a new version is published. To pull the latest immediately:
 
 ```bash
-claude plugin install superdocsapp/superdocs-plugin@1.0.0
+claude plugin update superdocs
+```
+
+To refresh the marketplace listing first (e.g. if a new version isn't showing up yet):
+
+```bash
+claude plugin marketplace update superdocs-plugin
+claude plugin update superdocs
 ```
 
 To uninstall:
@@ -86,6 +98,10 @@ claude plugin uninstall superdocs
 The plugin itself is small — just the manifest + the skill markdown. The 37 tools and 4 prompts are served live from `https://api.superdocs.app/mcp/` (Streamable HTTP, sk_ Bearer auth). Tool descriptions, prompt templates, and behavior changes ship from the backend instantly — no plugin update needed for those.
 
 The plugin's job is to make install painless. The smarts live on the server.
+
+## Running autonomously?
+
+If an AI agent is driving this plugin with no human present, it can self-serve its own account and API key in one request, then hand the account to a human near the quota cap using a one-time takeover code. See [For AI Agents](/introduction/agent-signup).
 
 ## Source
 

@@ -39,7 +39,7 @@ The response returns everything you need, including the API key (shown only once
     "openapi": "https://api.superdocs.app/openapi.json"
   },
   "mcp_setup": {
-    "claude_code": "claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ --header \"Authorization: Bearer sk_…\"",
+    "claude_code": "claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ --header \"Authorization: Bearer sk_…\"",
     "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp/ (Streamable HTTP) with header Authorization: Bearer <your key>",
     "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
     "docs": "https://docs.superdocs.app/account/mcp-setup"
@@ -70,7 +70,7 @@ curl -X POST https://api.superdocs.app/v1/chat \
 For MCP, point your client at `https://api.superdocs.app/mcp/` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
 
 ```bash Claude Code
-claude mcp add --transport http superdocs https://api.superdocs.app/mcp/ \
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
   --header "Authorization: Bearer sk_YOUR_KEY"
 ```
 
