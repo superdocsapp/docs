@@ -28,7 +28,7 @@ Two behaviors worth knowing:
 
 ## Verify for free (never export just to check)
 
-`GET /v1/documents/{id}` (`get_document_detail`) always includes a `structure` block — headings with levels and positions, `section_count`, `block_count`, and media counts — derived on read, **never billed**.
+`GET /v1/documents/{id}` (`get_document_detail`) always includes a `structure` block — headings with levels and positions, `section_count`, `block_count`, and media counts — derived on read, **never billed**. When the document carries page headers, footers, footnotes, endnotes, or comments, `structure` also includes a `parts` list naming each one with its type, a short preview, and the `chunk_id` you can reference when asking for a change. Counts and heading positions describe the document body; parts are listed separately and never inflate `section_count`.
 
 ```json
 "structure": {
@@ -52,6 +52,10 @@ Name the position and it is honored: "at the top", "in Section 2", "before the c
 
 To reposition existing content, ask for a move: "move the org chart into Section 2", "move the banner to the top". Moves relocate the original — nothing is duplicated or regenerated.
 
+## Headers, footers, footnotes, and comments
+
+Out-of-flow parts are edited the same way as body content: "change the footer to include the confidentiality notice", "fix the typo in footnote 3", "add a comment on the payment clause". Part edits ride the same request, the same review flow, and the same billing as body edits; they never change the body `section_count`. On `.docx` export an edited footnote is still a real Word footnote, a comment a real Word comment. The free `structure` read lists every part with its id under `parts` (see above), so you can verify a part edit without exporting.
+
 ## Page breaks and tables of contents
 
 - **Page breaks:** "start each section on a new page" / "page break before the appendix" inserts real page-break markers. DOCX exports carry true Word page breaks; PDF exports break pages there.
@@ -65,6 +69,7 @@ Synchronous `POST /v1/chat` is right for edits and normal-sized creations. For *
 
 - Most requests bill **1 operation**. Very large creations bill **1 per 25 sections** created (a 96-section handbook ≈ 4 operations).
 - **Failed operations bill 0.** If the AI couldn't complete your edit, the reply says so and you were not charged.
+- **Already-satisfied requests bill 0.** If the document already meets your instruction, the reply says so honestly; nothing is changed and nothing is charged. Don't re-issue the request expecting a rewrite.
 - Reads are free or flat: `structure`, listing documents/sessions, job polling — none of it eats your document-edit budget. Searches within your documents bill 1.
 - Check remaining quota anytime: `get_account_status` / `GET /v1/agents/whoami`.
 

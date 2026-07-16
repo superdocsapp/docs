@@ -45,7 +45,7 @@ If you make an edit you want to undo, you can rewind both the chat history and t
 
 Upload a file to load it as the active document in a session. The file is processed synchronously — the response includes the full document HTML ready for editing.
 
-**Supported formats:** DOCX, PDF, TXT, HTML, MD (Markdown), RTF
+**Supported formats:** DOCX, DOC, ODT, PDF, TXT, HTML, MD (Markdown), RTF
 
 ```bash
 curl -X POST https://api.superdocs.app/v1/documents/upload \
@@ -252,6 +252,10 @@ if (warningsHeader) {
 | `watermark_skipped` | A requested PDF watermark could not be applied. |
 | `embed_image_skipped` | An image could not be inlined into an HTML export with `embed_images=true`. |
 | `size_cap_warning` | The document is close to the per-format size limit. |
+| `header_footer_degraded` | A rich page header or footer could not be fully reproduced; it was emitted as best-effort text with working page-number fields. |
+| `sections_degraded` | Per-section page geometry (a section with its own page size or orientation) could not be applied in this PDF render; the export uses a single page setup. |
+| `svg_png_conversion_failed` | An SVG image could not be converted for `.docx` output; the original SVG is kept in the file. |
+| `math_partial_fidelity` | An equation contained a construct that could not be fully converted to native Word math; that construct is kept as its LaTeX source inside the equation. |
 
 ### Large documents
 

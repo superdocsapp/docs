@@ -166,6 +166,8 @@ Each proposed change has an `operation` field that determines what the AI wants 
 | `create` | null | New content to add | Section to insert after | Add a new section to the document |
 | `delete` | Content being removed | null | — | Remove a section from the document |
 
+Proposed edits to page headers, footers, footnote/endnote bodies, and comments use these same shapes: each arrives as an ordinary entry (its `chunk_id` targets the part's block) in the same batch as any body edits from the turn, so one turn can propose a body change and a header change and the user approves each independently. There is no separate approval track for them.
+
 ### Building a diff view
 
 To show users what the AI wants to change, compare `old_html` and `new_html`:
@@ -452,6 +454,15 @@ In multi-document sessions, every change in the batch carries the `document_id` 
 ### Very large batches
 
 A whole-document instruction ("tighten every section") can propose hundreds of changes in one batch. Two practical rules from running this at scale: **virtualize the card list** (render only visible rows — hundreds of side-by-side HTML diffs in the DOM at once will lock the tab), and lead with the summary ("312 changes across 5 sections types — Accept all / Review one by one") rather than dropping the user straight into row 1 of 312.
+
+## Recovering pending approvals after a reload
+
+A pending review survives your client. If the user reloads the page (or your process restarts) while a job is `awaiting_approval`, the proposal is not lost, and the job keeps blocking new turns on the session until it's resolved (the server auto-denies unattended reviews after about an hour). To restore the review UI on load:
+
+1. List the session's jobs with `GET /v1/sessions/{session_id}/jobs` (MCP: `get_session_jobs`).
+2. Find the job with `status: "awaiting_approval"` and branch on `metadata.awaiting_kind` first: a `continue_prompt` pause is resumed with `/continue`, not `/approve` (see the [flavours warning](#2-poll-for-approval-status) above).
+3. Rebuild the review list from `metadata.pending_changes`, exactly as you would from a `proposed_change_batch` event.
+4. Skip entries already decided before the reload: `metadata.pending_batch_decisions` maps each decided `change_id` to `{ "approved": true|false, "feedback": ... }`. Render only the undecided remainder, and submit those decisions through the same `/approve` calls as usual.
 
 ## Alternative: SSE streaming workflow
 

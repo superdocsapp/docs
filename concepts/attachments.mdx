@@ -12,18 +12,17 @@ Upload files to provide the AI with reference material. The AI can search and re
 | Type | Extensions |
 |------|-----------|
 | PDF | `.pdf` |
-| Word | `.docx` |
+| Word | `.docx` (`.doc` rolling out) |
+| OpenDocument | `.odt` (rolling out) |
 | HTML | `.html`, `.htm` |
 | Plain text | `.txt` |
 | Rich text | `.rtf` |
 | Markdown | `.md` |
 | Images | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` |
 
-Maximum file size: **50 MB** for direct (inline and multipart) uploads. Files sent through the pre-signed upload flow (`request_upload_url` → PUT → process) can be up to **100 MB**. Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
+Rich Text (`.rtf`) files are accepted and import as editable text today, with full styling normalization rolling out. Legacy Word (`.doc`) and OpenDocument (`.odt`) conversion onto the same rich pipeline as `.docx` is rolling out; until then those uploads return a clear, actionable error rather than a degraded result.
 
-<Note>
-Legacy `.doc` files are not supported. Convert to `.docx` first.
-</Note>
+Maximum file size: **50 MB** for direct (inline and multipart) uploads. Files sent through the pre-signed upload flow (`request_upload_url` → PUT → process) can be up to **100 MB**. Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
 
 ## Upload a file
 
