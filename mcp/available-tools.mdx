@@ -1,11 +1,11 @@
 ---
 title: "Available Tools"
-description: "All 37 MCP tools available when connecting to the SuperDocs MCP server."
+description: "All 38 MCP tools available when connecting to the SuperDocs MCP server."
 ---
 
 # Available MCP Tools
 
-When you connect to the SuperDocs MCP server, these 37 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
+When you connect to the SuperDocs MCP server, these 38 tools become available to your AI tool. Each tool is designed to surface SuperDocs' real capabilities — structural editing of styled documents, multi-document sessions, durable Files that persist across sessions, optional cross-session memory and search, fidelity-preserving export, multimodal vision, human-in-the-loop approval, and large-file upload/download without bloating agent context.
 
 ## Chat
 
@@ -98,6 +98,7 @@ SuperDocs can optionally carry a small durable memory note across an API key's s
 | Tool | What it does | Key parameters |
 |---|---|---|
 | `get_account_status` | Your account at a glance: tier, operations used/remaining this month, reset date, and whether the account has been adopted by a human. The first thing to call when resuming work with saved credentials, and the cheapest way to budget a long job. Non-billable. | — |
+| `request_limit_increase` | Request higher document/chat scale limits for your account in one call — use after a `413` with `DOCUMENT_TOO_COMPLEX` (single document past the standard per-document page limit) or `SESSION_TOO_FULL` (documents open in one chat past the per-chat limit). These are stability limits, not hard caps: the team is notified immediately with your account identity and the numbers you send, and limits are typically expanded within a day. Optional fields: `kind`, `attempted_pages`, `attempted_sections`, `filename`, `note`. Non-billable. | — |
 
 ## Templates
 

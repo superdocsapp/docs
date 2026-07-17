@@ -5,7 +5,7 @@ description: "Comprehensive capability reference for SuperDocs — every shipped
 
 # Features
 
-SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, plain text). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp/` (37 tools + 4 user-invocable workflow prompts on a single endpoint).
+SuperDocs is a universal AI document platform — one API for editing, drafting, searching, summarizing, generating visual content (images, diagrams, drawings, equations), and exporting styled documents (`.docx`, PDF, HTML, Markdown, plain text). Every capability below is live in production at `https://api.superdocs.app` and exposed identically over the REST API and the MCP server at `https://api.superdocs.app/mcp/` (38 tools + 4 user-invocable workflow prompts on a single endpoint).
 
 This page is exhaustive — it's a reference, not a marketing summary. Skip to the group that matches what you're trying to build.
 
@@ -281,9 +281,9 @@ For a 100-page styled `.docx`, this saves the agent ~70K tokens per upload (vs b
 
 ## Developer & integration
 
-### MCP server — 37 tools, every major client
+### MCP server — 38 tools, every major client
 
-The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp/` (Streamable HTTP transport). Compatible clients render the 37 tools natively:
+The same capabilities are exposed as a Model Context Protocol server at `https://api.superdocs.app/mcp/` (Streamable HTTP transport). Compatible clients render the 38 tools natively:
 
 | Client | Status |
 |---|---|
@@ -306,7 +306,7 @@ The same MCP server also exposes 4 user-invocable workflow templates (surfaced a
 | User API key (`sk_…`) | Individual developers, MCP integrations, scripts |
 | Organization API key (`lce_…`) | B2B integrations with shared usage limits |
 
-All three reach the same 37 MCP tools and the same REST API with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
+All three reach the same 38 MCP tools and the same REST API with identical scoping. Users own and manage their own keys; orgs manage theirs separately.
 
 ### REST API works with any programming language
 
