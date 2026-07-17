@@ -275,7 +275,7 @@ For files larger than ~100KB, the agent gets a 5-minute pre-signed PUT URL plus 
 
 For a 100-page styled `.docx`, this saves the agent ~70K tokens per upload (vs base64 inline). Five turns of editing on the same document drops from ~700K tokens of context overhead to ~3K tokens with the matching `response_mode='compact'` on chat.
 
-**Best for:** Production AI agents working with real-world document sizes (multi-page contracts, manuals, regulatory filings). Max file size 100 MB.
+**Best for:** Production AI agents working with real-world document sizes (multi-page contracts, manuals, regulatory filings). Max file size 100 MB; up to 25,000 sections per document and 30,000 per session as standard, expandable on request (stability limits, not platform caps).
 
 ---
 

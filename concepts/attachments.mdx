@@ -24,6 +24,8 @@ Legacy Word (`.doc`), OpenDocument (`.odt`), and Rich Text (`.rtf`) files are no
 
 Maximum file size: **50 MB** for direct (inline and multipart) uploads. Files sent through the pre-signed upload flow (`request_upload_url` → PUT → process) can be up to **100 MB**. Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
 
+**Document scale.** A single document can expand into up to **25,000 editable sections** (roughly 6,000 pages), and one chat session can hold up to **30,000 sections** across all of its open documents (roughly 7,500 pages). These are stability limits for the hosted service, not platform caps: there is no hard platform limit on document length or on how many documents you work with in parallel. Crossing a limit returns a structured `413` (`DOCUMENT_TOO_COMPLEX` for a single file, `SESSION_TOO_FULL` for a chat) with `limit_expandable: true` and a contact address; the team is notified automatically and limits are raised on request, typically within a day, via hello@superdocs.app. Larger dedicated deployments are available on Pro and Enterprise.
+
 ## Upload a file
 
 Attachments are processed asynchronously. Upload the file, get a `job_id`, then poll for completion. The `job_id` is an opaque UUID — attachment jobs are queried through the same `GET /v1/jobs/{job_id}` path as chat jobs (there's no separate id namespace or endpoint for them).

@@ -16,6 +16,17 @@ SuperDocs uses operation-based limits, not request-rate limits. Each AI action t
 | **Pro** | 10,000/mo | Overage at $0.015/op, no cap | Varies |
 | **Enterprise** | Custom | Custom | Custom |
 
+## Document scale limits
+
+Separate from operation quotas, the hosted service applies two scale limits so one pathological upload can never degrade the service for everyone:
+
+| Limit | Standard value | Error on crossing |
+|-------|----------------|-------------------|
+| Sections per document | 25,000 (roughly 6,000 pages) | `413` `DOCUMENT_TOO_COMPLEX` |
+| Sections per chat session (all open documents combined) | 30,000 | `413` `SESSION_TOO_FULL` |
+
+These are stability limits, not platform caps. The platform itself has no hard limit on document length or on the number of documents open in parallel; the standard values exist to keep the shared hosted service fast and stable. Both errors are structured: the `detail` carries `section_count` / `max_sections` (or `session_section_count` / `max_session_sections`), `limit_expandable: true`, and `contact_email`. Hitting a limit notifies the team automatically; email hello@superdocs.app and your limits are raised, typically within a day. Larger dedicated deployments are available on Pro and Enterprise.
+
 ## Handling 429 responses
 
 There are two kinds of `429`, and they need different handling.
