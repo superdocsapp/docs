@@ -18,11 +18,14 @@ Upload files to provide the AI with reference material. The AI can search and re
 | Plain text | `.txt` |
 | Rich text | `.rtf` |
 | Markdown | `.md` |
+| LaTeX | `.tex` (plus `.zip` project archives) |
 | Images | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` |
 
 Legacy Word (`.doc`), OpenDocument (`.odt`), and Rich Text (`.rtf`) files are normalized into the same rich pipeline as `.docx`, so their headings, tables, and styling carry through.
 
-Maximum file size: **50 MB** for direct (inline and multipart) uploads. Files sent through the pre-signed upload flow (`request_upload_url` → PUT → process) can be up to **100 MB**. Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
+**LaTeX projects.** A `.tex` file uploads directly. A multi-file LaTeX project — the shape editors export: a root `.tex` plus its `\input` chapters, figures, bibliography, and any custom class files — uploads as a single `.zip`; the root document is detected automatically. Math imports losslessly (every equation keeps its LaTeX source and exports as native Word math), footnotes become real footnotes, bibliographies render with their citations, and source-declared page geometry, font size, and line spacing carry into the editor. Documents built on heavily visual custom classes (many résumé and poster templates) are compiled and imported with their visual layout preserved. A `.zip` that contains no LaTeX root returns a structured error, and anything that can't be represented (for example an EPS figure or a TikZ drawing) is marked with a visible placeholder plus an ingest warning — never silently dropped. Standard BibTeX (`.bib`) bibliographies resolve fully; biblatex-specific flows may degrade to bracketed citation keys plus an ingest warning.
+
+Maximum file size: up to **100 MB** through the pre-signed upload flow (`request_upload_url` → PUT → process) — the path the web app and SDKs use automatically for anything large. Direct inline and multipart uploads are reliable up to about **20 MB**; an API-gateway request-body limit caps direct uploads below the pre-signed ceiling, so send larger files through the pre-signed flow (for files over ~100 KB it is preferable anyway, since bytes never pass through your context window). Oversized or unsupported uploads return a structured error naming the supported formats and the applicable limit.
 
 **Document scale.** A single document can expand into up to **25,000 editable sections** (roughly 6,000 pages), and one chat session can hold up to **30,000 sections** across all of its open documents (roughly 7,500 pages). These are stability limits for the hosted service, not platform caps: there is no hard platform limit on document length or on how many documents you work with in parallel. Crossing a limit returns a structured `413` (`DOCUMENT_TOO_COMPLEX` for a single file, `SESSION_TOO_FULL` for a chat) with `limit_expandable: true` and a contact address; the team is notified automatically and limits are raised on request, typically within a day, via hello@superdocs.app. Larger dedicated deployments are available on Pro and Enterprise.
 
