@@ -35,6 +35,10 @@ curl -X POST https://api.superdocs.app/v1/chat \
 
 The AI remembers the full conversation. On the second request, it knows about the introduction it just wrote.
 
+<Note>
+You don't have to re-send `document_html` on every turn. Once the session holds a document the server keeps it, so a follow-up can send just the `message` (the example above re-sends it to also sync any edits the client made). Re-send the HTML only to replace the document or to sync edits you made outside chat. See [Documents](/concepts/documents#sending-document-html).
+</Note>
+
 A session can also hold **multiple open documents** at once — each with its own `document_id`, with one document focused at a time. Chat turns target the focused document unless you pass `document_id` (or name a document in the message). See the [Multi-Document Sessions guide](/guides/multi-document).
 
 ## Persistence

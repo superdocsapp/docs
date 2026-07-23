@@ -100,6 +100,10 @@ SuperDocs can optionally carry a small durable memory note across an API key's s
 | `get_account_status` | Your account at a glance: tier, operations used/remaining this month, reset date, and whether the account has been adopted by a human. The first thing to call when resuming work with saved credentials, and the cheapest way to budget a long job. Non-billable. | — |
 | `request_limit_increase` | Request higher document/chat scale limits for your account in one call — use after a `413` with `DOCUMENT_TOO_COMPLEX` (single document past the standard per-document page limit) or `SESSION_TOO_FULL` (documents open in one chat past the per-chat limit). These are stability limits, not hard caps: the team is notified immediately with your account identity and the numbers you send, and limits are typically expanded within a day. Optional fields: `kind`, `attempted_pages`, `attempted_sections`, `filename`, `note`. Non-billable. | — |
 
+<Note>
+  **Running as an autonomous agent?** You can create your own account and `sk_` API key in one request (no web form, no human), then check quota anytime with `get_account_status`. When you near your monthly cap, hand the account to a human: `POST /v1/agents/handoff` with their email returns a one-time **takeover code**. They open an emailed link, enter the code, and adopt the account in place, so your work and this API key keep working. No human? `POST /v1/agents/request-upgrade`. Full flow (signup → handoff → adopt) is on the [For AI Agents](/introduction/agent-signup) page. (Signup, handoff, adopt, and request-upgrade are REST endpoints, not MCP tools.)
+</Note>
+
 ## Templates
 
 | Tool | Description | Key parameters |

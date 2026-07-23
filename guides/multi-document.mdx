@@ -111,6 +111,14 @@ curl -X POST https://api.superdocs.app/v1/sessions/my-session/redo \
 
 While a chat job on the session is in progress or awaiting approval, both `revert` and `redo` return `409` — settle or cancel the job first.
 
+## When an edit fails or goes wrong
+
+Multi-document turns are designed so you can always tell what state each document is in — nothing is left ambiguous after a failure:
+
+- **Failed turns say so, and bill 0.** If a requested edit could not be applied, the response text reports the real outcome instead of claiming success, and no operation is charged. A turn that partially applied reports per-section results: `document_changes.changes_summary` summarizes what actually changed (e.g. "2 sections edited, 1 added, rest untouched"), and `change_history` / compact-mode `chunk_diffs` carry the per-section before/after for audit.
+- **Bad output is reversible per document.** If the AI writes a malformed structure (say, into a nested table), you don't have to reload anything: preview the rollback with `POST /v1/sessions/{id}/revert` + `"dry_run": true`, inspect the per-document `revert_changes` map, then commit the revert — and `redo` remains available immediately afterward if the user changes their mind. See "Reverting without a whole-document swap" above.
+- **Versions are the ground truth.** Every stored document carries a monotonically increasing `version`; each committed change (AI turn, autosave, revert, another session's edit) bumps it. A response's `document_changes` reflects the committed state, and genuine same-section concurrent conflicts are surfaced explicitly — a `concurrent_merges` block plus a notice appended to the reply — never resolved silently. Cross-session changes announce themselves as [document events](/guides/concurrent-editing#polling-for-other-sessions-edits) you can poll.
+
 ## Notes
 
 - Document order in the roster is stable insertion order — safe to use as tab order.

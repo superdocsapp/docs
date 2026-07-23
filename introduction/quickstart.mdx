@@ -9,7 +9,7 @@ Go from zero to your first AI-powered document edit in 5 minutes.
 
 ## 1. Create an account
 
-Sign up at [use.superdocs.app](https://use.superdocs.app) with Google or email/password. Free plan includes 500 operations per month.
+Sign up at [use.superdocs.app](https://use.superdocs.app) with Google or email/password. Free plan includes 500 operations per month — an **operation** is one AI request that modifies, analyzes, or searches a document (uploads/parsing and exports are free; very large edits count one operation per 25 sections changed). Full definition and examples: [Plans & Usage](/account/plans-and-usage#what-counts-as-an-operation).
 
 ## 2. Create an API key
 
@@ -76,6 +76,10 @@ console.log(data.response);
 
 </CodeGroup>
 
+<Note>
+**You choose the `session_id`.** It's any string you pick, not a value the server assigns or returns. There's no "create session" call: the first request that uses a new string starts that session, and reusing the same string continues it. Pick something stable per document or per user (e.g. `user_123_draft-contract`). See [Sessions](/concepts/sessions).
+</Note>
+
 ## 4. Read the response
 
 ```json
@@ -103,7 +107,7 @@ Key fields:
 
 ## 5. Continue the conversation
 
-Use the same `session_id` to continue editing. Send back the updated HTML:
+Reuse the same `session_id` to keep editing. The server keeps your document between turns, so on a follow-up you send just the `message`. No need to re-send `document_html`:
 
 ```bash
 curl -X POST https://api.superdocs.app/v1/chat \
@@ -111,10 +115,15 @@ curl -X POST https://api.superdocs.app/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Make the data privacy section more formal",
-    "session_id": "my-first-session",
-    "document_html": "<div data-chunk-id=\"...\">...the HTML from the previous response..."
+    "session_id": "my-first-session"
   }'
 ```
+
+The AI picks up the document it already holds for this session and returns the updated HTML again.
+
+<Note>
+**When to re-send `document_html`:** only when *you* changed the HTML outside of chat. For example, the user edited the document in your own editor and you want the AI to see those edits. Then send the full current HTML (exactly as your editor has it, `data-chunk-id` attributes intact) and it replaces the server's copy. If chat is the only thing touching the document, omit `document_html` on every turn after the first. See [Documents](/concepts/documents#sending-document-html).
+</Note>
 
 ## Next steps
 

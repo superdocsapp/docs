@@ -9,7 +9,9 @@ description: "Load documents from files, edit them with AI, create new ones from
 
 Send your document HTML in `document_html`. The AI reads it, makes changes, and returns updated HTML in `document_changes.updated_html`.
 
-**The one rule:** Render the returned HTML as-is in your editor. When sending it back on the next request, send the full document HTML exactly as your editor has it. Don't programmatically strip, modify, or reformat the HTML. If your editor or HTML sanitizer removes custom `data-*` attributes, configure it to preserve them.
+**The server keeps your document between turns.** Once a session holds a document, you don't re-send it every turn. Send just the `message` and the AI works on the copy it already has. Include `document_html` only to **load** a document into a session the first time, **replace** it wholesale, or **sync** edits you made to the HTML outside of chat (covered below).
+
+**The one rule, for when you *do* send HTML back: send it faithfully.** If the user edited the document in your own editor and you're syncing those edits, send the full current HTML exactly as your editor has it. Don't programmatically strip, modify, or reformat it. If your editor or HTML sanitizer removes custom `data-*` attributes, configure it to preserve them. Those `data-chunk-id` attributes are what let the AI make targeted edits.
 
 ### Example flow
 
@@ -29,12 +31,20 @@ response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, j
 data = response.json()
 updated_html = data["document_changes"]["updated_html"]
 
-# 2. Send the updated HTML back on the next request
+# 2. Follow-up turn: the server still holds the document, so send just the message
 response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
     "message": "Make the summary more concise",
     "session_id": "my-doc",
-    "document_html": updated_html  # send back exactly as received
 })
+
+# Re-send document_html ONLY when you changed the HTML outside chat
+# (e.g. the user edited it in your editor) and want the AI to see those edits:
+#
+# response = requests.post("https://api.superdocs.app/v1/chat", headers=HEADERS, json={
+#     "message": "Make the summary more concise",
+#     "session_id": "my-doc",
+#     "document_html": edited_html,  # send it exactly as your editor has it
+# })
 ```
 
 The returned HTML contains `data-chunk-id` attributes on elements. These identify document sections and enable the AI to make targeted edits without reprocessing the entire document. These same IDs appear in API responses — for example, `chunk_id` and `insert_after_chunk_id` in [HITL proposed changes](/guides/human-in-the-loop#understanding-proposed-changes).

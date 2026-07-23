@@ -26,7 +26,8 @@
     { "source": "/getting-started", "destination": "/introduction/overview" },
     { "source": "/agent-signup", "destination": "/introduction/agent-signup" },
     { "source": "/agents", "destination": "/introduction/agent-signup" },
-    { "source": "/mcp", "destination": "/mcp/setup" }
+    { "source": "/mcp", "destination": "/mcp/setup" },
+    { "source": "/mcp/overview", "destination": "/mcp/setup" }
   ],
   "navigation": {
     "tabs": [

@@ -11,7 +11,7 @@ The fastest way to install SuperDocs in Claude Code. One command, one prompt for
 
 | Component | Count | What it does |
 |---|---|---|
-| **MCP tools** | 37 | Chat, structural editing, attachments, sessions, multi-document, durable Files, cross-session memory, revert, jobs, templates, pre-signed upload/download, image upload, account status |
+| **MCP tools** | 38 | Chat, structural editing, attachments, sessions, multi-document, durable Files, cross-session memory, revert, jobs, templates, pre-signed upload/download, image upload, account status |
 | **Workflow prompts** | 4 | `/superdocs:draft_from_outline`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:review_contract_for_redflags` |
 | **Skill** | 1 | Auto-loads when you ask Claude to edit, draft, or export documents — no need to think about which tool to use |
 
@@ -25,6 +25,17 @@ claude plugin install superdocs@superdocs-plugin
 ```
 
 The first command registers the marketplace (the `superdocsapp/superdocs-plugin` GitHub repo); the second installs the `superdocs` plugin from it. The install argument is `plugin-name@marketplace-name` (`superdocs@superdocs-plugin`). Running `claude plugin install superdocsapp/superdocs-plugin` on its own fails with "doesn't exist in marketplace", because that GitHub repo path is only valid for `marketplace add`, not for `install`.
+
+<Note>
+**Prefer just the MCP server, or hit a marketplace error?** You can always connect the server directly without the plugin, in one command with no marketplace step:
+
+```bash
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
+  --header "Authorization: Bearer sk_YOUR_API_KEY"
+```
+
+This installs the MCP tools only (not the prompts or skill). See [Claude Code → Manual setup](/mcp/claude-code#manual-setup-advanced).
+</Note>
 
 You'll be prompted for your `sk_…` API key. Get one from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
 

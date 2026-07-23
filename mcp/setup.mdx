@@ -1,5 +1,5 @@
 ---
-title: "MCP Overview"
+title: "MCP Setup"
 description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to SuperDocs using the Model Context Protocol (MCP)."
 ---
 
@@ -36,7 +36,7 @@ Two conveniences tie these channels together:
 ## Prerequisites
 
 - A SuperDocs account ([sign up free](https://use.superdocs.app))
-- An API key (see [API Keys](/account/api-keys) or [MCP Setup](/account/mcp-setup))
+- An API key (see [API Keys](/account/api-keys), or generate one from the web app's MCP tab — [MCP Key from Settings](/account/mcp-setup))
 
 ## Connection details
 
@@ -47,6 +47,10 @@ Two conveniences tie these channels together:
 | **Auth header** | `Authorization: Bearer sk_YOUR_API_KEY` |
 
 Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical spelling used throughout these docs.
+
+<Warning>
+**Keep your key out of dotfiles and repos.** MCP config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) are easy to commit by accident. Where your client supports environment-variable references in its MCP config (for example `${env:SUPERDOCS_API_KEY}` in VS Code's `mcp.json`), prefer that over pasting the raw `sk_` key inline — and never commit a config containing a real key. If a key does leak, revoke it in [API Keys](/account/api-keys) and create a new one.
+</Warning>
 
 ## Supported clients
 

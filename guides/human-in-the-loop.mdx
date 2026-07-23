@@ -5,6 +5,8 @@ description: "Review and approve AI-proposed document changes before they're app
 
 # Human-in-the-Loop
 
+**Quick path:** new to the API? Go from an API key to your first successful call in the [Quickstart](/introduction/quickstart) (~5 minutes), then come back here for the approval workflow.
+
 By default, the AI applies changes immediately. Set `approval_mode` to `"ask_every_time"` to review changes before they take effect.
 
 HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wait for your approval.
