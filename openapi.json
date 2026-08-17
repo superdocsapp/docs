@@ -5,6 +5,11 @@
   "description": "AI-powered document editing with multi-tenant organization support",
   "version": "2.0.0"
  },
+ "servers": [
+  {
+   "url": "https://api.superdocs.app"
+  }
+ ],
  "paths": {
   "/v1/chat": {
    "post": {
@@ -2638,6 +2643,18 @@
        "type": "string",
        "title": "Job Id"
       }
+     },
+     {
+      "name": "compact",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "When true, omit the heavy result body + streamed intermediate events from the response (status/progress/ids/timestamps/pending-change ids remain). Recommended for AI agents polling a large-document job: poll compact while it runs, then fetch once non-compact when status is completed to retrieve the final HTML.",
+       "default": false,
+       "title": "Compact"
+      },
+      "description": "When true, omit the heavy result body + streamed intermediate events from the response (status/progress/ids/timestamps/pending-change ids remain). Recommended for AI agents polling a large-document job: poll compact while it runs, then fetch once non-compact when status is completed to retrieve the final HTML."
      },
      {
       "name": "authorization",

@@ -90,7 +90,7 @@ SuperDocs can optionally carry a small durable memory note across an API key's s
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
 | `list_jobs` | List your async chat jobs (in-progress, awaiting approval, completed, failed). Pass `compact=true` to omit each job's heavy result payload and get a lightweight status/progress list. | `status`, `limit`, `compact` |
-| `get_job` | Get the status, partial results, and any pending changes for an async chat job. Poll after `chat_async`. | `job_id` |
+| `get_job` | Get the status, partial results, and any pending changes for an async chat job. Poll after `chat_async`. Pass `compact=true` to omit the heavy result body and streamed intermediate events (status/progress/ids/timestamps/pending-change ids remain) — poll compact while the job runs, then fetch once non-compact when status is `completed` to retrieve the final HTML. | `job_id`, `compact` |
 | `cancel_job` | Cancel a pending or in-progress async chat job. Already-applied changes are preserved. | `job_id` |
 
 ## Account
