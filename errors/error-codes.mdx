@@ -17,7 +17,7 @@ All API errors return a JSON response with a `detail` field:
 
 | Code | Meaning | Common causes |
 |------|---------|---------------|
-| **400** | Bad Request | Empty message, invalid parameters |
+| **400** | Bad Request | Empty message, invalid parameters; a document save that contains no content while the document still has content is refused and the document is left unchanged (the `detail` says so — fix the payload rather than retrying, since an unchanged retry is refused again) |
 | **401** | Unauthorized | Missing or invalid API key, expired token |
 | **403** | Forbidden | Accessing a resource you don't own; wrong agent-takeover code (the `detail` says how many attempts remain) |
 | **404** | Not Found | Job, session, template, or attachment doesn't exist; revert target message not in active history; pre-signed upload expired; expired or unknown agent-takeover link |
