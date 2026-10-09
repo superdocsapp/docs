@@ -48,7 +48,11 @@ SSE uses EventSource, which doesn't support custom headers. Pass your API key as
 
 ## Event types
 
-The stream emits nine event types: [`intermediate`](#intermediate), [`proposed_change_batch`](#proposed_change_batch), [`document_sync`](#document_sync), [`continue_prompt`](#continue_prompt), [`documents_changed`](#documents_changed), [`model_fallback`](#model_fallback), [`final`](#final), [`usage`](#usage), and [`error`](#error).
+The stream currently emits nine event types: [`intermediate`](#intermediate), [`proposed_change_batch`](#proposed_change_batch), [`document_sync`](#document_sync), [`continue_prompt`](#continue_prompt), [`documents_changed`](#documents_changed), [`model_fallback`](#model_fallback), [`final`](#final), [`usage`](#usage), and [`error`](#error).
+
+<Note>
+**Ignore event names your client doesn't recognise.** New event types can appear over time — treat an unrecognised event as a no-op and keep reading the stream rather than erroring or disconnecting.
+</Note>
 
 ### `intermediate`
 
