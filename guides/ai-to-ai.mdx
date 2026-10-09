@@ -1,22 +1,22 @@
 ---
 title: "AI-to-AI Integration"
-description: "Connect your AI agent to SuperDocs for autonomous document editing without a browser."
+description: "Connect your AI agent to Typebar for autonomous document editing without a browser."
 ---
 
 # AI-to-AI Integration
 
-Your AI agent can use SuperDocs as a document editing tool. No browser, no frontend — just API calls. Your AI decides what to edit, SuperDocs executes.
+Your AI agent can use Typebar as a document editing tool. No browser, no frontend — just API calls. Your AI decides what to edit, Typebar executes.
 
 ## How it works
 
 <Steps>
-  <Step title="Your AI agent sends a message and document HTML to SuperDocs" />
-  <Step title="SuperDocs AI edits the document and returns updated HTML" />
+  <Step title="Your AI agent sends a message and document HTML to Typebar" />
+  <Step title="Typebar AI edits the document and returns updated HTML" />
   <Step title="Your agent reads the response and decides the next action" />
   <Step title="Repeat — send the updated HTML back with the next instruction" />
 </Steps>
 
-This creates a loop: your AI agent controls _what_ to edit, SuperDocs handles _how_ to edit it.
+This creates a loop: your AI agent controls _what_ to edit, Typebar handles _how_ to edit it.
 
 ## Example: Autonomous document workflow
 
@@ -58,7 +58,7 @@ print("\nFinal document ready.")
 
 ## Session persistence
 
-Use the same `session_id` across calls. SuperDocs remembers the full conversation, so your agent can reference previous changes:
+Use the same `session_id` across calls. Typebar remembers the full conversation, so your agent can reference previous changes:
 
 ```python
 # First call
@@ -68,7 +68,7 @@ requests.post(BASE, headers=HEADERS, json={
     "document_html": ""
 })
 
-# Later call — SuperDocs remembers the contract it drafted
+# Later call — Typebar remembers the contract it drafted
 requests.post(BASE, headers=HEADERS, json={
     "message": "Add a payment terms section based on net-30",
     "session_id": "agent-contract",
@@ -96,4 +96,4 @@ The agent receives the document state from before that turn plus the original me
 
 ## With MCP
 
-If your AI agent supports MCP (like Claude), connect it directly to SuperDocs. See [MCP Setup](/mcp/setup) for setup. The AI agent gets native access to all 38 SuperDocs tools — including `revert_session_to_message` — without writing any API client code.
+If your AI agent supports MCP (like Claude), connect it directly to Typebar. See [MCP Setup](/mcp/setup) for setup. The AI agent gets native access to all 38 Typebar tools — including `revert_session_to_message` — without writing any API client code.

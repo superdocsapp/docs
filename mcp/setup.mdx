@@ -1,6 +1,6 @@
 ---
 title: "MCP Setup"
-description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to SuperDocs using the Model Context Protocol (MCP)."
+description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to Typebar using the Model Context Protocol (MCP)."
 ---
 
 # MCP Integration
@@ -9,17 +9,17 @@ description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to Super
 **New to MCP?** The [Model Context Protocol](https://modelcontextprotocol.io) is an open standard that lets AI assistants (Claude, Cursor, VS Code Copilot, and many others) call external tools and services. You add one server entry to your AI tool's config file, and the tool discovers that server's capabilities automatically. No SDK, no API client code, nothing to build.
 </Note>
 
-The Model Context Protocol (MCP) lets AI tools connect to external services. SuperDocs exposes an MCP server with 38 tools and 4 user-invocable workflow prompts for document editing, session management, attachments, multi-document and durable Files, revert, and more — all on a single endpoint at `https://api.superdocs.app/mcp/`.
+The Model Context Protocol (MCP) lets AI tools connect to external services. Typebar exposes an MCP server with 38 tools and 4 user-invocable workflow prompts for document editing, session management, attachments, multi-document and durable Files, revert, and more — all on a single endpoint at `https://api.superdocs.app/mcp/`.
 
-When connected, SuperDocs tools appear natively in your AI tool — no API client code needed.
+When connected, Typebar tools appear natively in your AI tool — no API client code needed.
 
 <Note>
 **Running as an autonomous AI agent?** You can create your own account and API key in a single request (no web form, no human), then check your quota anytime with the `get_account_status` tool. When you near your monthly cap, hand the account to a human with a one-time **takeover code**: they open an emailed link, enter the code, and adopt the account in place so your work and API key keep working. Full flow (signup, quota, handoff, adopt) is on the [For AI Agents](/introduction/agent-signup) page.
 </Note>
 
-## Where to find SuperDocs
+## Where to find Typebar
 
-You can install SuperDocs from any of these public channels (most users only need one):
+You can install Typebar from any of these public channels (most users only need one):
 
 | Channel | What it gives you | Install |
 |---|---|---|
@@ -35,7 +35,7 @@ Two conveniences tie these channels together:
 
 ## Prerequisites
 
-- A SuperDocs account ([sign up free](https://use.superdocs.app))
+- A Typebar account ([sign up free](https://use.typebar.ai))
 - An API key (see [API Keys](/account/api-keys), or generate one from the web app's MCP tab — [MCP Key from Settings](/account/mcp-setup))
 
 ## Connection details
@@ -47,6 +47,10 @@ Two conveniences tie these channels together:
 | **Auth header** | `Authorization: Bearer sk_YOUR_API_KEY` |
 
 Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical spelling used throughout these docs.
+
+<Note>
+**Typebar was previously called SuperDocs.** The server reports its name as Typebar. The name you give it in your config (`superdocs` in the examples on these pages) is only your own label, so it can stay as it is; some tools show that label instead of the server's name. Existing setups keep working with no change: the endpoint, your API key, the plugin and the install commands are the same.
+</Note>
 
 <Warning>
 **Keep your key out of dotfiles and repos.** MCP config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) are easy to commit by accident. Where your client supports environment-variable references in its MCP config (for example `${env:SUPERDOCS_API_KEY}` in VS Code's `mcp.json`), prefer that over pasting the raw `sk_` key inline — and never commit a config containing a real key. If a key does leak, revoke it in [API Keys](/account/api-keys) and create a new one.
@@ -67,14 +71,14 @@ Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical s
 </CardGroup>
 
 <Tip>
-These are just the most popular clients. **Any application with an MCP client** can connect to SuperDocs — including your own custom AI agents, internal business tools, or startup products. If it speaks MCP, it works with SuperDocs. Just point it at the endpoint and auth details above.
+These are just the most popular clients. **Any application with an MCP client** can connect to Typebar — including your own custom AI agents, internal business tools, or startup products. If it speaks MCP, it works with Typebar. Just point it at the endpoint and auth details above.
 </Tip>
 
 ## Quick test
 
 After connecting, ask your AI tool:
 
-> "Use the SuperDocs health tool to check the API status"
+> "Use the Typebar health tool to check the API status"
 
 If the connection is working, you'll get back `{"status": "healthy"}`.
 

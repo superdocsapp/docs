@@ -1,29 +1,29 @@
 ---
 title: "Integration Starter Prompt"
-description: "Paste this into your coding agent to integrate SuperDocs into any product, in any stack, with any architecture. Target fill time: under 5 minutes."
+description: "Paste this into your coding agent to integrate Typebar into any product, in any stack, with any architecture. Target fill time: under 5 minutes."
 ---
 
 # Integration Starter Prompt
 
-**Target fill time: under 5 minutes.** Optionally describe what you want SuperDocs to do in your product (1-3 sentences) and paste your existing agent context (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`) or a `package.json`. Anything you leave blank, the agent figures out — it auto-discovers your project root context, runs an investigation framework against your codebase, and (if Part 0 was empty) proposes a plain-English integration plan for you to approve before writing any code.
+**Target fill time: under 5 minutes.** Optionally describe what you want Typebar to do in your product (1-3 sentences) and paste your existing agent context (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`) or a `package.json`. Anything you leave blank, the agent figures out — it auto-discovers your project root context, runs an investigation framework against your codebase, and (if Part 0 was empty) proposes a plain-English integration plan for you to approve before writing any code.
 
 ## What you'll build
 
-A complete integration of SuperDocs into your product, regardless of architecture. Your coding agent reads this prompt, reads any context you provide (or auto-discovers from your project root), runs an investigation framework against your product, confirms its understanding with you, and then writes the integration in your stack's idioms.
+A complete integration of Typebar into your product, regardless of architecture. Your coding agent reads this prompt, reads any context you provide (or auto-discovers from your project root), runs an investigation framework against your product, confirms its understanding with you, and then writes the integration in your stack's idioms.
 
 This template is built around principles + investigation + cross-references rather than enumerating per-stack scaffolds. It works for any integration shape:
 
 - **Greenfield** with no app yet — the agent scaffolds one in your chosen stack.
-- **Existing app with no editor** — the agent adds SuperDocs surfaced however your UI already works.
-- **Existing app with an editor** (ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, contenteditable) — the agent wires SuperDocs into your existing editor without disrupting it.
-- **Existing AI agent** (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex) — the agent registers SuperDocs as a tool the AI can call.
+- **Existing app with no editor** — the agent adds Typebar surfaced however your UI already works.
+- **Existing app with an editor** (ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, contenteditable) — the agent wires Typebar into your existing editor without disrupting it.
+- **Existing AI agent** (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex) — the agent registers Typebar as a tool the AI can call.
 - **Server-side worker / batch job / queue processor** — the agent skips all UI work and builds a backend service module.
 - **MCP client** (Claude Desktop, Cursor, VS Code, Windsurf) — configuration only, no code to write.
 - **Custom architecture you didn't see listed** — the principles + investigation framework are designed to handle this case too.
 
 ## Model selection — pick the right tier per request
 
-SuperDocs offers four model tiers (`core`, `turbo`, `pro`, `max`) and three thinking depths (`fast`, `balanced`, `deep`). The default is `core` + `balanced` — fast and accurate for everyday edits.
+Typebar offers four model tiers (`core`, `turbo`, `pro`, `max`) and three thinking depths (`fast`, `balanced`, `deep`). The default is `core` + `balanced` — fast and accurate for everyday edits.
 
 For document-editing tasks where precision matters (legal contracts, regulatory filings, compliance docs, medical records), pass `model_tier: "pro"` or `model_tier: "max"` in your request body. For batch processing many short edits where speed dominates, use `turbo`. See the full matrix and recommendations at [Model Selection](/guides/model-selection).
 
@@ -33,22 +33,22 @@ If you skip this step, every request from your product will use the silent `core
 
 ## Copy this prompt
 
-Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other). The agent will fetch the latest SuperDocs API reference itself — no need to download `llms-full.txt` manually.
+Hit the copy button at the top-right of the code block, then paste into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other). The agent will fetch the latest Typebar API reference itself — no need to download `llms-full.txt` manually.
 
 ````text
-# SuperDocs Integration Starter Prompt — Universal Template
+# Typebar Integration Starter Prompt — Universal Template
 
-Paste this prompt into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other) to integrate SuperDocs into your product. This template is designed to work for any integration shape — a brand-new app, an existing app with an editor, an existing AI agent that needs document-editing capability, a server-side batch worker, an MCP client, or anything else.
+Paste this prompt into your coding agent (Claude Code, Cursor, Windsurf, Codex, Cline, or any other) to integrate Typebar into your product. This template is designed to work for any integration shape — a brand-new app, an existing app with an editor, an existing AI agent that needs document-editing capability, a server-side batch worker, an MCP client, or anything else.
 
-**Target fill time: under 5 minutes.** Almost everything below is optional. The agent reasons from the SuperDocs API docs + your existing context (`CLAUDE.md`, `package.json`, your codebase) and adapts the integration to your product. It will tell you what it inferred before it starts writing code, and you'll have one chance to correct it.
+**Target fill time: under 5 minutes.** Almost everything below is optional. The agent reasons from the Typebar API docs + your existing context (`CLAUDE.md`, `package.json`, your codebase) and adapts the integration to your product. It will tell you what it inferred before it starts writing code, and you'll have one chance to correct it.
 
-This template is published at https://docs.superdocs.app/guides/integration-starter-prompt. The filled-in ProseMirror + Next.js reference implementation lives at https://github.com/superdocsapp/prosemirror-superdocs-demo.
+This template is published at https://docs.typebar.ai/guides/integration-starter-prompt. The filled-in ProseMirror + Next.js reference implementation lives at https://github.com/superdocsapp/prosemirror-superdocs-demo.
 
 ---
 
-## Part 0 (recommended) — How do you want SuperDocs in your product?
+## Part 0 (recommended) — How do you want Typebar in your product?
 
-In 1-3 sentences, describe what you want SuperDocs to do in your product. This is the strongest single signal the agent uses to determine which integration shape applies.
+In 1-3 sentences, describe what you want Typebar to do in your product. This is the strongest single signal the agent uses to determine which integration shape applies.
 
 **If you fill this in:** the agent goes straight to the investigation framework with a clear target shape.
 
@@ -57,11 +57,11 @@ In 1-3 sentences, describe what you want SuperDocs to do in your product. This i
 Examples (don't copy verbatim — describe YOUR situation):
 
 - "Brand-new app from scratch with a rich-text editor on the left and a chat panel on the right."
-- "Existing Next.js app with a TipTap editor; add SuperDocs as the AI editing engine, surfaced through the editor's existing slash-command menu."
-- "Existing AI agent (built with OpenAI function-calling / LangChain / LlamaIndex / Anthropic tool_use) that handles customer queries — add SuperDocs as a tool the agent can call when it needs to edit a document."
-- "Backend service that processes contracts overnight via a queue worker — no UI, no human approval, fully automated. Auto-approve all SuperDocs edits."
-- "Want my Claude Desktop / Cursor / VS Code IDE to be able to edit my docs via SuperDocs MCP."
-- (Anything else — describe the user flow in your product and the agent will figure out where SuperDocs slots in.)
+- "Existing Next.js app with a TipTap editor; add Typebar as the AI editing engine, surfaced through the editor's existing slash-command menu."
+- "Existing AI agent (built with OpenAI function-calling / LangChain / LlamaIndex / Anthropic tool_use) that handles customer queries — add Typebar as a tool the agent can call when it needs to edit a document."
+- "Backend service that processes contracts overnight via a queue worker — no UI, no human approval, fully automated. Auto-approve all Typebar edits."
+- "Want my Claude Desktop / Cursor / VS Code IDE to be able to edit my docs via Typebar MCP."
+- (Anything else — describe the user flow in your product and the agent will figure out where Typebar slots in.)
 
 ```
 [describe your situation here in 1-3 sentences — or leave blank to let the agent propose a plan from your CLAUDE.md / codebase]
@@ -96,7 +96,7 @@ If your context lives in Notion, Confluence, a GitHub README, or a public docs s
 
 ### Option 3 — Paste your package manifest + one representative file
 
-If you don't have agent context yet but have an existing codebase, paste your package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.) and the path to one file that handles documents today — the current editor component, the current upload endpoint, whatever is closest to where SuperDocs will plug in.
+If you don't have agent context yet but have an existing codebase, paste your package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.) and the path to one file that handles documents today — the current editor component, the current upload endpoint, whatever is closest to where Typebar will plug in.
 
 ```
 <!-- package manifest here -->
@@ -147,7 +147,7 @@ Before executing **any** part of the integration, the coding agent must:
    a. Search the project root for any context files the integrator may have already maintained. Look for, in this order: `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`, `.aiderrules`, `GEMINI.md`, `COPILOT.md`, `INSTRUCTIONS.md`, or any file matching the pattern `*RULES*.md` / `*AGENT*.md` / `*INSTRUCTIONS*.md` in the project root. If any of these exist, read all of them — these files describe the integrator's product, stack, and conventions and are higher-priority context than anything else. Do NOT assume your coding-agent harness auto-loaded them; read them explicitly via your file-read tool so you know what's in them.
    b. Read every file and URL provided in Part 0A (paste-in context, links to internal docs, package manifests).
    c. Read the integrator's existing codebase — at minimum, the package manifest (`package.json`, `requirements.txt`, `Gemfile`, `go.mod`, `pyproject.toml`, etc.), the main framework config files, any editor component or AI-agent file if declared or discoverable, and the `README` if present.
-   d. **Fetch the SuperDocs API reference fresh from `https://docs.superdocs.app/llms-full.txt`** — even if a stale local copy exists. Run `curl -sS https://docs.superdocs.app/llms-full.txt -o llms-full.txt` to grab the current version. The live URL is always authoritative; the local copy may be days or weeks old.
+   d. **Fetch the Typebar API reference fresh from `https://docs.typebar.ai/llms-full.txt`** — even if a stale local copy exists. Run `curl -sS https://docs.typebar.ai/llms-full.txt -o llms-full.txt` to grab the current version. The live URL is always authoritative; the local copy may be days or weeks old.
 2. **INFER.** For every Part 0B slot the integrator left blank, infer the value from context. If a slot cannot be inferred with reasonable confidence, mark it as `UNSET`.
 3. **RUN THE INVESTIGATION FRAMEWORK** in Part 4 §C below. Answer all five questions about the integrator's product. If you can't answer a question from available context, mark it `UNSET — asking you`.
 4. **ECHO BACK.** Present every Part 0B value AND every Part 4 §C answer with a source tag:
@@ -186,11 +186,11 @@ This fallback is for the genuinely-no-signal case only. Inference from any real 
 
 Whatever shape your integration takes, verify these five universal checks:
 
-1. **Document HTML round-trip preserves `data-chunk-id` attributes.** Send a real document HTML to SuperDocs, receive the response, send the response back unchanged on the next request, verify the `chunk_id` references in `proposed_change_batch` events match elements that exist in your document.
+1. **Document HTML round-trip preserves `data-chunk-id` attributes.** Send a real document HTML to Typebar, receive the response, send the response back unchanged on the next request, verify the `chunk_id` references in `proposed_change_batch` events match elements that exist in your document.
 2. **API key is server-side only.** No browser network request should contain the `sk_` value. Verify in DevTools or your backend logs.
-3. **At least one full round-trip succeeds end-to-end.** A user (or your AI, or your batch worker) sends a message; SuperDocs returns proposed changes; those changes are surfaced (UI / agent / log) per your declared `APPROVAL_MODE`; approved changes apply to the document.
-4. **Failure modes are handled.** If the SuperDocs API returns 4xx/5xx, your code surfaces a useful error. If the SSE stream drops, your code reconnects or surfaces an error.
-5. **Your integration matches your product's existing idioms.** Don't introduce a new state library, new component framework, or new HTTP client just for SuperDocs. Match what your codebase already uses.
+3. **At least one full round-trip succeeds end-to-end.** A user (or your AI, or your batch worker) sends a message; Typebar returns proposed changes; those changes are surfaced (UI / agent / log) per your declared `APPROVAL_MODE`; approved changes apply to the document.
+4. **Failure modes are handled.** If the Typebar API returns 4xx/5xx, your code surfaces a useful error. If the SSE stream drops, your code reconnects or surfaces an error.
+5. **Your integration matches your product's existing idioms.** Don't introduce a new state library, new component framework, or new HTTP client just for Typebar. Match what your codebase already uses.
 
 ---
 
@@ -198,9 +198,9 @@ Whatever shape your integration takes, verify these five universal checks:
 
 Read these before writing code:
 
-1. **The full SuperDocs API reference at `https://docs.superdocs.app/llms-full.txt`.** Fetch the latest version yourself — do not assume a local copy is current:
+1. **The full Typebar API reference at `https://docs.typebar.ai/llms-full.txt`.** Fetch the latest version yourself — do not assume a local copy is current:
    ```bash
-   curl -sS https://docs.superdocs.app/llms-full.txt -o llms-full.txt
+   curl -sS https://docs.typebar.ai/llms-full.txt -o llms-full.txt
    ```
    Run this even if a stale `llms-full.txt` already exists in the project folder; the API surface evolves and the live URL is always authoritative. Refer to this file whenever an API question comes up.
 2. This prompt, Parts 2–8.
@@ -212,11 +212,11 @@ Do not search the internet for integration patterns beyond these sources. Everyt
 
 ## Part 2 — Hard constraints
 
-### Must always be true of any SuperDocs integration
+### Must always be true of any Typebar integration
 
 - The integration produces a working "send document → receive proposed changes → apply approved changes" loop appropriate to the product's existing patterns.
-- The SuperDocs `sk_` API key is never exposed to a browser, mobile app, or any client-side surface.
-- The document HTML (with `data-chunk-id` attributes) round-trips cleanly between wherever the document lives and SuperDocs.
+- The Typebar `sk_` API key is never exposed to a browser, mobile app, or any client-side surface.
+- The document HTML (with `data-chunk-id` attributes) round-trips cleanly between wherever the document lives and Typebar.
 - The approval mechanism (human-via-UI, AI-decides, auto-approve, human-out-of-band) matches what `APPROVAL_MODE` declares (or what Part 0 implies).
 
 ### Stack — match the customer's existing system
@@ -230,13 +230,13 @@ Do NOT impose Next.js, ProseMirror, Tailwind, or any other specific stack on a p
 
 ### Content safety — what to never include in your code, comments, or public-facing artefacts
 
-- Specific AI model names (the SuperDocs API includes the model; your users do not need to know which one).
-- Third-party orchestration framework names that SuperDocs might use internally.
+- Specific AI model names (the Typebar API includes the model; your users do not need to know which one).
+- Third-party orchestration framework names that Typebar might use internally.
 - Cloud provider names beyond "hosted" or "server-side."
-- Database technology assumptions about SuperDocs' own backend.
-- Cost-per-operation numbers or internal SuperDocs pricing.
+- Database technology assumptions about Typebar's own backend.
+- Cost-per-operation numbers or internal Typebar pricing.
 
-Say "SuperDocs' AI" or "the AI" when you need to refer to the model.
+Say "Typebar's AI" or "the AI" when you need to refer to the model.
 
 ---
 
@@ -253,18 +253,18 @@ Say "SuperDocs' AI" or "the AI" when you need to refer to the model.
 
 ## Part 4 — Universal Integration Framework
 
-This Part replaces the per-shape phase trees you might expect from a typical integration guide. SuperDocs deliberately reasons from principles rather than enumerating every possible customer architecture, because customer systems are too varied for a fixed set of templates. The framework below works for every shape — UI build, AI-agent tool, server-side worker, MCP client, embedded-in-existing-editor, custom — by giving the agent everything it needs to reason from your specific product.
+This Part replaces the per-shape phase trees you might expect from a typical integration guide. Typebar deliberately reasons from principles rather than enumerating every possible customer architecture, because customer systems are too varied for a fixed set of templates. The framework below works for every shape — UI build, AI-agent tool, server-side worker, MCP client, embedded-in-existing-editor, custom — by giving the agent everything it needs to reason from your specific product.
 
 ### §A — Integration principles
 
-What SuperDocs requires from any integration, regardless of shape:
+What Typebar requires from any integration, regardless of shape:
 
-1. **Documents are HTML in / HTML out.** SuperDocs accepts an HTML document and returns an HTML document. There is no proprietary format — you send and receive standard HTML strings.
-2. **`data-chunk-id` attributes on block-level elements must round-trip cleanly.** SuperDocs returns HTML with `data-chunk-id="<uuid>"` attributes on paragraphs, headings, lists, blockquotes, code blocks, and other block-level elements. Whatever holds your document (rich-text editor, database row, in-memory string, file storage) must preserve these attributes when the document goes back to SuperDocs on the next request. Failure mode is silent: surgical editing intermittently fails on chunks whose attribute was stripped.
+1. **Documents are HTML in / HTML out.** Typebar accepts an HTML document and returns an HTML document. There is no proprietary format — you send and receive standard HTML strings.
+2. **`data-chunk-id` attributes on block-level elements must round-trip cleanly.** Typebar returns HTML with `data-chunk-id="<uuid>"` attributes on paragraphs, headings, lists, blockquotes, code blocks, and other block-level elements. Whatever holds your document (rich-text editor, database row, in-memory string, file storage) must preserve these attributes when the document goes back to Typebar on the next request. Failure mode is silent: surgical editing intermittently fails on chunks whose attribute was stripped.
 3. **The integration loop is always the same shape.** Send document HTML + a message → receive proposed changes (one or many) → decide which to apply (human, AI, or auto-approve) → apply approved changes → persist the resulting HTML back to wherever the document lives.
 4. **Approval can take many shapes.** A human reviewing a UI diff card. A human notified out-of-band (Slack, email) who replies with approval. Your AI agent making the decision based on its own reasoning. Auto-approve-all for batch processing where no review is wanted.
 5. **Streaming (SSE) is one option, not the only option.** For interactive user-facing flows, SSE gives the best UX (progress events, mid-flight diffs). For server-side batch processing or AI-agent-tool integration, the synchronous `/v1/chat` endpoint or polling on `/v1/jobs/{id}` are simpler and equally valid.
-6. **Your existing system's idioms are the right idioms.** SuperDocs is one piece of plumbing among many in your product. The integration code should look like the rest of your codebase — same HTTP client, same error handling, same logging conventions, same component patterns.
+6. **Your existing system's idioms are the right idioms.** Typebar is one piece of plumbing among many in your product. The integration code should look like the rest of your codebase — same HTTP client, same error handling, same logging conventions, same component patterns.
 
 ### §B — Canonical minimal example (the loop in 15 lines)
 
@@ -306,7 +306,7 @@ Before writing any integration code, you (the agent) MUST answer these five ques
 2. **Who decides whether a proposed change is applied?** (a human via UI / your AI agent making the decision based on its own reasoning / auto-approve all changes / a human notified out-of-band, e.g. via Slack or email)
 3. **Where does the approved HTML go?** (back into the same editor / persisted to storage / pushed to another system / returned via API to a caller / written to a file)
 4. **What's your product's idiom for handling streaming or async events?** (web SSE / WebSocket / polling / queue worker / synchronous request-response / message bus)
-5. **Does any pattern in your existing system look similar to what SuperDocs is being added to do?** (existing rich-text edit flow, existing AI suggestion flow, existing document workflow, existing content moderation, existing review queue, etc.) Match the new integration to the existing idiom — don't invent a new pattern.
+5. **Does any pattern in your existing system look similar to what Typebar is being added to do?** (existing rich-text edit flow, existing AI suggestion flow, existing document workflow, existing content moderation, existing review queue, etc.) Match the new integration to the existing idiom — don't invent a new pattern.
 
 If a question can't be answered from the available context, mark it `UNSET — asking you` and ASK the integrator before proceeding. Do not invent answers.
 
@@ -320,28 +320,28 @@ Run the §C investigation framework. Output a short decision document covering a
 
 #### Phase 2 — Set up the API client
 
-Create a server-side wrapper around the SuperDocs API in a module appropriate to the customer's stack — a Next.js API route, an Express middleware, a FastAPI endpoint, a Rails controller, a Go handler, a .NET minimal-API endpoint, etc. The `sk_` API key never reaches a browser, mobile app, or any client-side surface; it lives in the backend's environment / secret store.
+Create a server-side wrapper around the Typebar API in a module appropriate to the customer's stack — a Next.js API route, an Express middleware, a FastAPI endpoint, a Rails controller, a Go handler, a .NET minimal-API endpoint, etc. The `sk_` API key never reaches a browser, mobile app, or any client-side surface; it lives in the backend's environment / secret store.
 
-→ For the Next.js / Express / FastAPI / Rails / Django / Go / .NET API-key proxy patterns: **https://docs.superdocs.app/guides/streaming** (the same guide also covers SSE auth setup with the `api_key` query param required by `EventSource`).
+→ For the Next.js / Express / FastAPI / Rails / Django / Go / .NET API-key proxy patterns: **https://docs.typebar.ai/guides/streaming** (the same guide also covers SSE auth setup with the `api_key` query param required by `EventSource`).
 
-→ For server-side-only integrations (no browser, no proxy required): **https://docs.superdocs.app/guides/server-integration**.
+→ For server-side-only integrations (no browser, no proxy required): **https://docs.typebar.ai/guides/server-integration**.
 
 #### Phase 3 — Implement the document round-trip
 
 Build the "send HTML → receive proposed changes" loop in your customer's idiom. The shape varies:
 
 - If the customer's product has a rich-text editor: wire the editor to `getHtml()` / `setHtml()` bridges, send via the API client from Phase 2, render proposed changes via the approval mechanism in Phase 4.
-- If the customer's product has an AI agent: register SuperDocs as a tool the agent can invoke, with the tool function calling the API client from Phase 2 and returning structured proposed-change data the agent can reason about.
+- If the customer's product has an AI agent: register Typebar as a tool the agent can invoke, with the tool function calling the API client from Phase 2 and returning structured proposed-change data the agent can reason about.
 - If the customer's product is a server-side worker: pull documents from your queue / storage, call the API client from Phase 2 with `approval_mode: "approve_all"`, persist the returned HTML back to storage.
 - If the customer's product is an MCP client: configure the client to connect to `https://api.superdocs.app/mcp/`. There is no code to write — it's a configuration step.
 
-→ For editor integrations (preserving `data-chunk-id` round-trip in ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, or contenteditable): **https://docs.superdocs.app/guides/editor-integration**.
+→ For editor integrations (preserving `data-chunk-id` round-trip in ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, or contenteditable): **https://docs.typebar.ai/guides/editor-integration**.
 
-→ For AI agent tool integrations (registering SuperDocs as a tool in OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or any other tool-using framework): **https://docs.superdocs.app/guides/agent-tool-integration**.
+→ For AI agent tool integrations (registering Typebar as a tool in OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or any other tool-using framework): **https://docs.typebar.ai/guides/agent-tool-integration**.
 
-→ For server-side / batch / queue-worker integrations (sync API, polling, `approval_mode: "approve_all"`): **https://docs.superdocs.app/guides/server-integration**.
+→ For server-side / batch / queue-worker integrations (sync API, polling, `approval_mode: "approve_all"`): **https://docs.typebar.ai/guides/server-integration**.
 
-→ For MCP clients (Claude Desktop, Cursor, VS Code, Windsurf, Claude Code): **https://docs.superdocs.app/mcp/setup**.
+→ For MCP clients (Claude Desktop, Cursor, VS Code, Windsurf, Claude Code): **https://docs.typebar.ai/mcp/setup**.
 
 #### Phase 4 — Implement the approval mechanism
 
@@ -349,12 +349,12 @@ Build the appropriate approve/deny flow based on §C question 2:
 
 - **`human-via-ui`** — render proposed changes as inline diff overlays in the editor, side-by-side cards in a chat panel, modals, notification toasts, or whatever pattern your UI already uses. On approve, POST to `/v1/chat/{session_id}/approve`.
 - **`ai-decides`** — your AI agent receives the proposed change as structured data (chunk_id, old_html, new_html, ai_explanation) and decides whether to approve based on its own reasoning. Same approve POST, but the decision is made by the agent.
-- **`auto-approve-all`** — pass `approval_mode: "approve_all"` in the initial request. SuperDocs applies all changes without pausing for review. No second API call needed.
+- **`auto-approve-all`** — pass `approval_mode: "approve_all"` in the initial request. Typebar applies all changes without pausing for review. No second API call needed.
 - **`human-out-of-band`** — your service sends a notification (Slack, email, SMS) with the proposed change, waits for the human's response (button click, reply, etc.), then POSTs to `/v1/chat/{session_id}/approve`.
 
-→ For human UI approval patterns (inline diff overlay, side-by-side cards, modals, etc.): **https://docs.superdocs.app/guides/human-in-the-loop**.
+→ For human UI approval patterns (inline diff overlay, side-by-side cards, modals, etc.): **https://docs.typebar.ai/guides/human-in-the-loop**.
 
-→ For AI-driven approval inside an agent's reasoning loop: **https://docs.superdocs.app/guides/agent-tool-integration**.
+→ For AI-driven approval inside an agent's reasoning loop: **https://docs.typebar.ai/guides/agent-tool-integration**.
 
 #### Phase 5 — Test end-to-end
 
@@ -366,14 +366,14 @@ This table maps common implementation choices to the right docs page. Use it to 
 
 | If your product has... | Look here for the implementation pattern |
 |---|---|
-| A rich-text editor (ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, contenteditable, custom) | [Editor Integration](https://docs.superdocs.app/guides/editor-integration) |
-| An existing AI agent (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, generic JSON-schema tool) | [Agent Tool Integration](https://docs.superdocs.app/guides/agent-tool-integration) |
-| A backend service / queue worker / batch job (Node, Python, Go, Ruby, .NET, etc.) with no UI | [Server Integration](https://docs.superdocs.app/guides/server-integration) |
-| HITL approval rendered in your UI | [Human-in-the-Loop](https://docs.superdocs.app/guides/human-in-the-loop) |
-| Real-time streaming (SSE) for progress events | [SSE Streaming](https://docs.superdocs.app/guides/streaming) |
-| Long-running async jobs with polling | [Async Jobs](https://docs.superdocs.app/guides/async-jobs) |
-| MCP client integration (Claude Desktop, Cursor, VS Code, Windsurf) | [MCP Setup](https://docs.superdocs.app/mcp/setup) |
-| Working code in a specific language | [JavaScript](https://docs.superdocs.app/examples/javascript), [Python](https://docs.superdocs.app/examples/python), [curl](https://docs.superdocs.app/examples/curl) |
+| A rich-text editor (ProseMirror, TipTap, Slate, Lexical, Quill, CKEditor, contenteditable, custom) | [Editor Integration](https://docs.typebar.ai/guides/editor-integration) |
+| An existing AI agent (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, generic JSON-schema tool) | [Agent Tool Integration](https://docs.typebar.ai/guides/agent-tool-integration) |
+| A backend service / queue worker / batch job (Node, Python, Go, Ruby, .NET, etc.) with no UI | [Server Integration](https://docs.typebar.ai/guides/server-integration) |
+| HITL approval rendered in your UI | [Human-in-the-Loop](https://docs.typebar.ai/guides/human-in-the-loop) |
+| Real-time streaming (SSE) for progress events | [SSE Streaming](https://docs.typebar.ai/guides/streaming) |
+| Long-running async jobs with polling | [Async Jobs](https://docs.typebar.ai/guides/async-jobs) |
+| MCP client integration (Claude Desktop, Cursor, VS Code, Windsurf) | [MCP Setup](https://docs.typebar.ai/mcp/setup) |
+| Working code in a specific language | [JavaScript](https://docs.typebar.ai/examples/javascript), [Python](https://docs.typebar.ai/examples/python), [curl](https://docs.typebar.ai/examples/curl) |
 
 ### §F — Stuck?
 
@@ -407,7 +407,7 @@ error                 { error }
 
 `proposed_change_batch` is the event that carries proposed changes for human review. The whole turn arrives as **one** event whose `changes[]` array holds every proposed change — even a single-change turn arrives as a one-element array. (You may also register a `proposed_change` listener defensively for forward-compatibility, but it never fires today — `proposed_change_batch` is what's emitted, so build your approval loop on it.)
 
-`proposed_change_batch.content` is a JSON-stringified string — you must `JSON.parse` it twice to access the batch. See the warning callout in the [SSE Streaming guide](https://docs.superdocs.app/guides/streaming).
+`proposed_change_batch.content` is a JSON-stringified string — you must `JSON.parse` it twice to access the batch. See the warning callout in the [SSE Streaming guide](https://docs.typebar.ai/guides/streaming).
 
 Parsed `proposed_change_batch.content` shape:
 ```
@@ -434,11 +434,11 @@ Iterate `changes[]` to render each proposed change; call `/approve` with the `ch
 | `proposed_change_batch` fires, approve POST returns 404 | wrong session_id in the URL | Path must include the session ID exactly as sent in the original `/v1/chat/async` request. |
 | Revert returns 409 | A chat job is in flight on the session | Wait for the SSE `final` event (or poll `/v1/jobs/{job_id}` until status is `completed`/`failed`) before retrying revert. Optionally cancel the job via `POST /v1/jobs/{job_id}/cancel` first. |
 | Revert returns 422 | The target user message predates the revert feature | Per-message revert only works on chats started after the feature shipped. Older sessions stay readable but their messages don't carry the rewind marker. Start a new session for full revert support. |
-| Document loses `data-chunk-id` after first edit | editor schema/config missing a node type | Add the missing node to your chunk-id-preservation config (see [Editor Integration](https://docs.superdocs.app/guides/editor-integration)). |
+| Document loses `data-chunk-id` after first edit | editor schema/config missing a node type | Add the missing node to your chunk-id-preservation config (see [Editor Integration](https://docs.typebar.ai/guides/editor-integration)). |
 | Diff card has empty `old_html` | operation is `create`, not `edit` | Correct — creates have no `old_html`. Render them as "new section" cards. |
 | `proposed_change_batch.content` fields all undefined | missed the JSON double-parse | `JSON.parse(JSON.parse(event.data).content)` to access the batch, then iterate its `changes[]`. |
 | Silent round-trip loss of attributes | HTML sanitizer strips unknown attributes | Add `data-chunk-id` to your sanitizer's allowlist. |
-| AI agent's tool call fails to parse the response | agent expects JSON but SuperDocs returned HTML in the `updated_html` field | The HTML is the value; pass it through to wherever your document lives. The agent should treat it as opaque content, not parse it. |
+| AI agent's tool call fails to parse the response | agent expects JSON but Typebar returned HTML in the `updated_html` field | The HTML is the value; pass it through to wherever your document lives. The agent should treat it as opaque content, not parse it. |
 
 ---
 
@@ -447,9 +447,9 @@ Iterate `changes[]` to render each proposed change; call `/approve` with the `ch
 Verify all applicable items before declaring the integration done. Skip items gated on scenarios you didn't enable.
 
 - [ ] You answered all five §C investigation questions and got integrator confirmation.
-- [ ] A user message (or your agent's tool call, or your worker's queue item) reaches SuperDocs with the current document HTML attached.
+- [ ] A user message (or your agent's tool call, or your worker's queue item) reaches Typebar with the current document HTML attached.
 - [ ] At least one full round-trip succeeds end-to-end and produces a visible result in the customer's actual product.
-- [ ] The SuperDocs `sk_` key never appears in any browser network request, mobile app log, or other client-side surface.
+- [ ] The Typebar `sk_` key never appears in any browser network request, mobile app log, or other client-side surface.
 - [ ] The `data-chunk-id` attribute survives the round-trip on every block node type your product uses (verify with a real document, not a synthetic one).
 - [ ] If using SSE streaming or `approval_mode="ask_every_time"` (or any operation that may take >10 seconds), `intermediate` progress events are rendered to the user as in-flight chat bubbles or a progress indicator. The user sees text updates arriving every few seconds — never a silent screen for 30+ seconds. Long operations on large documents can take minutes; a frozen UI looks identical to a crashed one. See [Streaming → Rendering intermediate events in your UI](/guides/streaming#rendering-intermediate-events-in-your-ui).
 - [ ] Your client validates that `document_html` is non-empty before sending. Editor refs can be transiently `null` during framework remounts (React Strict Mode, HMR, Fast Refresh) and silently return empty strings — cache the last successful `document_html` (from the previous `final.updated_html` or your editor's confirmed state) and fall back to it before sending.
@@ -462,7 +462,7 @@ Verify all applicable items before declaring the integration done. Skip items ga
 
 ## Part 8 — Content safety (last reminder)
 
-Nothing in your code, comments, commit messages, or public artefacts mentions specific AI model names, orchestration framework names, internal SuperDocs tech names, cloud providers, or cost-per-operation figures. Say "SuperDocs' AI" or "the AI."
+Nothing in your code, comments, commit messages, or public artefacts mentions specific AI model names, orchestration framework names, internal Typebar tech names, cloud providers, or cost-per-operation figures. Say "Typebar's AI" or "the AI."
 
 ---
 
@@ -477,7 +477,7 @@ Good luck.
 
 <CardGroup cols={2}>
   <Card title="Watch the build (16 min)" icon="youtube" href="https://youtu.be/IrSePc2BAlM">
-    Live build of this exact integration end-to-end with an on-screen timer — raw ProseMirror on Next.js wired to the SuperDocs REST API, ending with the full SOP-editing demo. Less than 15 minutes of actual coding.
+    Live build of this exact integration end-to-end with an on-screen timer — raw ProseMirror on Next.js wired to the Typebar REST API (recorded when Typebar was still called SuperDocs), ending with the full SOP-editing demo. Less than 15 minutes of actual coding.
   </Card>
   <Card title="prosemirror-superdocs-demo" icon="github" href="https://github.com/superdocsapp/prosemirror-superdocs-demo">
     The filled-in repo from the video — raw ProseMirror on Next.js with the full SOP-editing demo. MIT-licensed. Clone it, point your coding agent at it, and adapt. This is one specific shape of integration; the prompt above adapts to your product's actual shape.
@@ -487,7 +487,7 @@ Good luck.
 ## Related guides
 
 - [Editor Integration](/guides/editor-integration) — drop-in chunk-id preservation snippets for ProseMirror, TipTap, Slate, Lexical, Quill, and CKEditor 5 (plus a "for other editors" generic guide).
-- [Agent Tool Integration](/guides/agent-tool-integration) — register SuperDocs as a tool in your existing AI agent's tool registry (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, generic JSON-schema).
+- [Agent Tool Integration](/guides/agent-tool-integration) — register Typebar as a tool in your existing AI agent's tool registry (OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, generic JSON-schema).
 - [Server Integration](/guides/server-integration) — backend service / batch worker / queue processor patterns in Node, Python, Go, Ruby, and .NET.
 - [Human-in-the-Loop](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor) — inline diff overlay patterns (Cursor-style) and side-by-side review cards.
 - [SSE Streaming](/guides/streaming) — nine event types, the `proposed_change_batch.content` double-parse, and the `EventSource` + `api_key` query-param pattern.

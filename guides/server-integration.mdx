@@ -1,13 +1,13 @@
 ---
 title: "Server Integration"
-description: "Use SuperDocs from a backend service with no UI — batch document processing, queue workers, scheduled jobs, document workflows. No frontend, no SSE consumer, no human approval needed."
+description: "Use Typebar from a backend service with no UI — batch document processing, queue workers, scheduled jobs, document workflows. No frontend, no SSE consumer, no human approval needed."
 ---
 
 # Server Integration
 
 **Quick path:** new to the API? Go from an API key to your first successful call in the [Quickstart](/introduction/quickstart) (~5 minutes), then come back here for the full backend integration.
 
-If your product is a backend service that processes documents — a queue worker editing contracts overnight, a scheduled job that summarizes incoming reports, a document workflow that auto-improves files before they hit your storage — SuperDocs slots in as a synchronous API call, no UI required.
+If your product is a backend service that processes documents — a queue worker editing contracts overnight, a scheduled job that summarizes incoming reports, a document workflow that auto-improves files before they hit your storage — Typebar slots in as a synchronous API call, no UI required.
 
 This guide covers the pattern + working snippets for the five most common backend stacks (Node, Python, Go, Ruby, .NET), plus when to choose sync vs async vs polling.
 
@@ -17,16 +17,16 @@ This guide covers the pattern + working snippets for the five most common backen
 
 ## Why this shape is different from a UI integration
 
-In a typical SuperDocs UI integration, a user types in a chat panel, the chat opens an SSE stream, and the user reviews proposed edits in real time before approving. The whole architecture is shaped around interactive review.
+In a typical Typebar UI integration, a user types in a chat panel, the chat opens an SSE stream, and the user reviews proposed edits in real time before approving. The whole architecture is shaped around interactive review.
 
-In a server-side integration, none of that applies. There's no user typing, no chat panel, no SSE consumer to build, and (typically) no human approval. Your service has documents in a queue or storage, calls SuperDocs synchronously to get them edited, persists the results, and moves on.
+In a server-side integration, none of that applies. There's no user typing, no chat panel, no SSE consumer to build, and (typically) no human approval. Your service has documents in a queue or storage, calls Typebar synchronously to get them edited, persists the results, and moves on.
 
 The integration is simpler — usually one synchronous HTTP call per document, plus a wrapper around it for retries, error handling, and persistence.
 
 ## The pattern, in 4 steps
 
 1. **Get a document HTML** from wherever your service stores documents (S3, database, file, message queue payload).
-2. **Call `POST /v1/chat`** synchronously with `approval_mode: "approve_all"`. SuperDocs applies all proposed changes automatically and returns the final updated HTML.
+2. **Call `POST /v1/chat`** synchronously with `approval_mode: "approve_all"`. Typebar applies all proposed changes automatically and returns the final updated HTML.
 3. **Persist the updated HTML** back to wherever the document lives.
 4. **Handle errors and retries** per your service's existing conventions.
 
@@ -34,7 +34,7 @@ That's the whole loop. The snippets below are the same loop in five different la
 
 ## When to use sync vs async vs polling
 
-Three SuperDocs endpoints can drive a server-side integration. Pick based on document size and your service's needs:
+Three Typebar endpoints can drive a server-side integration. Pick based on document size and your service's needs:
 
 | Endpoint | When to use |
 |---|---|
@@ -51,7 +51,7 @@ import 'dotenv/config';
 
 const SUPERDOCS_KEY = process.env.SUPERDOCS_API_KEY!;
 
-interface SuperDocsResponse {
+interface TypebarResponse {
   response: string;
   document_changes: { updated_html: string; version_id?: string };
   usage: { monthly_used: number; monthly_limit: number; monthly_remaining: number };
@@ -62,7 +62,7 @@ export async function editDocument(
   sessionId: string,
   documentHtml: string,
   approvalMode: "approve_all" | "ask_every_time" = "approve_all"
-): Promise<SuperDocsResponse> {
+): Promise<TypebarResponse> {
   const res = await fetch("https://api.superdocs.app/v1/chat", {
     method: "POST",
     headers: {
@@ -80,9 +80,9 @@ export async function editDocument(
   });
 
   if (!res.ok) {
-    throw new Error(`SuperDocs ${res.status}: ${await res.text()}`);
+    throw new Error(`Typebar ${res.status}: ${await res.text()}`);
   }
-  return res.json() as Promise<SuperDocsResponse>;
+  return res.json() as Promise<TypebarResponse>;
 }
 
 // Example queue worker — pulls a document, edits it, persists the result
@@ -110,7 +110,7 @@ from typing import Literal, TypedDict
 
 SUPERDOCS_KEY = os.environ["SUPERDOCS_API_KEY"]
 
-class SuperDocsResponse(TypedDict):
+class TypebarResponse(TypedDict):
     response: str
     document_changes: dict
     usage: dict
@@ -120,7 +120,7 @@ def edit_document(
     session_id: str,
     document_html: str,
     approval_mode: Literal["approve_all", "ask_every_time"] = "approve_all",
-) -> SuperDocsResponse:
+) -> TypebarResponse:
     """Sync edit. For long documents (50+ pages), prefer the async + polling pattern."""
     with httpx.Client(headers={"Authorization": f"Bearer {SUPERDOCS_KEY}"}, timeout=300) as client:
         response = client.post(
@@ -142,7 +142,7 @@ def process_queue_item(job_id: str, document_html: str, instruction: str) -> dic
         persist_to_storage(job_id, result["document_changes"]["updated_html"])
         return {"ok": True, "job_id": job_id, "ops_remaining": result["usage"]["monthly_remaining"]}
     except httpx.HTTPStatusError as e:
-        # SuperDocs API returned non-2xx — let your queue's retry logic decide.
+        # Typebar API returned non-2xx — let your queue's retry logic decide.
         # Most errors (rate limit, transient network) are worth retrying.
         # 401 (bad key), 4xx with explicit messages, are NOT worth retrying.
         if e.response.status_code in (429, 502, 503, 504):
@@ -180,7 +180,7 @@ def edit_document_async(message: str, session_id: str, document_html: str) -> st
 ## Go (net/http)
 
 ```go
-package superdocs
+package typebar
 
 import (
     "bytes"
@@ -229,13 +229,13 @@ func EditDocument(ctx context.Context, req EditRequest) (*EditResponse, error) {
     client := &http.Client{Timeout: 300 * time.Second}
     res, err := client.Do(httpReq)
     if err != nil {
-        return nil, fmt.Errorf("superdocs request: %w", err)
+        return nil, fmt.Errorf("typebar request: %w", err)
     }
     defer res.Body.Close()
 
     if res.StatusCode != http.StatusOK {
         b, _ := io.ReadAll(res.Body)
-        return nil, fmt.Errorf("superdocs %d: %s", res.StatusCode, string(b))
+        return nil, fmt.Errorf("typebar %d: %s", res.StatusCode, string(b))
     }
 
     var out EditResponse
@@ -271,7 +271,7 @@ require "net/http"
 require "uri"
 require "json"
 
-class SuperDocsService
+class TypebarService
   KEY = ENV.fetch("SUPERDOCS_API_KEY")
   BASE = "https://api.superdocs.app"
 
@@ -290,7 +290,7 @@ class SuperDocsService
 
     res = Net::HTTP.start(uri.host, uri.port,
                           use_ssl: true, read_timeout: 300) { |h| h.request(req) }
-    raise "SuperDocs #{res.code}: #{res.body}" unless res.is_a?(Net::HTTPSuccess)
+    raise "Typebar #{res.code}: #{res.body}" unless res.is_a?(Net::HTTPSuccess)
     JSON.parse(res.body)
   end
 end
@@ -302,7 +302,7 @@ class EditDocumentJob < ApplicationJob
 
   def perform(document_id, instruction)
     document = Document.find(document_id)
-    result = SuperDocsService.edit_document(
+    result = TypebarService.edit_document(
       message: instruction,
       session_id: "doc-#{document_id}",
       document_html: document.html,
@@ -318,12 +318,12 @@ end
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-public class SuperDocsService
+public class TypebarService
 {
     private readonly HttpClient _http;
     private readonly string _key = Environment.GetEnvironmentVariable("SUPERDOCS_API_KEY")!;
 
-    public SuperDocsService(HttpClient http)
+    public TypebarService(HttpClient http)
     {
         _http = http;
         _http.Timeout = TimeSpan.FromSeconds(300);
@@ -364,17 +364,17 @@ public record Usage(
 );
 
 // Example background worker
-public class DocumentProcessingWorker(SuperDocsService superdocs, ILogger<DocumentProcessingWorker> log)
+public class DocumentProcessingWorker(TypebarService typebar, ILogger<DocumentProcessingWorker> log)
 {
     public async Task ProcessAsync(string jobId, string documentHtml, string instruction)
     {
         try {
-            var result = await superdocs.EditDocumentAsync(instruction, $"job-{jobId}", documentHtml);
+            var result = await typebar.EditDocumentAsync(instruction, $"job-{jobId}", documentHtml);
             await PersistToStorageAsync(jobId, result.DocumentChanges.UpdatedHtml);
             log.LogInformation("Processed {JobId}, ops remaining: {Remaining}",
                                jobId, result.Usage.MonthlyRemaining);
         } catch (HttpRequestException ex) {
-            log.LogError(ex, "SuperDocs failed for {JobId}", jobId);
+            log.LogError(ex, "Typebar failed for {JobId}", jobId);
             throw;
         }
     }
@@ -392,7 +392,7 @@ Where the result goes depends on your service's existing storage. Common pattern
 - **Local file.** `with open(f"output/{job_id}.html", "w") as f: f.write(updated_html)`. Fine for batch jobs that produce files.
 - **Message queue.** Publish the updated HTML to a downstream queue for the next step in your pipeline.
 
-The `data-chunk-id` attributes that SuperDocs adds to block-level elements **must round-trip** if you plan to send the document back to SuperDocs again later (e.g., for further edits in the same session). Most string-based storage preserves them automatically; if you parse the HTML through a sanitizer or DOM library, ensure unknown attributes survive.
+The `data-chunk-id` attributes that Typebar adds to block-level elements **must round-trip** if you plan to send the document back to Typebar again later (e.g., for further edits in the same session). Most string-based storage preserves them automatically; if you parse the HTML through a sanitizer or DOM library, ensure unknown attributes survive.
 
 <Note>
   If a document your server edits can **also** be open in another session at the same time (a user editing in your app's UI while a background job rewrites the same file, or two workers on one document), don't let the two writers clobber each other. Poll for the other session's edits and apply them per section, and persist your own typing through the autosave endpoint so everyone converges. See [Concurrent & Cross-Session Editing](/guides/concurrent-editing).
@@ -400,18 +400,18 @@ The `data-chunk-id` attributes that SuperDocs adds to block-level elements **mus
 
 ## Error handling and retries
 
-SuperDocs returns standard HTTP status codes. Worth handling:
+Typebar returns standard HTTP status codes. Worth handling:
 
 - **401 / 403** — bad or missing API key. Not retryable; surface immediately.
 - **429** — rate limit. Wait and retry with exponential backoff. Check the `Retry-After` header.
 - **5xx** — transient server error. Retry with backoff.
 - **4xx (other)** — bad request, malformed HTML, unsupported parameters. Read the response body for the actual error and fix the request shape; not retryable.
 
-For batch / queue workers, lean on your queue's existing retry mechanism (Sidekiq's `retry_on`, Celery's `autoretry_for`, AWS SQS dead-letter queues, etc.) rather than building retry logic in the SuperDocs wrapper itself.
+For batch / queue workers, lean on your queue's existing retry mechanism (Sidekiq's `retry_on`, Celery's `autoretry_for`, AWS SQS dead-letter queues, etc.) rather than building retry logic in the Typebar wrapper itself.
 
 ## Auto-approve vs human-out-of-band
 
-If your server-side workflow needs a human's sign-off before applying SuperDocs' edits — even though there's no interactive UI — you have two patterns:
+If your server-side workflow needs a human's sign-off before applying Typebar's edits — even though there's no interactive UI — you have two patterns:
 
 - **Send a notification (Slack, email, SMS) with the proposed change.** The notification includes a button or reply mechanism. When the human responds, your service POSTs to `/v1/chat/{session_id}/approve` to apply the change. Use `approval_mode: "ask_every_time"` and stream the proposed changes via SSE to your notification dispatcher.
 - **Queue proposed changes for batch human review.** The human reviews a list of pending changes in your existing admin UI (or a CSV export, or a Slack digest). Same `ask_every_time` + approve POST pattern, just with a delayed human in the loop.
@@ -424,7 +424,7 @@ If your server stack isn't covered here or your workflow needs a pattern not des
 
 - [Async Jobs](/guides/async-jobs) — when you want polling instead of sync `/v1/chat`.
 - [SSE Streaming](/guides/streaming) — when you want streaming progress events from a server-side consumer.
-- [Agent Tool Integration](/guides/agent-tool-integration) — when your service is wrapping an AI agent that needs SuperDocs as a tool.
+- [Agent Tool Integration](/guides/agent-tool-integration) — when your service is wrapping an AI agent that needs Typebar as a tool.
 - [Human-in-the-Loop](/guides/human-in-the-loop) — when you need human approval, even out-of-band.
 - [Concurrent & Cross-Session Editing](/guides/concurrent-editing) — when the same document can be edited from more than one place at once.
 - [Integration Starter Prompt](/guides/integration-starter-prompt) — paste this into your coding agent to wire all the above up automatically.

@@ -29,7 +29,7 @@ HITL requires the async workflow (`/v1/chat/async`) because the job pauses to wa
 
 The simplest, least-friction integration is to send `approval_mode: "approve_all"` by default and put a small in-UI toggle — one control, clearly labelled — that the user can flip on when they want to review each change before it lands. When the toggle is on, your code switches to `approval_mode: "ask_every_time"` and renders the proposed-change UI (chat-side card, inline editor overlay, or native track-changes — see below).
 
-This is the pattern the SuperDocs web app at [use.superdocs.app](https://use.superdocs.app) uses, and it's what most users expect:
+This is the pattern the Typebar web app at [use.typebar.ai](https://use.typebar.ai) uses, and it's what most users expect:
 
 - **Auto-apply on by default** — for 90% of edits (rewording, formatting, small additions), users don't want to approve each change. They want the AI to act, then Cmd-Z if they disagree.
 - **Review Mode as an explicit opt-in** — when the user is working on something high-stakes (a contract clause, a regulatory filing, a legal letter) they flip the toggle ON and approve each change explicitly. Persist the toggle state in `localStorage` so it survives page reload.
@@ -438,7 +438,7 @@ The pattern transfers to TipTap, BlockNote, Remirror, and Atlaskit with minor AP
 
 #### Pattern 3 — Native track-changes UI
 
-If your editor already supports track-changes (CKEditor 5 with the Track Changes feature, TinyMCE Premium, etc.), map each proposed change (each entry of the `proposed_change_batch` event's `changes` array) to a tracked suggestion in the editor's native model. The user then approves or rejects via the editor's built-in UI. Consult your editor's track-changes API docs for the specific mapping — the SuperDocs side is identical to Pattern 1 or 2.
+If your editor already supports track-changes (CKEditor 5 with the Track Changes feature, TinyMCE Premium, etc.), map each proposed change (each entry of the `proposed_change_batch` event's `changes` array) to a tracked suggestion in the editor's native model. The user then approves or rejects via the editor's built-in UI. Consult your editor's track-changes API docs for the specific mapping — the Typebar side is identical to Pattern 1 or 2.
 
 ### Batch changes
 

@@ -1,11 +1,11 @@
 ---
 title: "For AI Agents"
-description: "Sign up and get a working SuperDocs API key in one call, with no human in the loop."
+description: "Sign up and get a working Typebar API key in one call, with no human in the loop."
 ---
 
 # For AI Agents
 
-SuperDocs is built to be used by AI agents, not just people. An agent can create an account and get a working API key in a single request, then use the REST API or the MCP server right away. No web sign-up form, no waiting on a human.
+Typebar is built to be used by AI agents, not just people. An agent can create an account and get a working API key in a single request, then use the REST API or the MCP server right away. No web sign-up form, no waiting on a human.
 
 <Note>
 If you are an agent acting on behalf of a user, confirm with them before you accept the terms and create an account.
@@ -42,7 +42,7 @@ The response returns everything you need, including the API key (shown only once
     "claude_code": "claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ --header \"Authorization: Bearer sk_…\"",
     "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp/ (Streamable HTTP) with header Authorization: Bearer <your key>",
     "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
-    "docs": "https://docs.superdocs.app/account/mcp-setup"
+    "docs": "https://docs.typebar.ai/account/mcp-setup"
   },
   "handoff": { "how": "When you near the 500-op cap, POST /v1/agents/handoff with your key and {email}; you get back a short takeover code to give your human, who then adopts the account and can pay to continue" }
 }
@@ -95,7 +95,7 @@ Pass `working_context` (a short note on where you are running) so the email is r
 
 **Show that takeover code to your human**, and tell them where to find it if they ask (you can also save it to a file such as `~/.superdocs/takeover-code.txt`). We email a one-time link to the address you gave. Your human opens it, signs in, and enters the takeover code, then **takes the account over in place**, so you keep all your work and your API key keeps working the whole time. They can then upgrade or pay from the app.
 
-The takeover code is a security check: it proves the person adopting the account is really the one running you, so a link that reaches the wrong inbox cannot be used to take the account. Never email the code or post it anywhere public. (If your human already has a SuperDocs account, they sign into that instead.)
+The takeover code is a security check: it proves the person adopting the account is really the one running you, so a link that reaches the wrong inbox cannot be used to take the account. Never email the code or post it anywhere public. (If your human already has a Typebar account, they sign into that instead.)
 
 <Note>
 **Adopt-link errors:** a wrong takeover code returns `403` with the number of attempts remaining in `detail`. After too many wrong codes the link is permanently disabled and returns `410 Gone`; that old link can never work again, so send a new `POST /v1/agents/handoff` to get a fresh one. An expired or unknown link returns `404` (links expire after about 24 hours).

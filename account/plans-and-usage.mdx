@@ -59,7 +59,7 @@ Every chat response includes a `usage` object:
 `ops_charged` is how many operations the request billed — a single request can bill more than one (one operation per 25 sections edited), so `monthly_used` can increase by more than 1 between responses. `quota_exhausted` becomes `true` when you have reached your plan's operation limit with no remaining balance; the current request still completes, but further billable requests pause until you upgrade or your billing cycle resets.
 
 <Note>
-  **Reading usage from an API key:** the `/v1/users/me/usage` and `/v1/users/me/limits` endpoints belong to the web-app account surface and accept web-app session tokens only — they reject `sk_` / `lce_` API keys with a `401`. From an API-key context, read usage straight off the `usage` block returned in **every** `/v1/chat` and `/v1/chat/async` response (shown above) and the SSE `usage` event — no separate call needed. View usage in the browser at [use.superdocs.app](https://use.superdocs.app) → Settings.
+  **Reading usage from an API key:** the `/v1/users/me/usage` and `/v1/users/me/limits` endpoints belong to the web-app account surface and accept web-app session tokens only — they reject `sk_` / `lce_` API keys with a `401`. From an API-key context, read usage straight off the `usage` block returned in **every** `/v1/chat` and `/v1/chat/async` response (shown above) and the SSE `usage` event — no separate call needed. View usage in the browser at [use.typebar.ai](https://use.typebar.ai) → Settings.
 </Note>
 
 ## Promo codes & credits

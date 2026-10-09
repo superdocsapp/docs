@@ -1,11 +1,15 @@
 ---
 title: "Cursor & VS Code"
-description: "Connect SuperDocs to Cursor, VS Code, or Windsurf via MCP configuration."
+description: "Connect Typebar to Cursor, VS Code, or Windsurf via MCP configuration."
 ---
 
 # Cursor, VS Code & Windsurf
 
-Connect SuperDocs to your code editor for AI-powered document editing alongside your development workflow.
+Connect Typebar to your code editor for AI-powered document editing alongside your development workflow.
+
+<Note>
+In the examples below the server entry is named `superdocs`. That key is only a label in your config: the server itself reports its name as Typebar (formerly SuperDocs), and existing configs need no change.
+</Note>
 
 ## Cursor
 
@@ -29,7 +33,7 @@ Create `.cursor/mcp.json` in your project root (or global config):
 
 ### 2. Restart Cursor
 
-The SuperDocs tools will appear in Cursor's AI capabilities. Tools load at startup; if the tools panel says "Loading tools" for more than 10 seconds, restart Cursor again.
+The Typebar tools will appear in Cursor's AI capabilities. Tools load at startup; if the tools panel says "Loading tools" for more than 10 seconds, restart Cursor again.
 
 ## VS Code
 
@@ -51,11 +55,11 @@ VS Code reads MCP servers from a dedicated `mcp.json` file, not `settings.json`.
 }
 ```
 
-Note the shape: VS Code uses a top-level `servers` key and a `type` field (`"http"` for SuperDocs), unlike Cursor's `mcpServers` + `transport`.
+Note the shape: VS Code uses a top-level `servers` key and a `type` field (`"http"` for Typebar), unlike Cursor's `mcpServers` + `transport`.
 
 ### 2. Start the server
 
-Save the file, then start the server from the inline hint VS Code shows in `mcp.json` (or run **MCP: List Servers** and start it there). The tools appear in Copilot's agent mode. If SuperDocs doesn't show up, check the MCP server status in the Output panel, or restart VS Code.
+Save the file, then start the server from the inline hint VS Code shows in `mcp.json` (or run **MCP: List Servers** and start it there). The tools appear in Copilot's agent mode. If Typebar doesn't show up, check the MCP server status in the Output panel, or restart VS Code.
 
 ## Windsurf
 
@@ -79,6 +83,6 @@ Add the same configuration as Cursor to Windsurf's MCP settings:
 
 In your editor's AI chat, type:
 
-> "Check the SuperDocs API health"
+> "Check the Typebar API health"
 
 If configured correctly, the AI will call the `health` tool and report the API status.

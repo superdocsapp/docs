@@ -1,13 +1,13 @@
 ---
 title: "Agent Tool Integration"
-description: "Register SuperDocs as a tool in your existing AI agent's tool registry — OpenAI function-calling, Anthropic tool_use, LangChain, LlamaIndex, or any function-calling-compatible framework. Your AI is the consumer; SuperDocs is the document-editing capability it can call."
+description: "Register Typebar as a tool in your existing AI agent's tool registry — OpenAI function-calling, Anthropic tool_use, LangChain, LlamaIndex, or any function-calling-compatible framework. Your AI is the consumer; Typebar is the document-editing capability it can call."
 ---
 
 # Agent Tool Integration
 
-**Quick path:** new to the API? Go from an API key to your first successful call in the [Quickstart](/introduction/quickstart) (~5 minutes), then come back here to register SuperDocs as an agent tool.
+**Quick path:** new to the API? Go from an API key to your first successful call in the [Quickstart](/introduction/quickstart) (~5 minutes), then come back here to register Typebar as an agent tool.
 
-If your product has an existing AI agent (built with OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or a custom framework) that needs to edit documents, the right integration shape is to register SuperDocs as a tool the agent can call — not to build a separate UI around SuperDocs.
+If your product has an existing AI agent (built with OpenAI function-calling, Anthropic `tool_use`, LangChain, LlamaIndex, or a custom framework) that needs to edit documents, the right integration shape is to register Typebar as a tool the agent can call — not to build a separate UI around Typebar.
 
 <Tip>
 **Your agent can pick `model_tier` per call based on user intent.** A simple "fix typo" call can use `core`; a contract-clause edit can switch to `max` mid-conversation. Add `model_tier` and `thinking_depth` to your tool's parameter schema and let the agent reason about which tier fits the current task. See [Model Selection](/guides/model-selection) for the full matrix.
@@ -17,15 +17,15 @@ This guide covers the pattern + working snippets for the five most common agent 
 
 ## Why this shape is different from a UI integration
 
-In a typical SuperDocs UI integration, a human types in a chat panel, the chat sends a message to SuperDocs, and SuperDocs returns proposed edits the human reviews. The customer-facing app is the consumer of SuperDocs.
+In a typical Typebar UI integration, a human types in a chat panel, the chat sends a message to Typebar, and Typebar returns proposed edits the human reviews. The customer-facing app is the consumer of Typebar.
 
-In an agent-tool integration, your AI agent is the consumer. The agent decides — based on its own reasoning, the user's query, and the conversation context — that it needs to edit a document. It invokes SuperDocs as a tool, receives proposed changes as structured data, and either approves them itself (auto-decide), surfaces them through your existing UI for the user to review, or sends them out-of-band (Slack, email).
+In an agent-tool integration, your AI agent is the consumer. The agent decides — based on its own reasoning, the user's query, and the conversation context — that it needs to edit a document. It invokes Typebar as a tool, receives proposed changes as structured data, and either approves them itself (auto-decide), surfaces them through your existing UI for the user to review, or sends them out-of-band (Slack, email).
 
-The integration is server-side, the SuperDocs `sk_` key lives next to your other model API keys, and there is no SuperDocs-specific UI to build — your agent's existing UI is where the result appears.
+The integration is server-side, the Typebar `sk_` key lives next to your other model API keys, and there is no Typebar-specific UI to build — your agent's existing UI is where the result appears.
 
 ## The pattern, in 4 steps
 
-1. **Define the SuperDocs tool** in your agent's tool registry. The two required parameters are `message` (the natural-language instruction for the AI) and `session_id` (a string that ties multiple turns together). `document_html` (the HTML the agent wants edited) is optional — send it on the first turn, then omit it: the server persists document state by `session_id` across turns, so resending the full HTML every turn just wastes tokens.
+1. **Define the Typebar tool** in your agent's tool registry. The two required parameters are `message` (the natural-language instruction for the AI) and `session_id` (a string that ties multiple turns together). `document_html` (the HTML the agent wants edited) is optional — send it on the first turn, then omit it: the server persists document state by `session_id` across turns, so resending the full HTML every turn just wastes tokens.
 2. **Implement the tool function.** Call `POST /v1/chat` with the three parameters plus your chosen `approval_mode`. Return the response back to the agent — either as the parsed proposed changes (for `ask_every_time`) or as the final updated HTML (for `approve_all`).
 3. **Decide approval shape.** Choose between `approve_all` (your agent's reasoning is the approval — fastest), `ask_every_time` (the agent reviews each proposed change individually before deciding), or surface to a human through your UI.
 4. **Persist the result.** The agent receives the updated HTML and writes it back to wherever your documents live.
@@ -53,7 +53,7 @@ Every framework that supports tool-calling accepts a JSON-schema tool definition
       },
       "document_html": {
         "type": "string",
-        "description": "The current HTML of the document to be edited, as a complete HTML string. OMIT this once the session already holds the document — the server persists document state across turns by `session_id`, so resending the full HTML every turn just burns tokens. Send it on the first turn (or when you're switching the session to a new document). The response includes `data-chunk-id` attributes — preserve them on the next call so SuperDocs can target previously-edited sections precisely."
+        "description": "The current HTML of the document to be edited, as a complete HTML string. OMIT this once the session already holds the document — the server persists document state across turns by `session_id`, so resending the full HTML every turn just burns tokens. Send it on the first turn (or when you're switching the session to a new document). The response includes `data-chunk-id` attributes — preserve them on the next call so Typebar can target previously-edited sections precisely."
       },
       "approval_mode": {
         "type": "string",
@@ -118,7 +118,7 @@ def run_agent(user_message: str, document_html: str, session_id: str):
         {"role": "user", "content": f"{user_message}\n\nCurrent document HTML available — call edit_document with session_id={session_id}."},
     ]
     response = client.chat.completions.create(
-        model="gpt-5",  # Your model choice — SuperDocs is provider-agnostic
+        model="gpt-5",  # Your model choice — Typebar is provider-agnostic
         messages=messages,
         tools=[edit_document_tool],
     )
@@ -269,7 +269,7 @@ export const editDocument = tool({
       },
       body: JSON.stringify({ message, session_id, document_html, approval_mode }),
     });
-    if (!res.ok) throw new Error(`SuperDocs ${res.status}`);
+    if (!res.ok) throw new Error(`Typebar ${res.status}`);
     const data = await res.json();
     return {
       updated_html: data.document_changes.updated_html,
@@ -285,7 +285,7 @@ export const editDocument = tool({
 
 ### `approve_all` — your agent's reasoning is the approval
 
-The simplest pattern. Pass `approval_mode: "approve_all"` and SuperDocs returns the final updated HTML in one call. Use this when your agent is autonomous and you trust it to make the right call. Most appropriate for:
+The simplest pattern. Pass `approval_mode: "approve_all"` and Typebar returns the final updated HTML in one call. Use this when your agent is autonomous and you trust it to make the right call. Most appropriate for:
 
 - Backend AI agents processing a queue without human oversight.
 - Agents whose user already approved the high-level intent (e.g., "rewrite all sections in plain English") and doesn't need per-change review.
@@ -293,11 +293,11 @@ The simplest pattern. Pass `approval_mode: "approve_all"` and SuperDocs returns 
 
 ### `ask_every_time` — your agent reviews each proposed change
 
-Pass `approval_mode: "ask_every_time"` and SuperDocs returns the turn's proposed changes via SSE. The whole turn arrives as one `proposed_change_batch` event whose `changes[]` array holds every proposed change (a single-change turn arrives as a one-element array). Your agent reads that event (parse `event.data` then `JSON.parse` the `content` field again — see the [SSE Streaming guide](/guides/streaming) for the double-parse warning), loops over `changes[]` deciding whether to approve each based on its own reasoning, and POSTs to `/v1/chat/{session_id}/approve` to accept or reject. (You may also register a `proposed_change` listener defensively for forward-compatibility, but it never fires today — build your review loop on `proposed_change_batch`.)
+Pass `approval_mode: "ask_every_time"` and Typebar returns the turn's proposed changes via SSE. The whole turn arrives as one `proposed_change_batch` event whose `changes[]` array holds every proposed change (a single-change turn arrives as a one-element array). Your agent reads that event (parse `event.data` then `JSON.parse` the `content` field again — see the [SSE Streaming guide](/guides/streaming) for the double-parse warning), loops over `changes[]` deciding whether to approve each based on its own reasoning, and POSTs to `/v1/chat/{session_id}/approve` to accept or reject. (You may also register a `proposed_change` listener defensively for forward-compatibility, but it never fires today — build your review loop on `proposed_change_batch`.)
 
 Use this when:
 
-- Your agent has higher reasoning capability than SuperDocs' edit suggestions and wants to filter them.
+- Your agent has higher reasoning capability than Typebar's edit suggestions and wants to filter them.
 - The user is reviewing the agent's overall plan but trusts the agent to filter individual edits.
 - You want an audit log of every accepted vs rejected change for compliance.
 
@@ -312,7 +312,7 @@ for batch in stream_proposed_change_batches(job_id, session_id):
     for change in batch["changes"]:
         # The agent reasons about whether to approve each change
         decision = await agent.reason(
-            f"SuperDocs proposed: {change['ai_explanation']}\n"
+            f"Typebar proposed: {change['ai_explanation']}\n"
             f"Old: {change['old_html']}\n"
             f"New: {change['new_html']}\n"
             "Approve or deny?"
@@ -327,13 +327,13 @@ for batch in stream_proposed_change_batches(job_id, session_id):
 
 ### Surface to a human through your UI
 
-If your agent is in a chat with a human and SuperDocs proposes an edit, your agent can stop, surface the proposed change to the human via your existing chat thread (as a card, a button group, an inline question — whatever your UI does), wait for the human's decision, and then POST the decision back to SuperDocs.
+If your agent is in a chat with a human and Typebar proposes an edit, your agent can stop, surface the proposed change to the human via your existing chat thread (as a card, a button group, an inline question — whatever your UI does), wait for the human's decision, and then POST the decision back to Typebar.
 
-This pattern keeps your AI agent in control of what gets surfaced and when, but defers the binary approve/deny decision to the human. The agent's UI is the only UI involved — there's no SuperDocs-specific UI.
+This pattern keeps your AI agent in control of what gets surfaced and when, but defers the binary approve/deny decision to the human. The agent's UI is the only UI involved — there's no Typebar-specific UI.
 
 ## Document HTML round-trip — same rule as everywhere else
 
-The `data-chunk-id` attributes that SuperDocs adds to block-level elements **must round-trip cleanly** when you send the HTML back on the next call. If your agent stores the HTML in a database, file, or in-memory variable between calls, those attributes must survive the storage cycle. Most string-based storage preserves them automatically; if you parse the HTML through a library that strips unknown attributes, you'll break the round-trip silently.
+The `data-chunk-id` attributes that Typebar adds to block-level elements **must round-trip cleanly** when you send the HTML back on the next call. If your agent stores the HTML in a database, file, or in-memory variable between calls, those attributes must survive the storage cycle. Most string-based storage preserves them automatically; if you parse the HTML through a library that strips unknown attributes, you'll break the round-trip silently.
 
 If you're piping the HTML through a rich-text editor at any point in your agent's UI, see the [Editor Integration guide](/guides/editor-integration) for editor-specific preservation patterns.
 
@@ -343,7 +343,7 @@ A session can hold several open documents. Your agent targets one explicitly by 
 
 ## Letting your agent undo a step
 
-If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. SuperDocs returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original conversation is preserved for audit but hidden from active reads.
+If your agent decides — mid-workflow — that a previous edit was wrong, it can rewind the session to before the user message that triggered the bad edit instead of trying to patch the result forward. Call `POST /v1/sessions/{session_id}/revert` with the `turn_index` of the user message you want to undo. Typebar returns the document state from before that turn plus the original message text, the agent can rewrite the instruction more clearly, and the session continues from the rewind point. The original conversation is preserved for audit but hidden from active reads.
 
 Concrete shape — register revert as a second tool alongside `edit_document`:
 

@@ -1,15 +1,15 @@
 ---
 title: "Claude Code"
-description: "Connect SuperDocs to Claude Code (CLI) with a single command."
+description: "Connect Typebar to Claude Code (CLI) with a single command."
 ---
 
 # Claude Code
 
-The fastest way to connect SuperDocs to Claude Code is the official plugin — it bundles the MCP server (38 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
+The fastest way to connect Typebar to Claude Code is the official plugin — it bundles the MCP server (38 tools), the 4 workflow prompts, and the auto-loading skill in one install. Manual MCP config also works as a fallback.
 
 ## Install via plugin (recommended)
 
-In a Claude Code session, add the SuperDocs marketplace, then install the plugin from it:
+In a Claude Code session, add the Typebar marketplace, then install the plugin from it:
 
 ```bash
 claude plugin marketplace add superdocsapp/superdocs-plugin
@@ -18,13 +18,13 @@ claude plugin install superdocs@superdocs-plugin
 
 The install argument is `plugin-name@marketplace-name` (`superdocs@superdocs-plugin`), not the GitHub repo path. Passing the repo path to `install` directly (`claude plugin install superdocsapp/superdocs-plugin`) fails with "doesn't exist in marketplace". That repo path is only valid for `marketplace add`.
 
-You'll be prompted for your SuperDocs API key (`sk_…`). It's stored securely in your OS keychain — never in plaintext config. Get a key from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
+You'll be prompted for your Typebar API key (`sk_…`). It's stored securely in your OS keychain — never in plaintext config. Get a key from [use.typebar.ai](https://use.typebar.ai) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
 
 After install:
 
 - All 38 MCP tools are available
 - 4 workflow prompts appear in your `/` slash menu (`/superdocs:draft_from_outline`, `/superdocs:edit_styled_docx`, `/superdocs:convert_format`, `/superdocs:review_contract_for_redflags`)
-- The SuperDocs skill auto-loads when you ask document-editing questions
+- The Typebar skill auto-loads when you ask document-editing questions
 
 For full plugin reference (auto-update behavior, troubleshooting, advanced config), see [/mcp/plugin](/mcp/plugin).
 
@@ -53,22 +53,24 @@ You should see:
 superdocs: https://api.superdocs.app/mcp/ (HTTP) - ✓
 ```
 
+`superdocs` is the local name the install gives the server. The server itself reports its name as Typebar (formerly SuperDocs), and existing installs need no change.
+
 If you see `✗ Failed to connect`, restart Claude Code (`Ctrl+C` then `claude` in a new shell). MCP servers load at session startup, so a fresh session is required after `claude mcp add`.
 
 ## Test it
 
 ```bash
 claude
-# Then type: "Use the SuperDocs health tool to check the API"
+# Then type: "Use the Typebar health tool to check the API"
 ```
 
 ## Example usage
 
 Once connected, you can ask Claude Code to:
 
-- "Create a technical specification document using SuperDocs"
-- "Edit my SuperDocs session and update the introduction"
-- "Upload this file as an attachment to my SuperDocs session"
+- "Create a technical specification document using Typebar"
+- "Edit my Typebar session and update the introduction"
+- "Upload this file as an attachment to my Typebar session"
 
 ## Running autonomously?
 

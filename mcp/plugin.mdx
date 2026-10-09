@@ -1,11 +1,11 @@
 ---
-title: "SuperDocs Plugin"
+title: "Typebar Plugin"
 description: "The official Claude Code plugin — single install bundles 38 MCP tools, 4 workflow prompts, and the auto-loading skill."
 ---
 
-# SuperDocs Plugin for Claude Code
+# Typebar Plugin for Claude Code
 
-The fastest way to install SuperDocs in Claude Code. One command, one prompt for your API key, three things installed at once: the MCP server, the workflow prompts, and the skill.
+The fastest way to install Typebar in Claude Code. One command, one prompt for your API key, three things installed at once: the MCP server, the workflow prompts, and the skill.
 
 ## What you get
 
@@ -17,7 +17,7 @@ The fastest way to install SuperDocs in Claude Code. One command, one prompt for
 
 ## Install
 
-Two steps: add the SuperDocs marketplace, then install the plugin from it.
+Two steps: add the Typebar marketplace, then install the plugin from it.
 
 ```bash
 claude plugin marketplace add superdocsapp/superdocs-plugin
@@ -25,6 +25,8 @@ claude plugin install superdocs@superdocs-plugin
 ```
 
 The first command registers the marketplace (the `superdocsapp/superdocs-plugin` GitHub repo); the second installs the `superdocs` plugin from it. The install argument is `plugin-name@marketplace-name` (`superdocs@superdocs-plugin`). Running `claude plugin install superdocsapp/superdocs-plugin` on its own fails with "doesn't exist in marketplace", because that GitHub repo path is only valid for `marketplace add`, not for `install`.
+
+Typebar was previously called SuperDocs. The plugin, its marketplace and its prompts keep their `superdocs` names for now, so these commands and existing installs keep working unchanged.
 
 <Note>
 **Prefer just the MCP server, or hit a marketplace error?** You can always connect the server directly without the plugin, in one command with no marketplace step:
@@ -37,7 +39,7 @@ claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/
 This installs the MCP tools only (not the prompts or skill). See [Claude Code → Manual setup](/mcp/claude-code#manual-setup-advanced).
 </Note>
 
-You'll be prompted for your `sk_…` API key. Get one from [use.superdocs.app](https://use.superdocs.app) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
+You'll be prompted for your `sk_…` API key. Get one from [use.typebar.ai](https://use.typebar.ai) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
 
 The key is stored in your OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) — never in plaintext config.
 
@@ -51,13 +53,13 @@ You should see `superdocs` in the list. Then in a Claude Code session, type `/` 
 
 To test the connection:
 
-> "Use the SuperDocs health tool to check the API"
+> "Use the Typebar health tool to check the API"
 
 If you see `{"status": "healthy"}`, everything works.
 
 ## Use it
 
-After install, just ask Claude to do document work. The skill auto-loads and Claude reaches for SuperDocs:
+After install, just ask Claude to do document work. The skill auto-loads and Claude reaches for Typebar:
 
 ```
 "Edit /Users/me/contracts/draft.docx — make all H2 headings bold and add a new section at the end called 'Approvals'."
@@ -100,9 +102,9 @@ claude plugin uninstall superdocs
 
 **"401 Unauthorized" on tool calls** — API key is wrong or revoked. Reinstall the plugin or update the key with `claude plugin config superdocs api_key`.
 
-**Tools work but skill doesn't auto-load** — The skill loads probabilistically based on your prompt phrasing. If you want to force it, mention "use SuperDocs" explicitly.
+**Tools work but skill doesn't auto-load** — The skill loads probabilistically based on your prompt phrasing. If you want to force it, mention "use Typebar" explicitly.
 
-**Stale prompt content after a SuperDocs backend update** — Run `claude plugin update superdocs` to pull the latest plugin version.
+**Stale prompt content after a Typebar backend update** — Run `claude plugin update superdocs` to pull the latest plugin version.
 
 ## What's bundled vs. backend-served
 

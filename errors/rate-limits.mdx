@@ -5,7 +5,7 @@ description: "Operation limits per subscription tier, overage pricing, and how t
 
 # Rate Limits
 
-SuperDocs uses operation-based limits, not request-rate limits. Each AI action that modifies, analyzes, or searches a document counts as one operation.
+Typebar uses operation-based limits, not request-rate limits. Each AI action that modifies, analyzes, or searches a document counts as one operation.
 
 ## Limits by tier
 
@@ -73,7 +73,7 @@ Every chat response includes usage data:
 
 ### In the browser
 
-View your usage bar and tier limits at [use.superdocs.app](https://use.superdocs.app) → Settings. The `/v1/users/me/limits` and `/v1/users/me/usage` endpoints are web-app-only (they reject `sk_` / `lce_` keys with a `401`); from an API-key context, use the `usage` block in chat responses above.
+View your usage bar and tier limits at [use.typebar.ai](https://use.typebar.ai) → Settings. The `/v1/users/me/limits` and `/v1/users/me/usage` endpoints are web-app-only (they reject `sk_` / `lce_` keys with a `401`); from an API-key context, use the `usage` block in chat responses above.
 
 ## Monthly reset
 

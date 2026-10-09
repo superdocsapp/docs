@@ -2140,7 +2140,7 @@
      "account"
     ],
     "summary": "Request higher document/chat scale limits in one call \u2014 no email needed.",
-    "description": "Request a higher scale limit for your account in ONE call.\n\nWHEN TO USE: after any 413 with error_code DOCUMENT_TOO_COMPLEX (a single\ndocument crossed the standard per-document page limit) or SESSION_TOO_FULL\n(the documents open in one chat crossed the standard per-chat limit). These\nare stability limits, not hard caps: the platform supports larger\ndeployments, and limits are raised per account on request.\n\nWHAT HAPPENS: the SuperDocs team is notified immediately with your account\nidentity and the numbers you send; limits are typically expanded within a\nday and you are contacted at your account email. No email writing needed \u2014\nthough hello@superdocs.app also works if you prefer.\n\nALTERNATIVES while you wait: split the file into smaller documents, upload\nit as an attachment (reference/search, not editing), start another session\nfor additional documents (init_session), or close documents you no longer\nneed (close_session_document).",
+    "description": "Request a higher scale limit for your account in ONE call.\n\nWHEN TO USE: after any 413 with error_code DOCUMENT_TOO_COMPLEX (a single\ndocument crossed the standard per-document page limit) or SESSION_TOO_FULL\n(the documents open in one chat crossed the standard per-chat limit). These\nare stability limits, not hard caps: the platform supports larger\ndeployments, and limits are raised per account on request.\n\nWHAT HAPPENS: the Typebar team is notified immediately with your account\nidentity and the numbers you send; limits are typically expanded within a\nday and you are contacted at your account email. No email writing needed \u2014\nthough hello@superdocs.app also works if you prefer.\n\nALTERNATIVES while you wait: split the file into smaller documents, upload\nit as an attachment (reference/search, not editing), start another session\nfor additional documents (init_session), or close documents you no longer\nneed (close_session_document).",
     "operationId": "request_limit_increase",
     "security": [
      {
@@ -4113,7 +4113,7 @@
      "agents"
     ],
     "summary": "Agent Signup",
-    "description": "Create a SuperDocs account and get a working API key in one call \u2014 no human required.\n\nYou (an AI agent) get a normal **free account: 500 operations/month**, exactly\nlike a human. Use the returned `sk_` key as `Authorization: Bearer <key>` on\nthis API or the MCP server at `/mcp`. Store the key \u2014 it is shown only once.\nSave the whole response to `~/.superdocs/agent_credentials.json` and call\n`GET /v1/agents/whoami` before signing up again so you reuse the same account.\nWhen you approach the 500-op cap, hand the account to your human\n(POST /v1/agents/handoff) so they can adopt it and pay to continue. If you\nare acting for a user, confirm with them before accepting the terms.",
+    "description": "Create a Typebar account and get a working API key in one call \u2014 no human required.\n\nYou (an AI agent) get a normal **free account: 500 operations/month**, exactly\nlike a human. Use the returned `sk_` key as `Authorization: Bearer <key>` on\nthis API or the MCP server at `/mcp`. Store the key \u2014 it is shown only once.\nSave the whole response to `~/.superdocs/agent_credentials.json` and call\n`GET /v1/agents/whoami` before signing up again so you reuse the same account.\nWhen you approach the 500-op cap, hand the account to your human\n(POST /v1/agents/handoff) so they can adopt it and pay to continue. If you\nare acting for a user, confirm with them before accepting the terms.",
     "operationId": "agent_signup_v1_agents_signup_post",
     "requestBody": {
      "content": {
@@ -4163,7 +4163,7 @@
      "mcp"
     ],
     "summary": "Check your account status: subscription tier plus monthly operations used and remaining.",
-    "description": "Check your SuperDocs account status: tier, monthly operations used/remaining, and (for agent accounts) whether a human has adopted it.\n\nCall this with your `sk_` key. Useful before doing work (to confirm you have\noperations left) and before signing up again (to reuse your account).\n\nNearing your monthly cap and need to keep going? Hand the account to a human:\nPOST /v1/agents/handoff with their email returns a one-time takeover code to\ngive them; they open the emailed link, enter the code, and adopt the account\nin place (your work and this API key keep working) so they can upgrade and\npay. No human? POST /v1/agents/request-upgrade instead. Full flow:\nhttps://docs.superdocs.app/introduction/agent-signup",
+    "description": "Check your Typebar account status: tier, monthly operations used/remaining, and (for agent accounts) whether a human has adopted it.\n\nCall this with your `sk_` key. Useful before doing work (to confirm you have\noperations left) and before signing up again (to reuse your account).\n\nNearing your monthly cap and need to keep going? Hand the account to a human:\nPOST /v1/agents/handoff with their email returns a one-time takeover code to\ngive them; they open the emailed link, enter the code, and adopt the account\nin place (your work and this API key keep working) so they can upgrade and\npay. No human? POST /v1/agents/request-upgrade instead. Full flow:\nhttps://docs.typebar.ai/introduction/agent-signup",
     "operationId": "get_account_status",
     "security": [
      {
@@ -4465,7 +4465,7 @@
     "tags": [
      "mcp"
     ],
-    "summary": "Verify the SuperDocs MCP server is reachable and serving traffic.",
+    "summary": "Verify the Typebar MCP server is reachable and serving traffic.",
     "description": "Returns 200 with {\"status\":\"healthy\"} when the API is up. Call this once after MCP install to confirm the connection works before invoking other tools. No authentication required.",
     "operationId": "health",
     "responses": {
@@ -4897,7 +4897,7 @@
      "terms_accepted": {
       "type": "boolean",
       "title": "Terms Accepted",
-      "description": "Must be true. Accepts the Terms at https://superdocs.app/terms. If you are an agent, confirm with your user first.",
+      "description": "Must be true. Accepts the Terms at https://typebar.ai/terms. If you are an agent, confirm with your user first.",
       "default": false
      },
      "agent_name": {
@@ -4991,7 +4991,7 @@
       },
       "type": "object",
       "title": "Mcp Setup",
-      "description": "Copy-paste commands to connect the SuperDocs MCP server to your client, plus the REST fallback."
+      "description": "Copy-paste commands to connect the Typebar MCP server to your client, plus the REST fallback."
      },
      "handoff": {
       "additionalProperties": {

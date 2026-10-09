@@ -1,21 +1,21 @@
 ---
 title: "Editor Integration"
-description: "Make any rich-text editor round-trip SuperDocs document IDs, so surgical edits work reliably. Drop-in snippets for ProseMirror, TipTap, Slate, Lexical, Quill, and CKEditor 5."
+description: "Make any rich-text editor round-trip Typebar document IDs, so surgical edits work reliably. Drop-in snippets for ProseMirror, TipTap, Slate, Lexical, Quill, and CKEditor 5."
 ---
 
 # Editor Integration
 
 **Quick path:** new to the API? Go from an API key to your first successful call in the [Quickstart](/introduction/quickstart) (~5 minutes), then come back here to wire up your editor.
 
-SuperDocs identifies every block-level element in your document with a `data-chunk-id` attribute. Your editor must preserve those attributes across the round-trip — HTML in, editor model, HTML back out — for surgical edits to work.
+Typebar identifies every block-level element in your document with a `data-chunk-id` attribute. Your editor must preserve those attributes across the round-trip — HTML in, editor model, HTML back out — for surgical edits to work.
 
 <Note>
-  This guide covers **attribute preservation in a rich-text editor**. For rendering inline diff overlays inside the editor, see [Human-in-the-Loop → Rendering diffs inline in your editor](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor). For streaming events, see [SSE Streaming](/guides/streaming). If your product doesn't have an editor — your AI agent is the consumer of SuperDocs, or you're running server-side / batch — see [Agent Tool Integration](/guides/agent-tool-integration) or [Server Integration](/guides/server-integration) instead.
+  This guide covers **attribute preservation in a rich-text editor**. For rendering inline diff overlays inside the editor, see [Human-in-the-Loop → Rendering diffs inline in your editor](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor). For streaming events, see [SSE Streaming](/guides/streaming). If your product doesn't have an editor — your AI agent is the consumer of Typebar, or you're running server-side / batch — see [Agent Tool Integration](/guides/agent-tool-integration) or [Server Integration](/guides/server-integration) instead.
 </Note>
 
 ## Why this matters
 
-Every SuperDocs response returns HTML like this:
+Every Typebar response returns HTML like this:
 
 ```html
 <h2 data-chunk-id="550e8400-e29b-41d4-a716-446655440000">Section 1</h2>
@@ -30,7 +30,7 @@ The `data-chunk-id` values are how the AI references specific sections when it p
 
 Every editor integration follows the same three steps:
 
-1. **Parse** incoming HTML from SuperDocs into your editor's document model, preserving `data-chunk-id` on every block-level node.
+1. **Parse** incoming HTML from Typebar into your editor's document model, preserving `data-chunk-id` on every block-level node.
 2. **Serialise** the editor model back to HTML, preserving the same `data-chunk-id` attributes.
 3. **Render** incoming updates. `document_sync.content` (which arrives before the AI starts) can safely replace the whole document. For the AI's *results*, prefer **section-level application** over whole-document replacement — see [Applying AI updates safely](#applying-ai-updates-safely-without-losing-user-edits) below for why and how.
 
@@ -52,7 +52,7 @@ npm install prosemirror-state prosemirror-view prosemirror-model \
 Your schema needs to do two things:
 
 1. Add `data-chunk-id` as a preserved attribute on every standard block node (paragraph, heading, list, blockquote, code block, horizontal rule).
-2. Register a **wrapper node** for `<div data-chunk-id="…">…</div>` elements. SuperDocs uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). If your schema has no node that matches `div[data-chunk-id]`, the parser will descend into the children, the wrapper's `data-chunk-id` will be silently dropped, and any inline-diff or chunk-targeted edit referencing that ID will fail to render. The basic ProseMirror schema does not include a `<div>` node — you must add one.
+2. Register a **wrapper node** for `<div data-chunk-id="…">…</div>` elements. Typebar uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). If your schema has no node that matches `div[data-chunk-id]`, the parser will descend into the children, the wrapper's `data-chunk-id` will be silently dropped, and any inline-diff or chunk-targeted edit referencing that ID will fail to render. The basic ProseMirror schema does not include a `<div>` node — you must add one.
 
 ```typescript theme={null}
 // schema.ts
@@ -138,7 +138,7 @@ nodes = nodes.addToEnd("chunk_wrapper", chunkWrapperSpec);
 export const schema = new Schema({ nodes, marks: basicSchema.spec.marks });
 ```
 
-Use this `schema` when creating your `EditorState`. Use `DOMParser.fromSchema(schema).parse(htmlElement)` to load SuperDocs HTML and `DOMSerializer.fromSchema(schema).serializeFragment(doc.content)` to serialise it back out.
+Use this `schema` when creating your `EditorState`. Use `DOMParser.fromSchema(schema).parse(htmlElement)` to load Typebar HTML and `DOMSerializer.fromSchema(schema).serializeFragment(doc.content)` to serialise it back out.
 
 **Where this slots in:** typically inside a React / Vue / Svelte component that mounts ProseMirror via `new EditorView(domNode, { state })`. Expose two methods on a ref — `getHtml()` and `setHtml(html)` — so the chat panel can read the current document before each send and write the updated HTML after each `final` event.
 
@@ -154,7 +154,7 @@ npm install @tiptap/react @tiptap/starter-kit
 You need two pieces:
 
 1. A **global-attribute extension** that preserves `data-chunk-id` on every standard block node.
-2. A **wrapper Node** for `<div data-chunk-id="…">…</div>` elements. SuperDocs uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). TipTap's StarterKit has no node that matches a `<div>`, so without this extra Node the wrapper's `data-chunk-id` is silently dropped during parsing — and any inline-diff or chunk-targeted edit referencing that ID will fail to render.
+2. A **wrapper Node** for `<div data-chunk-id="…">…</div>` elements. Typebar uses these wrappers when a single chunk spans multiple block elements (e.g. a heading plus the paragraphs that follow it). TipTap's StarterKit has no node that matches a `<div>`, so without this extra Node the wrapper's `data-chunk-id` is silently dropped during parsing — and any inline-diff or chunk-targeted edit referencing that ID will fail to render.
 
 ```typescript theme={null}
 // chunk-id-preserver.ts
@@ -219,11 +219,11 @@ Register both on your editor:
 ```typescript theme={null}
 const editor = useEditor({
   extensions: [StarterKit, ChunkIdPreserver, ChunkWrapper],
-  content: superDocsHtml,
+  content: typebarHtml,
 });
 ```
 
-Then `editor.getHTML()` returns the round-tripped HTML, and `editor.commands.setContent(html, false)` loads a new SuperDocs payload without breaking undo history.
+Then `editor.getHTML()` returns the round-tripped HTML, and `editor.commands.setContent(html, false)` loads a new Typebar payload without breaking undo history.
 
 **Where this slots in:** anywhere you already use `useEditor`. If you use additional node extensions (tables, images, custom blocks), add their type names to the `types` array.
 
@@ -248,7 +248,7 @@ export type ChunkedElement = SlateElement & {
   children: { text: string }[];
 };
 
-// Render incoming SuperDocs HTML into Slate nodes.
+// Render incoming Typebar HTML into Slate nodes.
 export function fromHtml(html: string): ChunkedElement[] {
   const doc = new DOMParser().parseFromString(html, "text/html");
   return Array.from(doc.body.children).map((el) => ({
@@ -368,10 +368,10 @@ const ChunkIdAttributor = new Parchment.Attributor.Attribute(
 Quill.register(ChunkIdAttributor, true);
 ```
 
-Load SuperDocs HTML via the clipboard API (Parchment preserves block attributes by default once the attributor is registered):
+Load Typebar HTML via the clipboard API (Parchment preserves block attributes by default once the attributor is registered):
 
 ```typescript theme={null}
-quill.clipboard.dangerouslyPasteHTML(superDocsHtml);
+quill.clipboard.dangerouslyPasteHTML(typebarHtml);
 ```
 
 Read the round-tripped HTML with `quill.root.innerHTML` — `data-chunk-id` stays on every block.
@@ -426,7 +426,7 @@ ClassicEditor.create(element, {
 });
 ```
 
-Then `editor.getData()` returns HTML with `data-chunk-id` preserved, and `editor.setData(html)` loads SuperDocs HTML without stripping it.
+Then `editor.getData()` returns HTML with `data-chunk-id` preserved, and `editor.setData(html)` loads Typebar HTML without stripping it.
 
 **Where this slots in:** add `ChunkIdPreserver` to the `plugins` array of whichever CKEditor 5 build you're using. If you have custom block elements (tables, images, custom widgets), ensure `schema.extend` is called for their names too.
 
@@ -435,7 +435,7 @@ Then `editor.getData()` returns HTML with `data-chunk-id` preserved, and `editor
 
 ## Applying AI updates safely (without losing user edits)
 
-The naive pattern — replace the whole editor document with `final.updated_html` on every turn — works for a demo and fails in production in two specific ways. We hit both building the SuperDocs web app; they're worth designing out of your integration from day one.
+The naive pattern — replace the whole editor document with `final.updated_html` on every turn — works for a demo and fails in production in two specific ways. We hit both building the Typebar web app; they're worth designing out of your integration from day one.
 
 **Failure 1 — wiping concurrent user edits.** AI turns take seconds to minutes. If the user keeps typing while the AI works and you then `setContent` the AI's full document, everything they typed is silently gone. The fix is to apply changes **per section**: every result identifies exactly which chunks changed (`document_changes`, `chunk_diffs` in compact mode, or the per-change `old_html`/`new_html` in review mode), so you can replace only those `data-chunk-id` nodes and leave the rest of the document — including the user's in-progress typing — untouched. If the user edited the *same* section the AI changed, don't silently overwrite either version: keep the user's version and offer the AI's as a suggestion (or re-send the user's version on the next turn). The user's keystrokes should always win by default.
 
@@ -453,7 +453,7 @@ Whole-document replacement remains fine for read-only/display integrations, or i
 
 ## Rendering visual content (diagrams and equations)
 
-SuperDocs documents can contain diagrams (Mermaid), equations (LaTeX/KaTeX), drawings, and images. On the wire these arrive as HTML nodes that carry their **source in `data-` attributes** (e.g. the diagram's text spec, the equation's LaTeX) plus the node markup itself.
+Typebar documents can contain diagrams (Mermaid), equations (LaTeX/KaTeX), drawings, and images. On the wire these arrive as HTML nodes that carry their **source in `data-` attributes** (e.g. the diagram's text spec, the equation's LaTeX) plus the node markup itself.
 
 - **Preserve the `data-` attributes on round-trip** — exactly the same rule (and the same silent failure mode) as `data-chunk-id`. Most editor schemas and HTML sanitizers strip unknown attributes and `<svg>` by default; allow them through, or diagrams will degrade to empty blocks after one edit cycle.
 - **Render client-side after mount.** Use the standard libraries (Mermaid for diagrams, KaTeX for equations) to render the source into SVG/HTML once the node is in the DOM. Poll-free pattern: render on insert + on change of the source attribute.
@@ -490,7 +490,7 @@ Three things to verify in your editor's documentation:
 
 ### Verification test
 
-Paste any SuperDocs response into your editor, read the HTML back out, and diff against the input. Every `data-chunk-id` must survive.
+Paste any Typebar response into your editor, read the HTML back out, and diff against the input. Every `data-chunk-id` must survive.
 
 ```javascript theme={null}
 const incoming = `<h1 data-chunk-id="abc123">Title</h1><p data-chunk-id="def456">Body</p>`;

@@ -1,16 +1,22 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "SuperDocs",
+  "name": "Typebar",
   "theme": "maple",
   "logo": {
-    "light": "/logo/light.png",
-    "dark": "/logo/dark.png"
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
   },
   "favicon": "/favicon.png",
   "colors": {
-    "primary": "#f97766",
-    "light": "#eca496",
-    "dark": "#ac645b"
+    "primary": "#110b0b",
+    "light": "#fbfaf6",
+    "dark": "#110b0b"
+  },
+  "markdown": {
+    "instructions": [
+      "Typebar, formerly SuperDocs. Same product, same API, same keys: nothing changes for your integration.",
+      "Typebar, formerly SuperDocs, is not related to SuperDoc (superdoc.dev)."
+    ]
   },
   "openapi": [
     "openapi.json"
@@ -27,7 +33,8 @@
     { "source": "/agent-signup", "destination": "/introduction/agent-signup" },
     { "source": "/agents", "destination": "/introduction/agent-signup" },
     { "source": "/mcp", "destination": "/mcp/setup" },
-    { "source": "/mcp/overview", "destination": "/mcp/setup" }
+    { "source": "/mcp/overview", "destination": "/mcp/setup" },
+    { "source": "/api-reference/mcp/verify-the-superdocs-mcp-server-is-reachable-and-serving-traffic", "destination": "/api-reference/mcp/verify-the-typebar-mcp-server-is-reachable-and-serving-traffic" }
   ],
   "navigation": {
     "tabs": [
@@ -122,14 +129,14 @@
   },
   "seo": {
     "metatags": {
-      "canonical": "https://docs.superdocs.app"
+      "canonical": "https://docs.typebar.ai"
     }
   },
   "topbar": {
     "links": [
       {
         "name": "App",
-        "url": "https://use.superdocs.app"
+        "url": "https://use.typebar.ai"
       },
       {
         "name": "API Status",
@@ -144,11 +151,11 @@
         "items": [
           {
             "label": "Website",
-            "href": "https://superdocs.app"
+            "href": "https://typebar.ai"
           },
           {
             "label": "App",
-            "href": "https://use.superdocs.app"
+            "href": "https://use.typebar.ai"
           }
         ]
       },

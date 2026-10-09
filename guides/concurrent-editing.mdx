@@ -7,7 +7,7 @@ description: "Keep a document in sync when more than one place edits it at once 
 
 A single document can be open in more than one place at the same time: two browser tabs, a user editing in your UI while a background job rewrites the same file, or any integration that both writes and reads a document on separate connections. Without coordination, the last writer silently wins and someone's work disappears.
 
-SuperDocs gives you the pieces to keep those copies converged — a lightweight **change feed** to learn when another session edited a document you hold, and a **human autosave** endpoint so pure typing is persisted and announced. This guide is the integrator pattern for wiring them together.
+Typebar gives you the pieces to keep those copies converged — a lightweight **change feed** to learn when another session edited a document you hold, and a **human autosave** endpoint so pure typing is persisted and announced. This guide is the integrator pattern for wiring them together.
 
 <Note>
   You only need this guide if the **same** document can be edited from two places concurrently. If each session owns its own documents, skip it — there's nothing to reconcile. For the per-section apply discipline this builds on, see [Applying AI updates safely](/guides/editor-integration#applying-ai-updates-safely-without-losing-user-edits).

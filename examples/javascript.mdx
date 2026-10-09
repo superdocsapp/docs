@@ -1,6 +1,6 @@
 ---
 title: "JavaScript Examples"
-description: "Complete working JavaScript examples for the SuperDocs API using fetch and EventSource."
+description: "Complete working JavaScript examples for the Typebar API using fetch and EventSource."
 ---
 
 # JavaScript Examples
@@ -368,7 +368,7 @@ See [Streaming → Rendering intermediate events](/guides/streaming#rendering-in
 
 ## Frontend layout
 
-Most products that integrate SuperDocs converge on a two-pane layout: the document editor on the left (primary area) and a chat panel on the right (fixed width, 380–440 px). The skeleton below is framework-agnostic — the same shape works in React, Vue, Svelte, or plain HTML.
+Most products that integrate Typebar converge on a two-pane layout: the document editor on the left (primary area) and a chat panel on the right (fixed width, 380–440 px). The skeleton below is framework-agnostic — the same shape works in React, Vue, Svelte, or plain HTML.
 
 ```html theme={null}
 <!-- Framework-agnostic skeleton — adapt to React, Vue, Svelte, or plain HTML. -->
@@ -383,7 +383,7 @@ Most products that integrate SuperDocs converge on a two-pane layout: the docume
   <section class="editor-pane">
     <!--
       Your rich-text editor mounts here. Whatever editor you use must:
-      1. Load SuperDocs HTML via a setHtml() method.
+      1. Load Typebar HTML via a setHtml() method.
       2. Expose a getHtml() method the chat panel calls before each send.
       3. Preserve data-chunk-id — see /guides/editor-integration.
     -->
@@ -428,5 +428,5 @@ Notes on the pattern:
 
 - **Inline diff overlays** render inside the editor pane (see [Rendering diffs inline in your editor](/guides/human-in-the-loop#rendering-diffs-inline-in-your-editor)). The chat pane only holds the message log and the batch-approve bar.
 - **The chat panel reads editor HTML before every send** and writes it back on every `final` event. Expose this through a ref / store so the chat doesn't have to know about your editor's internals.
-- **One session per tab.** Generate a random `session_id` on page load and reuse it for every request in that tab. SuperDocs persists conversations across server restarts.
-- **API key stays server-side.** If you're building a browser app, proxy SuperDocs calls through your own backend so `sk_...` never reaches the browser. See the [streaming guide](/guides/streaming) for the `api_key` query-parameter workaround for `EventSource`, which cannot set custom headers.
+- **One session per tab.** Generate a random `session_id` on page load and reuse it for every request in that tab. Typebar persists conversations across server restarts.
+- **API key stays server-side.** If you're building a browser app, proxy Typebar calls through your own backend so `sk_...` never reaches the browser. See the [streaming guide](/guides/streaming) for the `api_key` query-parameter workaround for `EventSource`, which cannot set custom headers.

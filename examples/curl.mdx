@@ -1,6 +1,6 @@
 ---
 title: "curl Examples"
-description: "Copy-paste ready curl commands for every key SuperDocs API operation."
+description: "Copy-paste ready curl commands for every key Typebar API operation."
 ---
 
 # curl Examples
@@ -112,7 +112,7 @@ curl https://api.superdocs.app/v1/sessions/SESSION_ID/jobs \
 
 ### Delete a session
 
-Session deletion lives under `/v1/users/me/sessions/{id}` — that endpoint is part of the web-app account surface and accepts Firebase tokens only, not `sk_` API keys. To clear sessions programmatically with an API key, simply stop using the `session_id` (sessions persist server-side but are not billed unless used). To delete from the UI, use **Settings > Sessions** in [use.superdocs.app](https://use.superdocs.app).
+Session deletion lives under `/v1/users/me/sessions/{id}` — that endpoint is part of the web-app account surface and accepts Firebase tokens only, not `sk_` API keys. To clear sessions programmatically with an API key, simply stop using the `session_id` (sessions persist server-side but are not billed unless used). To delete from the UI, use **Settings > Sessions** in [use.typebar.ai](https://use.typebar.ai).
 
 ## Documents
 
@@ -245,7 +245,7 @@ curl -X POST https://api.superdocs.app/v1/chat/SESSION_ID/approve \
 
 ## User management
 
-The `/v1/users/*` endpoints (profile, usage, limits, sessions, programmatic API-key management) belong to the web-app account surface and accept **web-app session tokens only** — `sk_` / `lce_` API keys are rejected with a `401`. View profile, usage, and tier limits from [use.superdocs.app](https://use.superdocs.app) → Settings.
+The `/v1/users/*` endpoints (profile, usage, limits, sessions, programmatic API-key management) belong to the web-app account surface and accept **web-app session tokens only** — `sk_` / `lce_` API keys are rejected with a `401`. View profile, usage, and tier limits from [use.typebar.ai](https://use.typebar.ai) → Settings.
 
 To check usage from an API-key context, the `usage` block is included in every `/v1/chat` and `/v1/chat/async` response (`monthly_used`, `monthly_limit`, `monthly_remaining`, `was_billable`, `subscription_tier`) and in every SSE `usage` event — see [SSE Streaming](/guides/streaming).
 
