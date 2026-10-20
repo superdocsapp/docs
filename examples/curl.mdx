@@ -112,7 +112,7 @@ curl https://api.superdocs.app/v1/sessions/SESSION_ID/jobs \
 
 ### Delete a session
 
-Session deletion lives under `/v1/users/me/sessions/{id}` — that endpoint is part of the web-app account surface and accepts Firebase tokens only, not `sk_` API keys. To clear sessions programmatically with an API key, simply stop using the `session_id` (sessions persist server-side but are not billed unless used). To delete from the UI, use **Settings > Sessions** in [use.typebar.ai](https://use.typebar.ai).
+Session deletion lives under `/v1/users/me/sessions/{id}` — that endpoint is part of the web-app account surface and accepts the web app's own sign-in only, not `sk_` API keys. To clear sessions programmatically with an API key, simply stop using the `session_id` (sessions persist server-side but are not billed unless used). To delete from the UI, use **Settings > Sessions** in [use.typebar.ai](https://use.typebar.ai).
 
 ## Documents
 
