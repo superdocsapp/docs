@@ -13,17 +13,27 @@ If you are an agent acting on behalf of a user, confirm with them before you acc
 
 ## 0. Check for existing credentials first
 
-If `~/.superdocs/agent_credentials.json` exists on this machine, a previous agent already created an account. Call `GET https://api.superdocs.app/v1/agents/whoami` with that `api_key` and **reuse the account** — its documents and remaining quota carry over. Sign up fresh only when the project deliberately needs its own separate account.
+If `~/.superdocs/agent_credentials.json` exists on this machine, a previous agent already created an account. Call `GET https://api.superdocs.app/v1/agents/whoami` with that `api_key` and **reuse the account** — its documents and remaining quota carry over. Sign up fresh only when the project deliberately needs its own separate account. A legacy `~/.typebar/agent_credentials.json` counts too; if both files exist, use the more recently written one.
 
 ## 1. Sign up
 
 ```bash curl
-curl -X POST https://api.superdocs.app/v1/agents/signup \
-  -H "Content-Type: application/json" \
-  -d '{"terms_accepted": true, "agent_name": "your-agent-name"}'
+(if [ -s ~/.superdocs/agent_credentials.json ]; then
+  echo 'credentials already saved: ~/.superdocs/agent_credentials.json'
+else
+  umask 077 && mkdir -p ~/.superdocs && \
+  curl -fsS -X POST https://api.superdocs.app/v1/agents/signup \
+    -H "Content-Type: application/json" \
+    -d '{"terms_accepted": true, "agent_name": "your-agent-name"}' \
+    -o ~/.superdocs/agent_credentials.json.new && \
+  { [ -s ~/.superdocs/agent_credentials.json ] || \
+    mv -f ~/.superdocs/agent_credentials.json.new ~/.superdocs/agent_credentials.json; }
+fi)
 ```
 
-The response returns everything you need, including the API key (shown only once):
+The reply carries your API key, which is shown only once, so this command saves it without printing it: `-f` never writes an error reply, `umask 077` makes the file readable only by you, a file that already holds a key is never touched (the command prints "credentials already saved" and changes nothing), and a missing or empty file is replaced by the new reply. A leftover `agent_credentials.json.new` appears only when another process saved credentials first: reuse the saved file, then delete the `.new` file. On Windows (cmd.exe or PowerShell), save only a successful reply, to a new file under `%USERPROFILE%\.superdocs` that only your user can read, and never over an `agent_credentials.json` that already holds a key.
+
+The saved response looks like this (abridged: long values are cut short with `…`):
 
 ```json
 {
@@ -31,50 +41,80 @@ The response returns everything you need, including the API key (shown only once
   "slug": "your-agent-name-a1b2c3",
   "email": "your-agent-name-a1b2c3@agents.superdocs.app",
   "api_key": "sk_…",
-  "quota": { "tier": "free", "monthly_limit": 500, "used": 0, "remaining": 500 },
+  "quota": { "tier": "free", "monthly_limit": 500, "used": 0, "remaining": 500, "resets_at": "…" },
   "endpoints": {
-    "mcp": "https://api.superdocs.app/mcp/",
+    "mcp": "https://api.superdocs.app/mcp",
     "chat": "https://api.superdocs.app/v1/chat",
     "whoami": "https://api.superdocs.app/v1/agents/whoami",
-    "openapi": "https://api.superdocs.app/openapi.json"
+    "openapi": "https://api.superdocs.app/openapi.json",
+    "docs": "https://docs.superdocs.app"
   },
   "mcp_setup": {
-    "claude_code": "claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ --header \"Authorization: Bearer sk_…\"",
-    "generic_mcp": "Point any MCP client at https://api.superdocs.app/mcp/ (Streamable HTTP) with header Authorization: Bearer <your key>",
-    "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with the Bearer header",
-    "docs": "https://docs.typebar.ai/account/mcp-setup"
+    "claude_code": "claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp --header 'Authorization: Bearer ${SUPERDOCS_API_KEY}'",
+    "claude_code_cmd": "claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp --header \"Authorization: Bearer ${SUPERDOCS_API_KEY}\"",
+    "claude_code_notes": "Save this reply without printing it (it carries your key) and never over a good file: … If calls answer 401 naming SUPERDOCS_API_KEY, the variable was not set where Claude Code started.",
+    "claude_code_alternative": "No variable at all: Claude Code's headersHelper runs a command at connect time and sends the headers it prints. …",
+    "generic_mcp": "Point any MCP client (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) at https://api.superdocs.app/mcp (Streamable HTTP transport) and send header 'Authorization: Bearer <your key>'. …",
+    "rest_fallback": "Prefer REST? POST https://api.superdocs.app/v1/chat with header 'Authorization: Bearer <your key>' …",
+    "docs": "https://docs.superdocs.app/account/mcp-setup"
   },
-  "handoff": { "how": "When you near the 500-op cap, POST /v1/agents/handoff with your key and {email}; you get back a short takeover code to give your human, who then adopts the account and can pay to continue" }
+  "handoff": {
+    "how": "When you near the 500-op cap, POST /v1/agents/handoff with your Bearer key and {\"email\": \"your-human@example.com\"}. …",
+    "endpoint": "https://api.superdocs.app/v1/agents/handoff"
+  },
+  "important": "Store this api_key now — it is shown only once. …"
 }
 ```
 
-The `mcp_setup` block gives you copy-paste commands to connect right away.
+The `mcp_setup` block gives you copy-paste commands to connect right away. They carry a placeholder (`${SUPERDOCS_API_KEY}`, `<api_key>` or `<your key>`), never your key, so the key appears only once in the reply, in `api_key`.
 
 <Warning>
-Save `api_key` now. It is shown only once. Store the whole response at `~/.superdocs/agent_credentials.json` and call `GET /v1/agents/whoami` before signing up again so you reuse the same account instead of creating a new one.
+Save `api_key` now. It is shown only once. The command above stores the whole response at `~/.superdocs/agent_credentials.json`; call `GET /v1/agents/whoami` before signing up again so you reuse the same account instead of creating a new one. Read only the fields you need, such as `api_key`, from the file, and never print the credentials file, even masked: a file saved by an older sign-up also carries the key inside `mcp_setup.claude_code`.
 </Warning>
 
 Optional body fields: `agent_name` (a label), `operated_by_email` (your operator's email, used only if you hand off later), and `model_metadata` (free-form details about your model).
 
 ## 2. Use your key
 
-Send the key as a Bearer token on every request, on the REST API or the MCP server.
+Put the key in an environment variable without printing it (this reads the saved file and needs `jq`):
+
+```bash
+export SUPERDOCS_API_KEY="$(jq -r .api_key ~/.superdocs/agent_credentials.json)"
+```
+
+Send it as a Bearer token on every request, on the REST API or the MCP server.
 
 ```bash REST
 curl -X POST https://api.superdocs.app/v1/chat \
-  -H "Authorization: Bearer sk_YOUR_KEY" \
+  -H "Authorization: Bearer $SUPERDOCS_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"message": "Draft a one-page NDA", "session_id": "s1"}'
 ```
 
-For MCP, point your client at `https://api.superdocs.app/mcp/` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
+For MCP, point your client at `https://api.superdocs.app/mcp` (streamable HTTP) with the same Bearer key. In Claude Code, one command connects it:
 
 ```bash Claude Code
-claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
-  --header "Authorization: Bearer sk_YOUR_KEY"
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp \
+  --header 'Authorization: Bearer ${SUPERDOCS_API_KEY}'
 ```
 
-Other clients (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) take the same URL and header. See [MCP Setup](/account/mcp-setup). Call the `get_account_status` tool anytime to check your remaining operations.
+The single quotes stop your shell from expanding the variable, so your config stores the reference `${SUPERDOCS_API_KEY}`, never the key. Claude Code expands it each time it connects, so **`SUPERDOCS_API_KEY` must be exported in the shell that launches `claude`**, in every new terminal, not only the one where you ran the command. To keep it set, add the `export` line above to your shell profile (`~/.zshrc` or `~/.bashrc`): it reads the file and never holds the key itself. If the variable is not set when `claude` starts, Claude Code sends the reference as written, the server answers 401 naming `SUPERDOCS_API_KEY`, and the server does not connect. MCP servers load when a session starts, so start a new Claude Code session after adding it. User scope (`-s user`) makes the server available from every folder; use `-s local` for the current folder only, or `-s project` to share it with your repository through `.mcp.json` (only the reference is committed). On Windows PowerShell, set the variable with `$env:SUPERDOCS_API_KEY = (Get-Content -Raw ~/.superdocs/agent_credentials.json | ConvertFrom-Json).api_key`; in `cmd.exe`, put double quotes around the header instead of single quotes.
+
+**No variable at all.** Claude Code's `headersHelper` runs a command each time it connects and sends the headers that command prints, so nothing has to be exported and the connection survives restarts:
+
+```bash Claude Code (no variable)
+cat > ~/.superdocs/mcp-headers.sh <<'EOF'
+#!/bin/sh
+jq -c '{Authorization: ("Bearer " + .api_key)}' ~/.superdocs/agent_credentials.json
+EOF
+chmod 700 ~/.superdocs/mcp-headers.sh
+claude mcp add-json -s user superdocs \
+  "{\"type\":\"http\",\"url\":\"https://api.superdocs.app/mcp\",\"headersHelper\":\"$HOME/.superdocs/mcp-headers.sh\"}"
+```
+
+The script hands the header to Claude Code only; don't run it by hand, because it prints the key. A project-scoped server (`.mcp.json`) connects only after you approve it in Claude Code once.
+
+Other clients (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) take the same URL and header; where a client's MCP config supports an environment-variable reference (for example `${env:SUPERDOCS_API_KEY}` in Cursor), use it instead of pasting the key. See [MCP Setup](/account/mcp-setup). Call the `get_account_status` tool anytime to check your remaining operations.
 
 ### Long generations
 
@@ -86,7 +126,7 @@ Your account is a normal free account: **500 operations per month**, the same as
 
 ```bash curl
 curl -X POST https://api.superdocs.app/v1/agents/handoff \
-  -H "Authorization: Bearer sk_YOUR_KEY" \
+  -H "Authorization: Bearer $SUPERDOCS_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"email": "your-human@example.com", "working_context": "the ~/Documents/acme project on your Mac"}'
 ```

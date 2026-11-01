@@ -33,11 +33,17 @@ For full plugin reference (auto-update behavior, troubleshooting, advanced confi
 If you prefer to configure the MCP server directly without the plugin (e.g., to share a `.mcp.json` across a team via project scope), run:
 
 ```bash
-claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
-  --header "Authorization: Bearer sk_YOUR_API_KEY"
+# Key saved by an agent sign-up:
+export SUPERDOCS_API_KEY="$(jq -r .api_key ~/.superdocs/agent_credentials.json)"
+# Or paste a key from Settings at a hidden prompt instead:
+#   read -rs SUPERDOCS_API_KEY && export SUPERDOCS_API_KEY
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp \
+  --header 'Authorization: Bearer ${SUPERDOCS_API_KEY}'
 ```
 
-Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical spelling.
+The single quotes keep your shell from expanding the variable, so your config stores the reference `${SUPERDOCS_API_KEY}` and never the key. Claude Code expands it each time it connects, so **`SUPERDOCS_API_KEY` must be exported in the shell that launches `claude`**, in every new terminal: add the `export` line to your shell profile (`~/.zshrc` or `~/.bashrc`) to keep it set. If it is not set when `claude` starts, the server answers 401 naming `SUPERDOCS_API_KEY` and does not connect. On Windows `cmd.exe`, use double quotes around the header instead. User scope (`-s user`) makes the server available from every folder; use `-s local` for the current folder only, or `-s project` to share it with your repository through `.mcp.json` (only the reference is committed). To connect with no variable at all, use the [`headersHelper` form](/introduction/agent-signup#2-use-your-key).
+
+Both `/mcp` and `/mcp/` are accepted; `/mcp` is the canonical spelling.
 
 That installs only the MCP server (38 tools). To get the 4 prompts and the skill, you'd need to set those up separately — the plugin install above does all three in one shot.
 
@@ -50,7 +56,7 @@ claude mcp list
 You should see:
 
 ```
-superdocs: https://api.superdocs.app/mcp/ (HTTP) - ✓
+superdocs: https://api.superdocs.app/mcp (HTTP) - ✓
 ```
 
 `superdocs` is the local name the install gives the server. The server itself reports its name as Typebar (formerly SuperDocs), and existing installs need no change.

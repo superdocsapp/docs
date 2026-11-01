@@ -9,7 +9,7 @@ description: "Connect AI tools like Claude Desktop, Cursor, and VS Code to Typeb
 **New to MCP?** The [Model Context Protocol](https://modelcontextprotocol.io) is an open standard that lets AI assistants (Claude, Cursor, VS Code Copilot, and many others) call external tools and services. You add one server entry to your AI tool's config file, and the tool discovers that server's capabilities automatically. No SDK, no API client code, nothing to build.
 </Note>
 
-The Model Context Protocol (MCP) lets AI tools connect to external services. Typebar exposes an MCP server with 38 tools and 4 user-invocable workflow prompts for document editing, session management, attachments, multi-document and durable Files, revert, and more — all on a single endpoint at `https://api.superdocs.app/mcp/`.
+The Model Context Protocol (MCP) lets AI tools connect to external services. Typebar exposes an MCP server with 38 tools and 4 user-invocable workflow prompts for document editing, session management, attachments, multi-document and durable Files, revert, and more — all on a single endpoint at `https://api.superdocs.app/mcp`.
 
 When connected, Typebar tools appear natively in your AI tool — no API client code needed.
 
@@ -42,18 +42,18 @@ Two conveniences tie these channels together:
 
 | Field | Value |
 |-------|-------|
-| **Endpoint** | `https://api.superdocs.app/mcp/` |
+| **Endpoint** | `https://api.superdocs.app/mcp` |
 | **Transport** | Streamable HTTP |
 | **Auth header** | `Authorization: Bearer sk_YOUR_API_KEY` |
 
-Both `/mcp` and `/mcp/` are accepted; the trailing-slash form is the canonical spelling used throughout these docs.
+Both `/mcp` and `/mcp/` are accepted; `/mcp`, the address the sign-up response returns, is the canonical spelling used throughout these docs.
 
 <Note>
 **Typebar was previously called SuperDocs.** The server reports its name as Typebar. The name you give it in your config (`superdocs` in the examples on these pages) is only your own label, so it can stay as it is; some tools show that label instead of the server's name. Existing setups keep working with no change: the endpoint, your API key, the plugin and the install commands are the same.
 </Note>
 
 <Warning>
-**Keep your key out of dotfiles and repos.** MCP config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) are easy to commit by accident. Where your client supports environment-variable references in its MCP config (for example `${env:SUPERDOCS_API_KEY}` in VS Code's `mcp.json`), prefer that over pasting the raw `sk_` key inline — and never commit a config containing a real key. If a key does leak, revoke it in [API Keys](/account/api-keys) and create a new one.
+**Keep your key out of dotfiles and repos.** MCP config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) are easy to commit by accident. Where your client supports environment-variable references in its MCP config (for example `${env:SUPERDOCS_API_KEY}` in Cursor's and VS Code's `mcp.json`, or `${SUPERDOCS_API_KEY}` in Claude Code's `--header` value and `.mcp.json`), prefer that over pasting the raw `sk_` key inline — and never commit a config containing a real key. If a key does leak, revoke it in [API Keys](/account/api-keys) and create a new one.
 </Warning>
 
 ## Supported clients

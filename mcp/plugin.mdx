@@ -32,11 +32,11 @@ Typebar was previously called SuperDocs. The plugin, its marketplace and its pro
 **Prefer just the MCP server, or hit a marketplace error?** You can always connect the server directly without the plugin, in one command with no marketplace step:
 
 ```bash
-claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp/ \
-  --header "Authorization: Bearer sk_YOUR_API_KEY"
+claude mcp add -s user --transport http superdocs https://api.superdocs.app/mcp \
+  --header 'Authorization: Bearer ${SUPERDOCS_API_KEY}'
 ```
 
-This installs the MCP tools only (not the prompts or skill). See [Claude Code → Manual setup](/mcp/claude-code#manual-setup-advanced).
+Export `SUPERDOCS_API_KEY` with your key in the shell that launches `claude` first: Claude Code expands the reference each time it connects, so the key never sits in the command or the config. This installs the MCP tools only (not the prompts or skill). See [Claude Code → Manual setup](/mcp/claude-code#manual-setup-advanced) for the exact `export` line and the no-variable form.
 </Note>
 
 You'll be prompted for your `sk_…` API key. Get one from [use.typebar.ai](https://use.typebar.ai) → **Settings → API Keys → Create**. Free plan includes 500 AI operations per month.
@@ -108,7 +108,7 @@ claude plugin uninstall superdocs
 
 ## What's bundled vs. backend-served
 
-The plugin itself is small — just the manifest + the skill markdown. The 38 tools and 4 prompts are served live from `https://api.superdocs.app/mcp/` (Streamable HTTP, sk_ Bearer auth). Tool descriptions, prompt templates, and behavior changes ship from the backend instantly — no plugin update needed for those.
+The plugin itself is small — just the manifest + the skill markdown. The 38 tools and 4 prompts are served live from `https://api.superdocs.app/mcp` (Streamable HTTP, sk_ Bearer auth). Tool descriptions, prompt templates, and behavior changes ship from the backend instantly — no plugin update needed for those.
 
 The plugin's job is to make install painless. The smarts live on the server.
 
