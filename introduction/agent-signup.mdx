@@ -123,17 +123,20 @@ Upload a document and give every instruction for the job in one request. Typebar
 ```bash REST
 SID=tb-$(date +%s); rm -f reply.json
 SUPERDOCS_API_KEY=$(jq -r .api_key ~/.superdocs/agent_credentials.json)
+cat > msg.txt <<'MSG'
+Apply every reviewer comment and accept the tracked changes, except the two where reviewers disagree; list those two.
+MSG
 curl -sS --max-time 95 -X POST https://api.superdocs.app/v1/chat/file \
   -H "Authorization: Bearer $SUPERDOCS_API_KEY" \
   -F "session_id=$SID" -F "wait_seconds=85" -F "approval_mode=approve_all" -F "file=@./report.docx" \
-  --form-string "message=Apply every reviewer comment and accept the tracked changes, except the two where reviewers disagree; list those two." \
+  -F "message=<msg.txt" \
   -o reply.json -w 'HTTP %{http_code}\n'
 U=$(jq -r '.download.download_url // empty' reply.json); [ -n "$U" ] && curl -sS --max-time 9 -o ./report-NEW.docx "$U"
 ```
 
 The reply holds `response` (what was done, per instruction), `session_id`, `turn_index` (pass it to `/v1/sessions/{session_id}/revert` to undo the turn), `document_changes` (counts only, so the reply stays small on any document size) and `download` (a 15-minute link; send `-F export_format=pdf` for another format). Follow-ups on the same document go to `POST /v1/chat` with the same `session_id`.
 
-To **create** a document instead, drop `file` and attach each source with `-F "sources=@./source.pdf"` (repeat it); the message is the brief. The call waits up to `wait_seconds` (85 here, at most 110), so it fits a shell command limit. A longer job answers **202** and keeps running: `GET /v1/sessions/{session_id}/result?wait_seconds=85&export_format=docx` waits for it in one call (run it again on another 202). Never re-send the POST: that starts a second job. If `document_changes.requires_approval` is true, Typebar held changes for review and nothing from this turn is in the document yet (a download now is the document as it was before this turn). Rows marked `requires_review` need your user's own go: without it, never approve them. If any row is `requires_review` and you can ask your user, ask before the approve call (it declines every row it does not name), and include the ones they approve in that same call. To apply the others, `POST /v1/chat/{session_id}/approve` with `job_id`, `"approved": true`, `"wait_for_result": false` and `changes` naming exactly those rows (one `{change_id, approved: true}` each), then wait with the result call. That call closes every row it does not name as declined: not applied, and never approvable later, so tell your user which changes were not applied and that they can ask for them again. Until held changes are decided, a new chat answers 409.
+To **create** a document instead, drop `file` and attach each source with `-F "sources=@./source.pdf"` (repeat it); the message is the brief. The call waits up to `wait_seconds` (85 here, at most 110), so it fits a shell command limit. A longer job answers **202** and keeps running: `GET /v1/sessions/{session_id}/result?wait_seconds=85&export_format=docx` waits for it in one call (run it again on another 202). Never re-send the POST: that starts a second job. If `document_changes.requires_approval` is true, Typebar held changes for review and nothing from this turn is in the document yet (a download now is the document as it was before this turn: save it before you stop or ask your user anything). Rows marked `requires_review` need your user's own go: without it, never approve them. If any row is `requires_review` and you can ask your user, ask before the approve call (it declines every row it does not name), and include the ones they approve in that same call. To apply the others, `POST /v1/chat/{session_id}/approve` with `job_id`, `"approved": true`, `"wait_for_result": false` and `changes` naming exactly those rows (one `{change_id, approved: true}` each), then wait with the result call. That call closes every row it does not name as declined: not applied, and never approvable later, so tell your user which changes were not applied and that they can ask for them again. Until held changes are decided, a new chat answers 409.
 
 Over MCP the same job is about four calls: `request_upload_url`, its `curl_example`, one `chat` with `upload_id`, `upload_filename`, `response_mode: "summary"` and `export_format: "docx"`, then the reply's `download.curl_example`.
 

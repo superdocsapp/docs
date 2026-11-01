@@ -27,10 +27,13 @@ Building an autonomous agent? You can skip the UI entirely. One call to `POST /v
 ## 3. Edit a file in one call
 
 ```bash curl
+cat > msg.txt <<'MSG'
+In the Payment section change 30 days to 45 days, and delete the Non-compete clause.
+MSG
 curl -sS --max-time 95 -X POST https://api.superdocs.app/v1/chat/file \
   -H "Authorization: Bearer sk_YOUR_API_KEY" \
   -F "session_id=my-first-file" -F "wait_seconds=85" -F "file=@./contract.docx" \
-  --form-string "message=In the Payment section change 30 days to 45 days, and delete the Non-compete clause." \
+  -F "message=<msg.txt" \
   -o reply.json -w 'HTTP %{http_code}\n'
 ```
 
