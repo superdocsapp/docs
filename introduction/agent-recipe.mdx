@@ -1,0 +1,65 @@
+---
+title: "Agent recipe (REST)"
+description: "For agents that reach Typebar with curl: one shell command per document job. Upload a file with every instruction, get the result and the edited file back, each command under about 105 seconds."
+---
+
+# Typebar over REST (curl): one command per job
+
+You orchestrate; Typebar does the document work. Each shell command is one more model turn for you,
+so do a whole job in ONE command. Put every instruction in one message and name targets by section and
+content: Typebar finds them. Never open, unzip, read, grep, list or diff the documents yourself, before
+or after. Trust the reply.
+
+Each command starts a fresh shell, so it sets `API` and reads the key. Every curl call has
+`--max-time`, so no command runs longer than about 105 s. Never re-send a POST that timed out:
+that starts, and bills, a second job. Re-run only the GET wait. Never use pkill, killall or kill.
+Each reply is saved to its own `reply-TIME.json`; never overwrite or delete one.
+
+## Key (once)
+Reuse `~/.superdocs/agent_credentials.json` if it exists. Otherwise sign up. Signing up accepts the
+Terms (typebar.ai/terms): do it only if the user's instruction says to, and otherwise ask the user first.
+```bash
+API=https://api.superdocs.app; umask 077; mkdir -p ~/.superdocs
+[ -s ~/.superdocs/agent_credentials.json ] || curl -fsS --max-time 30 -X POST "$API/v1/agents/signup" -H 'Content-Type: application/json' -d '{"terms_accepted": true}' -o ~/.superdocs/agent_credentials.json
+```
+
+## Edit a file: one command
+```bash
+API=https://api.superdocs.app; SID=tb-$(date +%s); echo "session $SID"; R=reply-$(date +%s).json
+K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+curl -sS --max-time 95 -X POST "$API/v1/chat/file" -H "Authorization: Bearer $K" -F "session_id=$SID" -F "wait_seconds=85" -F "approval_mode=approve_all" \
+  -F "file=@./INPUT.docx" --form-string "message=EVERY INSTRUCTION, IN ONE MESSAGE" -o $R -w 'HTTP %{http_code}\n'
+python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));print(r.get("response") or r);[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
+U=$(python3 -c 'import json,sys;print((json.load(open(sys.argv[1])).get("download") or {}).get("download_url",""))' $R); [ -n "$U" ] && curl -sS --max-time 9 -o ./OUTPUT.docx "$U" -w 'saved %{size_download} bytes\n'
+```
+**Create** a document from sources instead: add `A=(); for f in ./data/* ./context/*; do A+=(-F "sources=@$f"); done`
+before the curl, and replace `-F "file=@./INPUT.docx"` with `"${A[@]}"`. The message is the brief, and the file comes back as .docx.
+
+## The reply
+- `response` says what was done for each ask. `download` is a 15-minute link to the result (the upload's format; add `-F export_format=pdf` for another).
+- **HTTP 202** or a timeout: the job is still running under the printed session. Run ONE wait command (again on another 202), with `SID` = that printed session, never a new one:
+  ```bash
+  API=https://api.superdocs.app; SID=PRINTED_SESSION; R=reply-$(date +%s).json
+  K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+  curl -sS --max-time 95 "$API/v1/sessions/$SID/result?wait_seconds=85&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
+  ```
+  Then use the same `python3` and `U=` lines. Re-running the wait also lists the held lines (with `job_id`); never guess other endpoints.
+- **HELD lines** (`document_changes.requires_approval`): changes held for review; nothing from this turn is in the document yet (a download now is the document as it was before this turn).
+  - Lines marked `requires_review` need the user's own go; never approve one without it. If you can ask the user, ask BEFORE the approve call (it declines every line it does not name); set `OK` to the change ids of the `requires_review` lines they approved (space-separated; empty if none).
+  - Approve the other lines (if the user asked for the edits) in ONE call, then wait and download. Every line it does not name is declined: not applied, never approvable later. Until held lines are decided, a new chat answers 409.
+  ```bash
+  API=https://api.superdocs.app; SID=PRINTED_SESSION; export OK=""; P=$(ls -t reply-*.json | head -1); R=reply-$(date +%s).json
+  K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+  python3 -c 'import json,sys,os;d=json.load(open(sys.argv[1]))["document_changes"];ok=[{"change_id":c["change_id"],"approved":True} for c in d["pending_changes"] if not c.get("requires_review") or c["change_id"] in os.environ.get("OK","").split()];ok or sys.exit("nothing to approve");print(json.dumps({"job_id":d["job_id"],"approved":True,"wait_for_result":False,"changes":ok}))' $P > approve-$SID.json &&
+  curl -sS --max-time 20 -X POST "$API/v1/chat/$SID/approve" -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d @approve-$SID.json -w 'HTTP %{http_code}\n' &&
+  curl -sS --max-time 70 "$API/v1/sessions/$SID/result?wait_seconds=60&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
+  ```
+  Then use the same `python3` and `U=` lines. Tell the user exactly which held changes were NOT applied, naming each, and that they can ask for them again; never stop without the file.
+- **Follow-up** on the same document: `POST $API/v1/chat` with JSON `{"session_id": "...", "message": "...", "response_mode": "summary", "export_format": "docx"}`.
+- **Undo a turn**: `POST $API/v1/sessions/$SID/revert` with `{"turn_index": N}`, using N from the reply.
+
+## Related
+
+- [For AI Agents](/introduction/agent-signup): sign-up, the API key and handing the account to a human.
+- [Human-in-the-Loop](/guides/human-in-the-loop): how held changes work.
+- [Agent Editing Playbook](/guides/agent-editing-playbook): editing patterns, placement, verification and billing.

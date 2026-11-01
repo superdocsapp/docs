@@ -24,7 +24,19 @@ Your key looks like: `sk_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4`
 Building an autonomous agent? You can skip the UI entirely. One call to `POST /v1/agents/signup` returns a working key with no human in the loop. See [For AI Agents](/introduction/agent-signup).
 </Note>
 
-## 3. Make your first request
+## 3. Edit a file in one call
+
+```bash curl
+curl -sS --max-time 95 -X POST https://api.superdocs.app/v1/chat/file \
+  -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  -F "session_id=my-first-file" -F "wait_seconds=85" -F "file=@./contract.docx" \
+  --form-string "message=In the Payment section change 30 days to 45 days, and delete the Non-compete clause." \
+  -o reply.json -w 'HTTP %{http_code}\n'
+```
+
+`reply.json` holds the outcome per instruction and `download.download_url`, a 15-minute link to the edited file. Put every instruction in one message; Typebar finds the targets. On HTTP 202 the job is still running: `GET /v1/sessions/my-first-file/result?wait_seconds=85&export_format=docx` waits for it.
+
+## 4. Or send HTML directly
 
 <CodeGroup>
 
@@ -80,7 +92,7 @@ console.log(data.response);
 **You choose the `session_id`.** It's any string you pick, not a value the server assigns or returns. There's no "create session" call: the first request that uses a new string starts that session, and reusing the same string continues it. Pick something stable per document or per user (e.g. `user_123_draft-contract`). See [Sessions](/concepts/sessions).
 </Note>
 
-## 4. Read the response
+## 5. Read the response
 
 ```json
 {
@@ -105,7 +117,7 @@ Key fields:
 - `document_changes.updated_html` — The full updated document HTML. Render this in your editor.
 - `usage` — How many operations you've used this month
 
-## 5. Continue the conversation
+## 6. Continue the conversation
 
 Reuse the same `session_id` to keep editing. The server keeps your document between turns, so on a follow-up you send just the `message`. No need to re-send `document_html`:
 

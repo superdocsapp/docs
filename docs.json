@@ -46,7 +46,8 @@
             "pages": [
               "introduction/overview",
               "introduction/quickstart",
-              "introduction/agent-signup"
+              "introduction/agent-signup",
+              "introduction/agent-recipe"
             ]
           },
           {

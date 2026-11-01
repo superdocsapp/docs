@@ -2657,6 +2657,20 @@
       "description": "When true, omit the heavy result body + streamed intermediate events from the response (status/progress/ids/timestamps/pending-change ids remain). Recommended for AI agents polling a large-document job: poll compact while it runs, then fetch once non-compact when status is completed to retrieve the final HTML."
      },
      {
+      "name": "wait_seconds",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 110,
+       "minimum": 0,
+       "description": "Optional: wait up to this many seconds (at most 110) for a pending or running job to settle before answering, so one call replaces a polling loop. 0 (default) answers at once.",
+       "default": 0,
+       "title": "Wait Seconds"
+      },
+      "description": "Optional: wait up to this many seconds (at most 110) for a pending or running job to settle before answering, so one call replaces a polling loop. 0 (default) answers at once."
+     },
+     {
       "name": "authorization",
       "in": "header",
       "required": false,
@@ -2835,6 +2849,191 @@
         "schema": {
          "$ref": "#/components/schemas/JobListResponse"
         }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/chat/file": {
+   "post": {
+    "tags": [
+     "v1",
+     "chat"
+    ],
+    "summary": "Edit an uploaded file, or create a document from uploaded sources, in one call; returns the result and a download link.",
+    "description": "One call per document job. Edit: send `file` (the document) and the instructions; it is loaded into\na session (new unless session_id is given) and the message runs as one chat turn. Create: omit `file`\nand send `sources` (any number of source files) with the brief; they are processed as read-only\nreferences before the turn drafts the document. The reply carries the outcome, turn_index and\n`download` (a short-lived URL plus curl_example for the resulting file). Put every instruction in one\nmessage; Typebar finds the targets. Billing is the chat turn's own; loading files is not billed.",
+    "operationId": "chat_with_file",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_chat_with_file"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChatResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/sessions/{session_id}/result": {
+   "get": {
+    "tags": [
+     "v1",
+     "sessions"
+    ],
+    "summary": "Wait (one blocking call) for the session's latest chat turn and return its result and a download link.",
+    "description": "The one server-side blocking wait for a turn started by /v1/chat/file (or any chat call) that\noutlived its caller's timeout. Waits up to wait_seconds for the session's newest chat job to settle,\nthen returns that turn's stored result (the sync chat's own recoverable result), plus a freshly\nminted download link when export_format is set. 202 while it is still running; call again.",
+    "operationId": "wait_for_session_result",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Session Id"
+      }
+     },
+     {
+      "name": "wait_seconds",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 110,
+       "minimum": 0,
+       "description": "How long to wait for the turn to settle (default 90 s).",
+       "default": 90,
+       "title": "Wait Seconds"
+      },
+      "description": "How long to wait for the turn to settle (default 90 s)."
+     },
+     {
+      "name": "export_format",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "docx",
+          "pdf",
+          "html",
+          "markdown",
+          "txt"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "When set and the turn settled with nothing awaiting review, also return `download` for the document in this format.",
+       "title": "Export Format"
+      },
+      "description": "When set and the turn settled with nothing awaiting review, also return `download` for the document in this format."
+     },
+     {
+      "name": "response_mode",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "summary",
+        "compact",
+        "full"
+       ],
+       "type": "string",
+       "description": "Shape of the returned result: 'summary' (default; its size does not grow with the document), 'compact' (adds per-section diffs) or 'full' (adds the whole document HTML).",
+       "default": "summary",
+       "title": "Response Mode"
+      },
+      "description": "Shape of the returned result: 'summary' (default; its size does not grow with the document), 'compact' (adds per-section diffs) or 'full' (adds the whole document HTML)."
+     },
+     {
+      "name": "authorization",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Authorization"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
        }
       }
      },
@@ -5196,6 +5395,12 @@
       ],
       "title": "Changes",
       "description": "Batch decisions: array of {change_id, approved, feedback} objects. Use for 'Accept All' or 'Deny All'."
+     },
+     "wait_for_result": {
+      "type": "boolean",
+      "title": "Wait For Result",
+      "description": "Default true: when the decision completes the batch, the call returns after the resumed turn settles (changes applied and saved, a new review pause, or a failure), reported in job_status, applied and job. false returns once the decision is recorded (applied=false, job_status='in_progress'); then wait with get_job.",
+      "default": true
      }
     },
     "type": "object",
@@ -5305,13 +5510,40 @@
       "title": "Approval Mode",
       "description": "Change review mode: 'approve_all' (default, auto-applies changes) or 'ask_every_time' (pauses for your review)."
      },
+     "upload_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Upload Id",
+      "description": "Optional upload_id from request_upload_url (after the PUT): the file is loaded into this session (replacing its focused document) before the turn, so one call loads and edits it. Needs upload_filename."
+     },
+     "upload_filename": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Upload Filename",
+      "description": "The filename given to request_upload_url for upload_id."
+     },
      "response_mode": {
       "anyOf": [
        {
         "type": "string",
         "enum": [
          "full",
-         "compact"
+         "compact",
+         "summary"
         ]
        },
        {
@@ -5319,7 +5551,7 @@
        }
       ],
       "title": "Response Mode",
-      "description": "Response shape control. 'full' (default) puts the complete updated document HTML in the job result \u2014 required by web app editors and recommended for small documents. 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and stores only per-section diffs (chunk_diffs), saving thousands of tokens when polling get_job. To read sections in compact mode, send a natural-language request to chat ('show me the pricing section') \u2014 the AI returns the content in the reply text.",
+      "description": "Response shape control. 'full' (default) puts the complete updated document HTML in the job result; it is required by web app editors and recommended for small documents. 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and stores only per-section diffs (chunk_diffs), saving thousands of tokens when polling get_job. To read sections in compact mode, send a natural-language request to chat ('show me the pricing section'): the AI returns the content in the reply text. 'summary' (agent jobs): no HTML or diffs, only the reply, change counts, ids of held changes and turn_index; its size does not grow with the document.",
       "default": "full"
      },
      "cursor_context": {
@@ -5528,6 +5760,131 @@
     "title": "Base64UploadRequest",
     "description": "JSON request body for base64-encoded file uploads."
    },
+   "Body_chat_with_file": {
+    "properties": {
+     "file": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "binary"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File",
+      "description": "The document to edit (.docx, .pdf, .html, .md, .txt, .rtf, .tex). Max 100 MB. Omit it to create a new document."
+     },
+     "sources": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "binary"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sources",
+      "description": "Source materials (repeat the field per file) loaded as read-only references the turn draws on, e.g. to draft a report from them. Each is processed before the turn runs."
+     },
+     "message": {
+      "type": "string",
+      "maxLength": 100000,
+      "title": "Message",
+      "description": "Every instruction for this job, in one message. Typebar finds the targets itself."
+     },
+     "session_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 256,
+        "pattern": "^[a-zA-Z0-9_\\-\\.]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Session Id",
+      "description": "Omit to start a new session (the reply returns it); reuse it for follow-ups on /v1/chat."
+     },
+     "response_mode": {
+      "type": "string",
+      "enum": [
+       "summary",
+       "compact",
+       "full"
+      ],
+      "title": "Response Mode",
+      "description": "'summary' (default): a reply whose size does not grow with the document. 'compact' adds per-section diffs; 'full' adds the whole document HTML.",
+      "default": "summary"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "Format of the returned file: docx, pdf, html, markdown or txt. Default: the upload's own format. 'none' skips the download link."
+     },
+     "approval_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Approval Mode",
+      "description": "'approve_all' applies the changes; 'ask_every_time' holds them for review. Omit it to use the account's saved setting."
+     },
+     "model_tier": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model Tier",
+      "description": "core (default), turbo, pro or max."
+     },
+     "thinking_depth": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Thinking Depth",
+      "description": "fast, balanced (default) or deep."
+     },
+     "wait_seconds": {
+      "type": "integer",
+      "maximum": 110.0,
+      "minimum": 1.0,
+      "title": "Wait Seconds",
+      "description": "How long this call waits for the turn (default 90 s, under a 120 s shell timeout). A longer turn keeps running: the reply is then 202 with session_id, and GET /v1/sessions/{session_id}/result waits for it (one blocking call, no polling).",
+      "default": 90
+     }
+    },
+    "type": "object",
+    "required": [
+     "message"
+    ],
+    "title": "Body_chat_with_file"
+   },
    "Body_upload_attachment": {
     "properties": {
      "session_id": {
@@ -5645,6 +6002,31 @@
        }
       ],
       "description": "Operation usage data. Present for authenticated users with usage tracking."
+     },
+     "download": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Download",
+      "description": "Present when export_format was set and the turn ended with no changes awaiting review: download_url, curl_example, filename, format, expires_at, expires_in_seconds."
+     },
+     "turn_index": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Turn Index",
+      "description": "This turn's position in the session history. Pass it to revert_session_to_message to put the document back to just before this turn. Absent while the turn waits for review (find it later with get_session_history)."
      },
      "hint": {
       "anyOf": [
@@ -7707,13 +8089,59 @@
       "title": "Approval Mode",
       "description": "Change review mode: 'approve_all' (default, auto-applies changes) or 'ask_every_time' (pauses for your review)."
      },
+     "upload_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Upload Id",
+      "description": "Optional upload_id from request_upload_url (after the PUT): the file is loaded into this session (replacing its focused document) before the turn, so one call loads and edits it. Needs upload_filename."
+     },
+     "upload_filename": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Upload Filename",
+      "description": "The filename given to request_upload_url for upload_id."
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "docx",
+         "pdf",
+         "html",
+         "markdown",
+         "txt"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "Optional: the reply also carries `download` (a short-lived URL and curl_example) for the document in this format, so no request_download_url call is needed. While changes are held, it is the document before this turn."
+     },
      "response_mode": {
       "anyOf": [
        {
         "type": "string",
         "enum": [
          "full",
-         "compact"
+         "compact",
+         "summary"
         ]
        },
        {
@@ -7721,7 +8149,7 @@
        }
       ],
       "title": "Response Mode",
-      "description": "Response shape control. 'full' (default) returns the complete updated document HTML \u2014 required by web app editors and recommended for small documents (<20 pages). 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and returns only per-section diffs (chunk_diffs) for changed sections, saving thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section' \u2014 the AI returns the content in the chat reply text.",
+      "description": "Response shape control. 'full' (default) returns the complete updated document HTML; it is required by web app editors and recommended for small documents (<20 pages). 'compact' (recommended for AI agents editing large documents) suppresses the full HTML and returns only per-section diffs (chunk_diffs) for changed sections, saving thousands of tokens per turn. To read sections in compact mode, just send a natural-language request like 'show me the force majeure section': the AI returns the content in the chat reply text. 'summary' (agent jobs): no HTML or diffs, only the reply, change counts, ids of held changes and turn_index; its size does not grow with the document.",
       "default": "full"
      },
      "cursor_context": {
