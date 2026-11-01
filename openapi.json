@@ -2905,10 +2905,10 @@
          "type": "null"
         }
        ],
-       "description": "When set and the turn settled with nothing awaiting review, also return `download` for the document in this format.",
+       "description": "When set, also return `download` for the document in this format (not for a failed or cancelled turn). While changes are held for review, it is the document as it was before this turn (before_this_turn is true): nothing from this turn is in it yet.",
        "title": "Export Format"
       },
-      "description": "When set and the turn settled with nothing awaiting review, also return `download` for the document in this format."
+      "description": "When set, also return `download` for the document in this format (not for a failed or cancelled turn). While changes are held for review, it is the document as it was before this turn (before_this_turn is true): nothing from this turn is in it yet."
      },
      {
       "name": "response_mode",
@@ -5930,7 +5930,7 @@
        }
       ],
       "title": "Download",
-      "description": "Present when export_format was set and the turn ended with no changes awaiting review: download_url, curl_example, filename, format, expires_at, expires_in_seconds."
+      "description": "Present whenever export_format was set (not on a failed turn): download_url, curl_example, filename, format, expires_at, expires_in_seconds (or error, saying why no link could be made). While changes are held for review, it is the document as it was before this turn (before_this_turn is true): nothing from this turn is in it yet."
      },
      "turn_index": {
       "anyOf": [
