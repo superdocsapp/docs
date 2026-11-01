@@ -19,6 +19,8 @@
 !*.ico
 !.gitignore
 !/README.md
+# Agent skill files served at /.well-known/agent-skills (Markdown docs only)
+!/.mintlify/skills/*/SKILL.md
 
 # Explicitly block dangerous file types (defense in depth)
 # These override the whitelist above as an extra safety net
