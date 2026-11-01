@@ -63,7 +63,7 @@ Out-of-flow parts are edited the same way as body content: "change the footer to
 
 ## Long generations: use async
 
-Synchronous `POST /v1/chat` is right for edits and normal-sized creations. For **document-scale generations** — a whole handbook, a long report — use `POST /v1/chat/async` (`chat_async`): it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}` (`get_job`). Sync requests that run very long can hit the platform gateway timeout (~300s) and return nothing. Long sync responses also carry an advisory `hint` telling you when to switch.
+Synchronous `POST /v1/chat` is right for edits and normal-sized creations. For **document-scale generations** — a whole handbook, a long report — use `POST /v1/chat/async` (`chat_async`): it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}` (`get_job`) or the [progress stream](/guides/streaming). A sync request that runs very long can be cut off by a client or gateway timeout before its reply reaches you. Long sync responses also carry an advisory `hint` telling you when to switch.
 
 ## Operations and billing (what a request costs)
 

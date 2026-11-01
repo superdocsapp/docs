@@ -78,7 +78,7 @@ Other clients (Cursor, Claude Desktop, Windsurf, VS Code, Cline, Continue) take 
 
 ### Long generations
 
-For document-scale generations (a whole handbook or long report in one turn), use `POST /v1/chat/async` — it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}`. Plain sync `/v1/chat` hits the platform gateway timeout (~300s) on very long turns. Editing patterns, placement, verification, and billing are covered in the [Agent editing playbook](/guides/agent-editing-playbook).
+For document-scale generations (a whole handbook or long report in one turn), use `POST /v1/chat/async` — it returns a `job_id` immediately and reports progress via `GET /v1/jobs/{job_id}`. A very long plain sync `/v1/chat` call can be cut off by a client or gateway timeout before its reply reaches you, so send long turns async (you can also [stream](/guides/streaming) their progress). Editing patterns, placement, verification, and billing are covered in the [Agent editing playbook](/guides/agent-editing-playbook).
 
 ## 3. Quota and handing off to a human
 

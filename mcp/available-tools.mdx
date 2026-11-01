@@ -37,7 +37,7 @@ When you connect to the Typebar MCP server, these 38 tools become available to y
 |------|-------------|----------------|
 | `list_sessions` | List your active document editing sessions to resume or audit prior work. | `limit` |
 | `get_session_history` | Restore the full conversation and document state for a previous session, including chunk IDs, attachments, and editor actions. Returns the focused document's HTML by default; pass `include_document_html=false` to skip the body and get conversation + metadata only (lighter on tokens when resuming a large document). | `session_id`, `include_document_html` |
-| `get_session_jobs` | List all async chat jobs for a specific session, most recent first. Pass `compact=true` to omit each job's heavy result payload (status/progress only) — useful when you just want to see which jobs are paused. | `session_id`, `limit`, `compact` |
+| `get_session_jobs` | List every job in a specific session, most recent first, including synchronous `chat` calls as well as `chat_async` jobs. Pass `compact=true` to omit each job's heavy result payload (status/progress only) — useful when you just want to see which jobs are paused. | `session_id`, `limit`, `compact` |
 | `revert_session_to_message` | Rewind a chat session to before a specific user message — restores both the document and the conversation in one call. Returns the reverted message text so you can pre-fill a compose box for editing. The original branch is preserved server-side but hidden from active reads. | `session_id`, `turn_index` |
 | `redo_revert` | Undo a revert. Restores the session forward to the pre-revert state and brings back the rolled-back conversation and document. Pass the same `turn_index` you reverted plus the `redo_checkpoint_id` returned by that revert. Meant for use immediately after a revert, before sending a new message. The mirror of `revert_session_to_message`. | `session_id`, `turn_index`, `redo_checkpoint_id` |
 
@@ -89,7 +89,7 @@ Typebar can optionally carry a small durable memory note across an API key's ses
 
 | Tool | Description | Key parameters |
 |------|-------------|----------------|
-| `list_jobs` | List your async chat jobs (in-progress, awaiting approval, completed, failed). Pass `compact=true` to omit each job's heavy result payload and get a lightweight status/progress list. | `status`, `limit`, `compact` |
+| `list_jobs` | List your jobs, including synchronous `chat` calls as well as `chat_async` jobs (in-progress, awaiting approval, completed, failed). Pass `compact=true` to omit each job's heavy result payload and get a lightweight status/progress list. | `status`, `limit`, `compact` |
 | `get_job` | Get the status, partial results, and any pending changes for an async chat job. Poll after `chat_async`. Pass `compact=true` to omit the heavy result body and streamed intermediate events (status/progress/ids/timestamps/pending-change ids remain) — poll compact while the job runs, then fetch once non-compact when status is `completed` to retrieve the final HTML. | `job_id`, `compact` |
 | `cancel_job` | Cancel a pending or in-progress async chat job. Already-applied changes are preserved. | `job_id` |
 
