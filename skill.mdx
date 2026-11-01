@@ -33,6 +33,70 @@ After adding, restart your session if your client requires it (Claude Code does)
 
 ---
 
+## Fastest path: one call per job (read this first)
+
+You orchestrate; Typebar does the document work. Every tool call or shell command is one more model turn for you, so do a whole job in one request. Put EVERY instruction for the job in one message and describe targets by section and content ("in the Corporate section, shorten..."): Typebar finds them. Never open, read, unzip, grep or diff the document yourself, before or after. Trust the reply.
+
+### REST (curl): file + instructions -> result, in ONE shell command
+
+Each command starts a fresh shell, so it sets `API` and reads the key. Every curl call has
+`--max-time`, so no command runs longer than about 105 s. Never re-send a POST that timed out:
+that starts, and bills, a second job. Re-run only the GET wait. Never use pkill, killall or kill.
+Each reply is saved to its own `reply-TIME.json`; never overwrite or delete one.
+
+#### Key (once)
+Reuse `~/.superdocs/agent_credentials.json` if it exists. Otherwise sign up. Signing up accepts the
+Terms (typebar.ai/terms): do it only if the user's instruction says to, and otherwise ask the user first.
+```bash
+API=https://api.superdocs.app; umask 077; mkdir -p ~/.superdocs
+[ -s ~/.superdocs/agent_credentials.json ] || curl -fsS --max-time 30 -X POST "$API/v1/agents/signup" -H 'Content-Type: application/json' -d '{"terms_accepted": true}' -o ~/.superdocs/agent_credentials.json
+```
+
+#### Edit a file: one command
+```bash
+API=https://api.superdocs.app; SID=tb-$(date +%s); echo "session $SID"; R=reply-$(date +%s).json
+K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+curl -sS --max-time 95 -X POST "$API/v1/chat/file" -H "Authorization: Bearer $K" -F "session_id=$SID" -F "wait_seconds=85" -F "approval_mode=approve_all" \
+  -F "file=@./INPUT.docx" --form-string "message=EVERY INSTRUCTION, IN ONE MESSAGE" -o $R -w 'HTTP %{http_code}\n'
+python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));print(r.get("response") or r);[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
+U=$(python3 -c 'import json,sys;print((json.load(open(sys.argv[1])).get("download") or {}).get("download_url",""))' $R); [ -n "$U" ] && curl -sS --max-time 9 -o ./OUTPUT.docx "$U" -w 'saved %{size_download} bytes\n'
+```
+**Create** a document from sources instead: add `A=(); for f in ./data/* ./context/*; do A+=(-F "sources=@$f"); done`
+before the curl, and replace `-F "file=@./INPUT.docx"` with `"${A[@]}"`. The message is the brief, and the file comes back as .docx.
+
+#### The reply
+- `response` says what was done for each ask. `download` is a 15-minute link to the result (the upload's format; add `-F export_format=pdf` for another).
+- **HTTP 202** or a timeout: the job is still running under the printed session. Run ONE wait command (again on another 202), with `SID` = that printed session, never a new one:
+  ```bash
+  API=https://api.superdocs.app; SID=PRINTED_SESSION; R=reply-$(date +%s).json
+  K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+  curl -sS --max-time 95 "$API/v1/sessions/$SID/result?wait_seconds=85&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
+  ```
+  Then use the same `python3` and `U=` lines. Re-running the wait also lists the held lines (with `job_id`); never guess other endpoints.
+- **HELD lines** (`document_changes.requires_approval`): changes held for review; nothing from this turn is in the document yet (a download now is the document as it was before this turn).
+  - Lines marked `requires_review` need the user's own go; never approve one without it. If you can ask the user, ask BEFORE the approve call (it declines every line it does not name); set `OK` to the change ids of the `requires_review` lines they approved (space-separated; empty if none).
+  - Approve the other lines (if the user asked for the edits) in ONE call, then wait and download. Every line it does not name is declined: not applied, never approvable later. Until held lines are decided, a new chat answers 409.
+  ```bash
+  API=https://api.superdocs.app; SID=PRINTED_SESSION; export OK=""; P=$(ls -t reply-*.json | head -1); R=reply-$(date +%s).json
+  K=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.superdocs/agent_credentials.json")))["api_key"])')
+  python3 -c 'import json,sys,os;d=json.load(open(sys.argv[1]))["document_changes"];ok=[{"change_id":c["change_id"],"approved":True} for c in d["pending_changes"] if not c.get("requires_review") or c["change_id"] in os.environ.get("OK","").split()];ok or sys.exit("nothing to approve");print(json.dumps({"job_id":d["job_id"],"approved":True,"wait_for_result":False,"changes":ok}))' $P > approve-$SID.json &&
+  curl -sS --max-time 20 -X POST "$API/v1/chat/$SID/approve" -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d @approve-$SID.json -w 'HTTP %{http_code}\n' &&
+  curl -sS --max-time 70 "$API/v1/sessions/$SID/result?wait_seconds=60&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
+  ```
+  Then use the same `python3` and `U=` lines. Tell the user exactly which held changes were NOT applied, naming each, and that they can ask for them again; never stop without the file.
+- **Follow-up** on the same document: `POST $API/v1/chat` with JSON `{"session_id": "...", "message": "...", "response_mode": "summary", "export_format": "docx"}`.
+- **Undo a turn**: `POST $API/v1/sessions/$SID/revert` with `{"turn_index": N}`, using N from the reply.
+
+### MCP: the same job in about 4 calls
+
+1. `request_upload_url` (`filename`, `content_type`), then run its `curl_example`.
+2. **ONE** `chat` call: a new `session_id`, `upload_id` + `upload_filename` (this loads the file), every instruction in one `message`, `response_mode: "summary"`, `export_format: "docx"`. `chat` waits for the result; the reply carries the outcome, `turn_index` and `download`.
+3. Run `download.curl_example`.
+
+- Held changes (`requires_approval`): nothing from this turn is in the document yet; a download now is the document as it was before this turn. Rows marked `requires_review` need the user's own go: without it, never approve them. If any row is `requires_review` and you can ask the user, ask before the approve call (it declines every row it does not name), and include the ones they approve in that same call. The others may be approved when the user asked for the edits: ONE `approve_change` with `job_id`, `approved: true` and `changes` naming exactly those rows (one `{change_id, approved: true}` each, never one call per change). That call closes every row it does not name as declined: not applied, and never approvable later; tell the user exactly which held changes were NOT applied, naming each, and that they can ask for them again. It waits for the resumed turn and reports `applied` (a `get_job` with `wait_seconds: 90` only if it still reports in_progress), then `request_download_url`. Undo: pass a reply's `turn_index` to `revert_session_to_message`, never a chat message.
+
+---
+
 ## When to use
 
 Reach for Typebar when **any** of these are true:
@@ -358,7 +422,7 @@ STEP 3 — Continue with chat. The AI now has the attachment available for retri
 
 3. **`session_id` is sticky.** Use the same `session_id` across all calls for one document. Generate a new one (e.g., `user-${timestamp}`) per logical document. State persists across restarts via the Typebar backend.
 
-4. **Default `response_mode='full'`** is fine for documents under 20 pages. Switch to `compact` only when context cost matters.
+4. **`response_mode`:** for an agent job use `summary` (counts, ids of held changes and `turn_index`; its size does not grow with the document). It is the default for `/v1/chat/file` and for a `chat` call with `upload_id` or `export_format`. Other calls keep the default `full` (the web editor's shape); `compact` adds per-section diffs.
 
 5. **`parse_mode` matters for `process_uploaded_document`** — `'document'` loads as the active editable doc, `'attachment'` loads as a read-only AI-searchable reference. Don't mix them up.
 
