@@ -2854,7 +2854,7 @@
      "sessions"
     ],
     "summary": "Wait (one blocking call) for the session's latest chat turn and return its result and a download link.",
-    "description": "The one server-side blocking wait for a turn started by /v1/chat/file (or any chat call) that\noutlived its caller's timeout. Waits up to wait_seconds for the session's newest chat job to settle,\nthen returns that turn's stored result (the sync chat's own recoverable result), plus a freshly\nminted download link when export_format is set. 202 while it is still running; call again.",
+    "description": "The one server-side blocking wait for a turn started by /v1/chat/file (or any chat call) that\noutlived its caller's timeout. Waits up to wait_seconds for that turn to settle, then returns its\nstored result, plus a freshly minted download link when export_format is set. 202 while it is still\nrunning; call again. You can call this from any client, at any time, to get the job's result.",
     "operationId": "wait_for_session_result",
     "security": [
      {
@@ -2926,6 +2926,24 @@
        "title": "Response Mode"
       },
       "description": "Shape of the returned result: 'summary' (default; its size does not grow with the document), 'compact' (adds per-section diffs) or 'full' (adds the whole document HTML)."
+     },
+     {
+      "name": "job_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The job_id a 202 from /v1/chat/file returned: wait for exactly that call. Omit it to wait for the session's newest chat turn.",
+       "title": "Job Id"
+      },
+      "description": "The job_id a 202 from /v1/chat/file returned: wait for exactly that call. Omit it to wait for the session's newest chat turn."
      },
      {
       "name": "authorization",
