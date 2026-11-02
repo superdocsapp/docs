@@ -27,7 +27,7 @@ EVERY INSTRUCTION, IN ONE MESSAGE
 TYPEBAR_MSG_END
 curl -sS --max-time 95 -X POST "$API/v1/chat/file" -H "Authorization: Bearer $K" -F "session_id=$SID" -F "wait_seconds=85" -F "approval_mode=approve_all" \
   -F "file=@\"./INPUT.docx\"" -F "message=<msg-$SID.txt" -o $R -w 'HTTP %{http_code}\n'
-python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));print(r.get("response") or r,"[edited: false]"*(r.get("edited") is False));[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
+python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));d=r.get("detail");e=r.get("edited",d.get("edited") if isinstance(d,dict) else None);print(r.get("response") or r,"[edited: false]"*(e is False));[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
 read U N <<< "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1])).get("download") or {};print(d.get("download_url","-"),"OUTPUT-before-this-turn.docx" if d.get("before_this_turn") else "OUTPUT.docx")' $R)"; [ "$U" != - ] && curl -sS --max-time 9 -o "./$N" "$U" -w "saved $N\n"
 ```
 **Create** from sources: add `A=(); while IFS= read -r f; do A+=(-F "sources=@\"$f\""); done < <(find ./data ./context -type f ! -path '*/.*' 2>/dev/null)`
@@ -50,12 +50,15 @@ unquoted, curl reads `;` and `,` as options.)
   - `requires_review` lines need the user's own go; never approve one without it. If you can ask, ask
     BEFORE the approve call; put the ids they approve in `OK` (space-separated). If you cannot ask and
     every line is `requires_review`, stop: give the user the held lines and that one decision.
+  - A note saying it could not be verified, or goes beyond the request: deny it (id in `NO`), finish, then
+    re-ask that change alone: the edit command on `OUTPUT.docx`, quoting verbatim from the document (the one
+    exception) the exact text to keep or the anchor. Never stop without the final file.
   - Otherwise approve in ONE call, then wait and download. Lines it does not name are declined: never
     applied, never approvable later. Until held lines are decided, a new chat answers 409.
   ```bash
-  API=https://api.superdocs.app; SID=PRINTED_SESSION; export OK=""; P=$(ls -t reply-$SID*.json | head -1); R=reply-$SID-$(date +%s).json
+  API=https://api.superdocs.app; SID=PRINTED_SESSION; export OK="" NO=""; P=$(ls -t reply-$SID*.json | head -1); R=reply-$SID-$(date +%s).json
   K=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["api_key"])' ~/.superdocs/agent_credentials.json)
-  python3 -c 'import json,sys,os;d=json.load(open(sys.argv[1]))["document_changes"];ok=[{"change_id":c["change_id"],"approved":True} for c in d["pending_changes"] if not c.get("requires_review") or c["change_id"] in os.environ.get("OK","").split()];ok or sys.exit("nothing to approve");print(json.dumps({"job_id":d["job_id"],"approved":True,"wait_for_result":False,"changes":ok}))' $P > approve-$SID.json &&
+  python3 -c 'import json,sys,os;d=json.load(open(sys.argv[1]))["document_changes"];no=os.environ.get("NO","").split();ok=[{"change_id":c["change_id"],"approved":c["change_id"] not in no} for c in d["pending_changes"] if c["change_id"] in no or not c.get("requires_review") or c["change_id"] in os.environ.get("OK","").split()];ok or sys.exit("nothing to approve");print(json.dumps({"job_id":d["job_id"],"approved":True,"wait_for_result":False,"changes":ok}))' $P > approve-$SID.json &&
   curl -sS --max-time 20 -X POST "$API/v1/chat/$SID/approve" -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d @approve-$SID.json -o ap-$SID.json &&
   python3 -c 'import json,sys;a=json.load(open(sys.argv[1]));print(a.get("message") or a);a.get("batch_complete") or sys.exit("STILL HELD: %s"%a.get("needs_individual_approval","") if "batch_complete" in a else "APPROVE FAILED: %s"%(a.get("detail") or a))' ap-$SID.json &&
   curl -sS --max-time 70 "$API/v1/sessions/$SID/result?wait_seconds=60&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
