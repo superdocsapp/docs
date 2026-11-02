@@ -60,12 +60,12 @@ EVERY INSTRUCTION, IN ONE MESSAGE
 TYPEBAR_MSG_END
 curl -sS --max-time 95 -X POST "$API/v1/chat/file" -H "Authorization: Bearer $K" -F "session_id=$SID" -F "wait_seconds=85" -F "approval_mode=approve_all" \
   -F "file=@\"./INPUT.docx\"" -F "message=<msg-$SID.txt" -o $R -w 'HTTP %{http_code}\n'
-python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));print(r.get("response") or r);[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
+python3 -c 'import json,sys;r=json.load(open(sys.argv[1]));print(r.get("response") or r,"[edited: false]"*(r.get("edited") is False));[print("HELD:",c.get("note") or c.get("operation"),"[requires_review]"*bool(c.get("requires_review"))) for c in (r.get("document_changes") or {}).get("pending_changes") or []]' $R
 read U N <<< "$(python3 -c 'import json,sys;d=json.load(open(sys.argv[1])).get("download") or {};print(d.get("download_url","-"),"OUTPUT-before-this-turn.docx" if d.get("before_this_turn") else "OUTPUT.docx")' $R)"; [ "$U" != - ] && curl -sS --max-time 9 -o "./$N" "$U" -w "saved $N\n"
 ```
-**Create** from sources: add `A=(); while IFS= read -r f; do A+=(-F "sources=@\"$f\""); done < <(find ./data ./context -type f 2>/dev/null)`
-before the curl and replace `-F "file=@\"./INPUT.docx\""` with `"${A[@]}"`; the message is the brief. (File names stay in
-`\"…\"`: curl reads `;` and `,` in an unquoted name as options.)
+**Create** from sources: add `A=(); while IFS= read -r f; do A+=(-F "sources=@\"$f\""); done < <(find ./data ./context -type f ! -path '*/.*' 2>/dev/null)`
+before the curl and replace `-F "file=@\"./INPUT.docx\""` with `"${A[@]}"`; the message is the brief. (Keep the `\"…\"`:
+unquoted, curl reads `;` and `,` as options.)
 
 #### The reply
 - `response`: what was done per ask. `download`: a 15-minute link (`-F export_format=pdf` for PDF).
@@ -76,7 +76,8 @@ before the curl and replace `-F "file=@\"./INPUT.docx\""` with `"${A[@]}"`; the 
   curl -sS --max-time 95 "$API/v1/sessions/$SID/result?wait_seconds=85&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
   ```
   Then the same `python3` and `read U N` lines. The wait also re-lists held lines; guess no other endpoint.
-- **`status: failed`**: nothing was edited; run the edit command again (a new session).
+- **`[edited: false]`** printed: nothing was edited; run the edit command again (a new session). Any
+  other failure may have edited: give the user its `response` before sending again.
 - **HELD lines** (`requires_approval`): nothing from this turn is applied yet; the saved
   `OUTPUT-before-this-turn.docx` predates it (a held create has none: see `download.error`).
   - `requires_review` lines need the user's own go; never approve one without it. If you can ask, ask
@@ -88,12 +89,17 @@ before the curl and replace `-F "file=@\"./INPUT.docx\""` with `"${A[@]}"`; the 
   API=https://api.superdocs.app; SID=PRINTED_SESSION; export OK=""; P=$(ls -t reply-$SID*.json | head -1); R=reply-$SID-$(date +%s).json
   K=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["api_key"])' ~/.superdocs/agent_credentials.json)
   python3 -c 'import json,sys,os;d=json.load(open(sys.argv[1]))["document_changes"];ok=[{"change_id":c["change_id"],"approved":True} for c in d["pending_changes"] if not c.get("requires_review") or c["change_id"] in os.environ.get("OK","").split()];ok or sys.exit("nothing to approve");print(json.dumps({"job_id":d["job_id"],"approved":True,"wait_for_result":False,"changes":ok}))' $P > approve-$SID.json &&
-  curl -sS --max-time 20 -X POST "$API/v1/chat/$SID/approve" -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d @approve-$SID.json -w 'HTTP %{http_code}\n' &&
+  curl -sS --max-time 20 -X POST "$API/v1/chat/$SID/approve" -H "Authorization: Bearer $K" -H 'Content-Type: application/json' -d @approve-$SID.json -o ap-$SID.json &&
+  python3 -c 'import json,sys;a=json.load(open(sys.argv[1]));print(a.get("message") or a);a.get("batch_complete") or sys.exit("STILL HELD: %s"%a.get("needs_individual_approval","") if "batch_complete" in a else "APPROVE FAILED: %s"%(a.get("detail") or a))' ap-$SID.json &&
   curl -sS --max-time 70 "$API/v1/sessions/$SID/result?wait_seconds=60&export_format=docx" -H "Authorization: Bearer $K" -o $R -w 'HTTP %{http_code}\n'
   ```
   Then the same two lines. Tell the user which held changes were NOT applied, naming each (they can ask again).
+  - **STILL HELD** ids need their own call and the user's go: for each they approved, POST
+    `{"job_id": J, "change_id": ID, "approved": true}` the same way, then wait; name the rest to the user.
+    Never wait on a held job without deciding. **APPROVE FAILED**: do what its message says.
 - **Follow-up**: `POST $API/v1/chat`, JSON: same `session_id`, `message`, `"response_mode": "summary"`, `"export_format": "docx"`.
-- **Undo**: `POST $API/v1/sessions/$SID/revert` with `{"turn_index": N}` (N from the reply).
+- **Undo**: `POST $API/v1/sessions/$SID/revert` with `{"turn_index": N, "response_mode": "summary"}` (N from the reply).
+  **Redo** (right after an undo): `POST $API/v1/sessions/$SID/redo` with `{"turn_index": N, "redo_checkpoint_id": "ID", "response_mode": "summary"}` (ID from the undo reply).
 
 ### MCP: the same job in about 4 calls
 

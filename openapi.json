@@ -5328,7 +5328,7 @@
        }
       ],
       "title": "Changes",
-      "description": "Batch decisions: array of {change_id, approved, feedback} objects. Use for 'Accept All' or 'Deny All'."
+      "description": "Batch decisions: array of {change_id, approved, feedback}. Each listed change_id with approved=true is an explicit decision and applies, including changes flagged for individual review; an approve that names no change decides nothing and returns the flagged ids in needs_individual_approval."
      },
      "wait_for_result": {
       "type": "boolean",
